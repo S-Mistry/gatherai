@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/internal/cron/analysis-recovery",
+      "schedule": "*/15 * * * *"
+    }
+  ]
+}

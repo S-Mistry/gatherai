@@ -1,0 +1,9 @@
+{
+  "name": "gatherai-workspace",
+  "private": true,
+  "scripts": {
+    "docs:sync": "node ./scripts/build-agents.mjs --write",
+    "docs:check": "node ./scripts/build-agents.mjs --check",
+    "hooks:install": "git config core.hooksPath .githooks"
+  }
+}
