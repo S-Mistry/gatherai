@@ -16,7 +16,12 @@ export type InterviewState =
   | "complete"
   | "abandoned"
 
-export type SessionStatus = "pre_start" | "in_progress" | "paused" | "complete" | "abandoned"
+export type SessionStatus =
+  | "pre_start"
+  | "in_progress"
+  | "paused"
+  | "complete"
+  | "abandoned"
 
 export type TranscriptSpeaker = "participant" | "agent" | "system"
 
@@ -119,6 +124,7 @@ export interface SessionRuntimeState {
 export interface TranscriptSegment {
   id: string
   sessionId: string
+  sourceItemId?: string
   speaker: TranscriptSpeaker
   text: string
   createdAt: string
@@ -160,6 +166,7 @@ export interface SessionOutputGenerated {
   id: string
   sessionId: string
   cleanedTranscript: string
+  summary: string
   questionAnswers: QuestionAnswer[]
   themes: ThemeSummary[]
   painPoints: InsightClaim[]
@@ -245,6 +252,8 @@ export interface AnalysisJob {
   maxAttempts: number
   nextAttemptAt: string
   lockedAt?: string
+  completedAt?: string
+  lastError?: string
   createdAt: string
 }
 

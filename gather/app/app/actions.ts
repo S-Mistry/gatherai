@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 
+import { createServerSupabaseClient } from "@/lib/supabase/server"
 import {
   createProjectFromForm,
   enqueueSynthesisRefresh,
@@ -50,4 +51,14 @@ export async function saveSessionOverrideAction(formData: FormData) {
 
   await saveSessionOverride(sessionId, editedSummary, consultantNotes)
   revalidatePath(`/app/projects/${projectId}/sessions/${sessionId}`)
+}
+
+export async function signOutAction() {
+  const client = await createServerSupabaseClient()
+
+  if (client) {
+    await client.auth.signOut()
+  }
+
+  redirect("/sign-in")
 }

@@ -37,7 +37,7 @@ import type {
   TranscriptSpeaker,
   WorkspaceSummary,
 } from "@/lib/domain/types"
-import { ANALYSIS_JOB_TYPES } from "@/lib/jobs/analysis"
+import { SESSION_ANALYSIS_JOB_TYPES } from "@/lib/jobs/analysis"
 import {
   createSecretSupabaseClient,
   createServerSupabaseClient,
@@ -121,6 +121,7 @@ interface ParticipantSessionRow {
 interface TranscriptSegmentRow {
   id: string
   session_id: string
+  source_item_id: string | null
   speaker: TranscriptSpeaker
   content: string
   order_index: number
@@ -179,6 +180,8 @@ interface AnalysisJobRow {
   max_attempts: number
   next_attempt_at: string
   claimed_at: string | null
+  completed_at: string | null
+  last_error: string | null
   created_at: string
 }
 
@@ -468,6 +471,7 @@ function mapTranscript(row: TranscriptSegmentRow): TranscriptSegment {
   return {
     id: row.id,
     sessionId: row.session_id,
+    sourceItemId: row.source_item_id ?? undefined,
     speaker: row.speaker,
     text: row.content,
     createdAt: row.created_at,
@@ -485,6 +489,10 @@ function mapGeneratedOutput(
     id: row.id,
     sessionId: row.session_id,
     cleanedTranscript: row.cleaned_transcript,
+    summary:
+      typeof payload.summary === "string" && payload.summary.trim().length > 0
+        ? payload.summary
+        : row.cleaned_transcript,
     questionAnswers: Array.isArray(payload.questionAnswers)
       ? (payload.questionAnswers as SessionOutputGenerated["questionAnswers"])
       : [],
@@ -523,6 +531,38 @@ function mapOutputOverride(
     suppressedClaimIds: safeStringArray(row.suppressed_claim_ids),
     consultantNotes: row.consultant_notes,
     updatedAt: row.updated_at,
+  }
+}
+
+function mergeSessionOutputWithOverride(
+  generatedOutput: SessionOutputGenerated,
+  override?: SessionOutputOverride
+): SessionOutputGenerated {
+  if (!override) {
+    return generatedOutput
+  }
+
+  const suppressedClaimIds = new Set(override.suppressedClaimIds)
+  const summary = override.editedSummary.trim() || generatedOutput.summary
+
+  return {
+    ...generatedOutput,
+    summary,
+    themes: generatedOutput.themes.filter(
+      (theme) => !suppressedClaimIds.has(theme.id)
+    ),
+    painPoints: generatedOutput.painPoints.filter(
+      (claim) => !suppressedClaimIds.has(claim.id)
+    ),
+    opportunities: generatedOutput.opportunities.filter(
+      (claim) => !suppressedClaimIds.has(claim.id)
+    ),
+    risks: generatedOutput.risks.filter(
+      (claim) => !suppressedClaimIds.has(claim.id)
+    ),
+    keyQuotes: generatedOutput.keyQuotes.filter(
+      (claim) => !suppressedClaimIds.has(claim.id)
+    ),
   }
 }
 
@@ -581,6 +621,8 @@ function mapAnalysisJob(row: AnalysisJobRow): AnalysisJob {
     maxAttempts: row.max_attempts,
     nextAttemptAt: row.next_attempt_at,
     lockedAt: row.claimed_at ?? undefined,
+    completedAt: row.completed_at ?? undefined,
+    lastError: row.last_error ?? undefined,
     createdAt: row.created_at,
   }
 }
@@ -1127,6 +1169,118 @@ async function claimAnalysisJobs(limit = 4, workerName = "gather-dispatch") {
   return (result.data as AnalysisJobRow[] | null)?.map(mapAnalysisJob) ?? []
 }
 
+const SESSION_ANALYSIS_JOB_PRIORITY: Record<AnalysisJobType, number> = {
+  transcript_cleaning: 0,
+  session_extraction: 1,
+  quality_scoring: 2,
+  project_synthesis: 3,
+}
+
+function sortAnalysisJobs(jobs: AnalysisJob[]) {
+  return [...jobs].sort((left, right) => {
+    const priorityDelta =
+      SESSION_ANALYSIS_JOB_PRIORITY[left.type] -
+      SESSION_ANALYSIS_JOB_PRIORITY[right.type]
+
+    if (priorityDelta !== 0) {
+      return priorityDelta
+    }
+
+    return (
+      new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime()
+    )
+  })
+}
+
+async function claimQueuedSessionAnalysisJobs(
+  sessionId: string,
+  workerName = "gather-session-dispatch"
+) {
+  const client = requireSecretClient()
+  const queuedResult = await client
+    .from("analysis_jobs")
+    .select("*")
+    .eq("session_id", sessionId)
+    .in("job_type", SESSION_ANALYSIS_JOB_TYPES)
+    .eq("status", "queued")
+    .order("created_at", { ascending: true })
+
+  const queuedJobs = sortAnalysisJobs(
+    expectRows(queuedResult, "Unable to load queued session analysis jobs").map(
+      (row) => mapAnalysisJob(row as AnalysisJobRow)
+    )
+  )
+
+  if (queuedJobs.length === 0) {
+    return []
+  }
+
+  const claimedAt = new Date().toISOString()
+  const claimResult = await client
+    .from("analysis_jobs")
+    .update({
+      status: "processing",
+      claimed_by: workerName,
+      claimed_at: claimedAt,
+    })
+    .in(
+      "id",
+      queuedJobs.map((job) => job.id)
+    )
+    .eq("status", "queued")
+    .select("*")
+
+  return sortAnalysisJobs(
+    expectRows(claimResult, "Unable to claim queued session analysis jobs").map(
+      (row) => mapAnalysisJob(row as AnalysisJobRow)
+    )
+  )
+}
+
+async function claimQueuedProjectSynthesisJobs(
+  projectId: string,
+  workerName = "gather-session-dispatch"
+) {
+  const client = requireSecretClient()
+  const queuedResult = await client
+    .from("analysis_jobs")
+    .select("*")
+    .eq("project_id", projectId)
+    .eq("job_type", "project_synthesis")
+    .eq("status", "queued")
+    .order("created_at", { ascending: true })
+    .limit(1)
+
+  const queuedJobs = expectRows(
+    queuedResult,
+    "Unable to load queued project synthesis jobs"
+  ).map((row) => mapAnalysisJob(row as AnalysisJobRow))
+
+  if (queuedJobs.length === 0) {
+    return []
+  }
+
+  const claimedAt = new Date().toISOString()
+  const claimResult = await client
+    .from("analysis_jobs")
+    .update({
+      status: "processing",
+      claimed_by: workerName,
+      claimed_at: claimedAt,
+    })
+    .in(
+      "id",
+      queuedJobs.map((job) => job.id)
+    )
+    .eq("status", "queued")
+    .select("*")
+
+  return expectRows(
+    claimResult,
+    "Unable to claim queued project synthesis jobs"
+  ).map((row) => mapAnalysisJob(row as AnalysisJobRow))
+}
+
 async function completeAnalysisJob(jobId: string) {
   const client = requireSecretClient()
   const result = await client
@@ -1134,6 +1288,8 @@ async function completeAnalysisJob(jobId: string) {
     .update({
       status: "completed",
       completed_at: new Date().toISOString(),
+      claimed_at: null,
+      claimed_by: null,
       last_error: null,
     })
     .eq("id", jobId)
@@ -1218,6 +1374,7 @@ async function persistSessionOutput(
         session_id: session.id,
         cleaned_transcript: output.cleanedTranscript,
         payload: {
+          summary: output.summary,
           questionAnswers: output.questionAnswers,
           themes: output.themes,
           painPoints: output.painPoints,
@@ -1295,33 +1452,43 @@ async function persistProjectSynthesis(projectId: string) {
   const workspaceId = projectRow.workspace_id
 
   const sessionIds = await listProjectSessionIds(client, projectId)
-  const [configRows, linkRows, sessionRows, outputRows] = await Promise.all([
-    client
-      .from("project_config_versions")
-      .select("*")
-      .eq("project_id", projectId)
-      .order("version_number", { ascending: false }),
-    client
-      .from("project_public_links")
-      .select("*")
-      .eq("project_id", projectId)
-      .is("revoked_at", null)
-      .order("created_at", { ascending: false }),
-    client
-      .from("participant_sessions")
-      .select("*")
-      .eq("project_id", projectId)
-      .order("started_at", { ascending: false }),
-    sessionIds.length === 0
-      ? Promise.resolve({
-          data: [] as SessionOutputGeneratedRow[],
-          error: null,
-        })
-      : client
-          .from("session_outputs_generated")
-          .select("*")
-          .in("session_id", sessionIds),
-  ])
+  const [configRows, linkRows, sessionRows, outputRows, overrideRows] =
+    await Promise.all([
+      client
+        .from("project_config_versions")
+        .select("*")
+        .eq("project_id", projectId)
+        .order("version_number", { ascending: false }),
+      client
+        .from("project_public_links")
+        .select("*")
+        .eq("project_id", projectId)
+        .is("revoked_at", null)
+        .order("created_at", { ascending: false }),
+      client
+        .from("participant_sessions")
+        .select("*")
+        .eq("project_id", projectId)
+        .order("started_at", { ascending: false }),
+      sessionIds.length === 0
+        ? Promise.resolve({
+            data: [] as SessionOutputGeneratedRow[],
+            error: null,
+          })
+        : client
+            .from("session_outputs_generated")
+            .select("*")
+            .in("session_id", sessionIds),
+      sessionIds.length === 0
+        ? Promise.resolve({
+            data: [] as SessionOutputOverrideRow[],
+            error: null,
+          })
+        : client
+            .from("session_output_overrides")
+            .select("*")
+            .in("session_id", sessionIds),
+    ])
 
   const configRow = expectRows(configRows, "Unable to load project configs")[0]
   const linkRow = expectRows(linkRows, "Unable to load project links")[0]
@@ -1331,10 +1498,20 @@ async function persistProjectSynthesis(projectId: string) {
   ).map((row) =>
     mapSession(row as ParticipantSessionRow, linkRow?.link_token ?? "")
   )
+  const overridesBySessionId = new Map(
+    expectRows(overrideRows, "Unable to load session output overrides")
+      .map((row) => mapOutputOverride(row as SessionOutputOverrideRow))
+      .map((override) => [override.sessionId, override] as const)
+  )
   const outputs = expectRows(
     outputRows,
     "Unable to load generated outputs"
-  ).map((row) => mapGeneratedOutput(row as SessionOutputGeneratedRow))
+  ).map((row) =>
+    mergeSessionOutputWithOverride(
+      mapGeneratedOutput(row as SessionOutputGeneratedRow),
+      overridesBySessionId.get((row as SessionOutputGeneratedRow).session_id)
+    )
+  )
   const promptVersionId = await ensurePromptVersion(
     client,
     workspaceId,
@@ -1410,6 +1587,79 @@ async function processAnalysisJob(job: AnalysisJob) {
   }
 
   await completeAnalysisJob(job.id)
+}
+
+async function enqueueProjectSynthesisJob(
+  projectId: string,
+  payload: Record<string, unknown> = { projectId }
+) {
+  const client = requireSecretClient()
+  const result = await client
+    .from("analysis_jobs")
+    .insert({
+      job_type: "project_synthesis",
+      status: "queued",
+      project_id: projectId,
+      payload,
+    })
+    .select("*")
+    .single<AnalysisJobRow>()
+
+  return mapAnalysisJob(
+    expectData(result, "Unable to enqueue project synthesis job")
+  )
+}
+
+export async function processCompletedSessionAnalysis(
+  sessionId: string,
+  projectId: string,
+  workerName = "gather-session-dispatch"
+) {
+  const jobs = await claimQueuedSessionAnalysisJobs(sessionId, workerName)
+  const processed: AnalysisJob[] = []
+  let sessionJobFailed = false
+
+  for (const job of jobs) {
+    try {
+      await processAnalysisJob(job)
+      processed.push({ ...job, status: "completed" })
+    } catch (error) {
+      sessionJobFailed = true
+      await failAnalysisJob(
+        job,
+        error instanceof Error ? error.message : "Analysis job failed."
+      )
+    }
+  }
+
+  if (sessionJobFailed || jobs.length === 0) {
+    return processed
+  }
+
+  await enqueueProjectSynthesisJob(projectId, {
+    projectId,
+    sessionId,
+    source: "session_completion",
+  })
+
+  const synthesisJobs = await claimQueuedProjectSynthesisJobs(
+    projectId,
+    workerName
+  )
+
+  for (const job of synthesisJobs) {
+    try {
+      await processAnalysisJob(job)
+      processed.push({ ...job, status: "completed" })
+    } catch (error) {
+      await failAnalysisJob(
+        job,
+        error instanceof Error ? error.message : "Analysis job failed."
+      )
+    }
+  }
+
+  return processed
 }
 
 export async function getWorkspaceSnapshot() {
@@ -1624,29 +1874,39 @@ export async function getSessionReview(projectId: string, sessionId: string) {
     fail("Supabase publishable-key environment is not configured.")
   }
 
-  const [transcriptResult, generatedResult, overrideResult, qualityResult] =
-    await Promise.all([
-      client
-        .from("transcript_segments")
-        .select("*")
-        .eq("session_id", sessionId)
-        .order("order_index", { ascending: true }),
-      client
-        .from("session_outputs_generated")
-        .select("*")
-        .eq("session_id", sessionId)
-        .maybeSingle<SessionOutputGeneratedRow>(),
-      client
-        .from("session_output_overrides")
-        .select("*")
-        .eq("session_id", sessionId)
-        .maybeSingle<SessionOutputOverrideRow>(),
-      client
-        .from("quality_scores")
-        .select("*")
-        .eq("session_id", sessionId)
-        .maybeSingle<QualityScoreRow>(),
-    ])
+  const [
+    transcriptResult,
+    generatedResult,
+    overrideResult,
+    qualityResult,
+    jobsResult,
+  ] = await Promise.all([
+    client
+      .from("transcript_segments")
+      .select("*")
+      .eq("session_id", sessionId)
+      .order("order_index", { ascending: true }),
+    client
+      .from("session_outputs_generated")
+      .select("*")
+      .eq("session_id", sessionId)
+      .maybeSingle<SessionOutputGeneratedRow>(),
+    client
+      .from("session_output_overrides")
+      .select("*")
+      .eq("session_id", sessionId)
+      .maybeSingle<SessionOutputOverrideRow>(),
+    client
+      .from("quality_scores")
+      .select("*")
+      .eq("session_id", sessionId)
+      .maybeSingle<QualityScoreRow>(),
+    client
+      .from("analysis_jobs")
+      .select("*")
+      .eq("session_id", sessionId)
+      .order("created_at", { ascending: false }),
+  ])
 
   if (generatedResult.error) {
     fail(`Unable to load generated output: ${generatedResult.error.message}`)
@@ -1660,19 +1920,81 @@ export async function getSessionReview(projectId: string, sessionId: string) {
     fail(`Unable to load session quality score: ${qualityResult.error.message}`)
   }
 
+  const analysisJobs = expectRows(
+    jobsResult,
+    "Unable to load session analysis jobs"
+  ).map((row) => mapAnalysisJob(row as AnalysisJobRow))
+  const override = overrideResult.data
+    ? mapOutputOverride(overrideResult.data)
+    : undefined
+  const generatedOutput = generatedResult.data
+    ? mapGeneratedOutput(generatedResult.data)
+    : buildGeneratedOutputPlaceholder(session, detail.configVersion)
+  const effectiveOutput = mergeSessionOutputWithOverride(
+    generatedOutput,
+    override
+  )
+  const sessionJobFailures = analysisJobs.filter(
+    (job) =>
+      (job.type === "transcript_cleaning" ||
+        job.type === "session_extraction" ||
+        job.type === "quality_scoring") &&
+      job.status === "failed"
+  )
+  const sessionJobsPending = analysisJobs.some(
+    (job) =>
+      (job.type === "transcript_cleaning" ||
+        job.type === "session_extraction" ||
+        job.type === "quality_scoring") &&
+      (job.status === "queued" || job.status === "processing")
+  )
+  const generatedStatus = generatedResult.data
+    ? "ready"
+    : sessionJobFailures.some(
+          (job) =>
+            job.type === "transcript_cleaning" ||
+            job.type === "session_extraction"
+        )
+      ? "failed"
+      : sessionJobsPending || session.status === "complete"
+        ? "pending"
+        : "idle"
+  const qualityStatus = qualityResult.data
+    ? "ready"
+    : sessionJobFailures.some((job) => job.type === "quality_scoring")
+      ? "failed"
+      : sessionJobsPending || session.status === "complete"
+        ? "pending"
+        : "idle"
+  const transcript = expectRows(
+    transcriptResult,
+    "Unable to load transcript"
+  ).map((row) => mapTranscript(row as TranscriptSegmentRow))
+  const transcriptStatus =
+    transcript.length > 0
+      ? "ready"
+      : generatedStatus === "failed"
+        ? "failed"
+        : generatedStatus === "pending"
+          ? "pending"
+          : session.status === "complete"
+            ? "empty"
+            : "pending"
+  const analysisFailure = sessionJobFailures[0]?.lastError
+
   return {
     project: detail.project,
     configVersion: detail.configVersion,
     session,
-    transcript: expectRows(transcriptResult, "Unable to load transcript").map(
-      (row) => mapTranscript(row as TranscriptSegmentRow)
-    ),
-    generatedOutput: generatedResult.data
-      ? mapGeneratedOutput(generatedResult.data)
-      : buildGeneratedOutputPlaceholder(session, detail.configVersion),
-    override: overrideResult.data
-      ? mapOutputOverride(overrideResult.data)
-      : undefined,
+    transcript,
+    transcriptStatus,
+    generatedStatus,
+    qualityStatus,
+    analysisFailure,
+    analysisJobs,
+    generatedOutput,
+    effectiveOutput,
+    override,
     qualityScore: qualityResult.data
       ? mapQualityScore(qualityResult.data)
       : undefined,
@@ -1782,6 +2104,43 @@ export async function appendTranscriptSegments(
     return null
   }
 
+  const sourceItemIds = [
+    ...new Set(
+      segments
+        .map((segment) => segment.sourceItemId)
+        .filter(
+          (value): value is string =>
+            typeof value === "string" && value.length > 0
+        )
+    ),
+  ]
+
+  const existingSourceIds =
+    sourceItemIds.length === 0
+      ? new Set<string>()
+      : new Set(
+          expectRows(
+            await bundle.client
+              .from("transcript_segments")
+              .select("source_item_id")
+              .eq("session_id", sessionId)
+              .in("source_item_id", sourceItemIds),
+            "Unable to inspect transcript source item IDs"
+          )
+            .map(
+              (row) => (row as { source_item_id: string | null }).source_item_id
+            )
+            .filter((value): value is string => typeof value === "string")
+        )
+
+  const dedupedSegments = segments.filter((segment) =>
+    segment.sourceItemId ? !existingSourceIds.has(segment.sourceItemId) : true
+  )
+
+  if (dedupedSegments.length === 0) {
+    return []
+  }
+
   const latestSegmentResult = await bundle.client
     .from("transcript_segments")
     .select("order_index")
@@ -1794,8 +2153,9 @@ export async function appendTranscriptSegments(
     "Unable to inspect transcript ordering"
   )[0] as { order_index: number } | undefined
   const createdAt = new Date().toISOString()
-  const insertRows = segments.map((segment, index) => ({
+  const insertRows = dedupedSegments.map((segment, index) => ({
     session_id: sessionId,
+    source_item_id: segment.sourceItemId ?? null,
     speaker: segment.speaker,
     content: segment.text,
     order_index: (latestSegment?.order_index ?? 0) + index + 1,
@@ -1858,7 +2218,7 @@ export async function completeParticipantSession(sessionId: string) {
     bundle.client
       .from("analysis_jobs")
       .insert(
-        ANALYSIS_JOB_TYPES.map((jobType) => ({
+        SESSION_ANALYSIS_JOB_TYPES.map((jobType) => ({
           job_type: jobType,
           status: "queued",
           project_id: bundle.session.projectId,

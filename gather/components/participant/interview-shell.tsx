@@ -14,6 +14,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { VoiceStatus, type VoiceState } from "@/components/ui/voice-status"
 import type { PublicInterviewConfig } from "@/lib/domain/types"
 
+type RealtimeHistoryItem = import("@openai/agents/realtime").RealtimeItem
+type RealtimeHistoryContentPart =
+  import("@openai/agents/realtime").RealtimeMessageItem["content"][number]
+type RealtimeSessionHandle = import("@openai/agents/realtime").RealtimeSession
+
+type TranscriptSpeaker = "participant" | "agent"
+
 type ShellStatus =
   | "ready"
   | "requesting_mic"
@@ -29,9 +36,24 @@ interface InterviewShellProps {
   config: PublicInterviewConfig
 }
 
-type RealtimeHandle = {
-  disconnect: () => Promise<void> | void
-  mute?: (muted: boolean) => void
+interface TranscriptPayloadSegment {
+  sourceItemId: string
+  speaker: TranscriptSpeaker
+  text: string
+}
+
+function teardownRealtime({
+  realtimeSessionRef,
+  micStreamRef,
+}: {
+  realtimeSessionRef: { current: RealtimeSessionHandle | null }
+  micStreamRef: { current: MediaStream | null }
+}) {
+  realtimeSessionRef.current?.close()
+  realtimeSessionRef.current = null
+
+  micStreamRef.current?.getTracks().forEach((track) => track.stop())
+  micStreamRef.current = null
 }
 
 function buildBrowserInstructions(config: PublicInterviewConfig) {
@@ -72,6 +94,50 @@ function formatMinutes(seconds: number): string {
   return `${minutes}`
 }
 
+function extractTranscriptParts(content: RealtimeHistoryContentPart[] = []) {
+  return content
+    .map((part) => {
+      if (part.type === "input_text" || part.type === "output_text") {
+        return typeof part.text === "string" ? part.text.trim() : ""
+      }
+
+      if (part.type === "input_audio" || part.type === "output_audio") {
+        return typeof part.transcript === "string" ? part.transcript.trim() : ""
+      }
+
+      return ""
+    })
+    .filter(Boolean)
+}
+
+function extractTranscriptSegments(
+  history: RealtimeHistoryItem[]
+): TranscriptPayloadSegment[] {
+  return history.flatMap((item) => {
+    if (item.type !== "message" || item.role === "system") {
+      return []
+    }
+
+    if (item.status !== "completed") {
+      return []
+    }
+
+    const text = extractTranscriptParts(item.content).join(" ").trim()
+
+    if (!item.itemId || !text) {
+      return []
+    }
+
+    return [
+      {
+        sourceItemId: item.itemId,
+        speaker: item.role === "user" ? "participant" : "agent",
+        text,
+      },
+    ]
+  })
+}
+
 export function InterviewShell({ linkToken, config }: InterviewShellProps) {
   const [status, setStatus] = useState<ShellStatus>("ready")
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -79,14 +145,15 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
   const [, setRecoveryToken] = useState<string | null>(null)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [pending, startTransition] = useTransition()
-  const realtimeSessionRef = useRef<RealtimeHandle | null>(null)
+  const realtimeSessionRef = useRef<RealtimeSessionHandle | null>(null)
   const micStreamRef = useRef<MediaStream | null>(null)
+  const sessionIdRef = useRef<string | null>(null)
+  const persistedItemIdsRef = useRef<Set<string>>(new Set())
+  const inflightItemIdsRef = useRef<Set<string>>(new Set())
+  const flushPromiseRef = useRef<Promise<void>>(Promise.resolve())
 
   useEffect(() => {
-    return () => {
-      void realtimeSessionRef.current?.disconnect?.()
-      micStreamRef.current?.getTracks().forEach((track) => track.stop())
-    }
+    return () => teardownRealtime({ realtimeSessionRef, micStreamRef })
   }, [])
 
   useEffect(() => {
@@ -95,12 +162,78 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
     return () => window.clearInterval(id)
   }, [status])
 
+  useEffect(() => {
+    sessionIdRef.current = sessionId
+  }, [sessionId])
+
+  function queueTranscriptFlush(history: RealtimeHistoryItem[]) {
+    const activeSessionId = sessionIdRef.current
+
+    if (!activeSessionId) {
+      return
+    }
+
+    const segments = extractTranscriptSegments(history).filter((segment) => {
+      return (
+        !persistedItemIdsRef.current.has(segment.sourceItemId) &&
+        !inflightItemIdsRef.current.has(segment.sourceItemId)
+      )
+    })
+
+    if (segments.length === 0) {
+      return
+    }
+
+    segments.forEach((segment) =>
+      inflightItemIdsRef.current.add(segment.sourceItemId)
+    )
+
+    flushPromiseRef.current = flushPromiseRef.current
+      .catch(() => undefined)
+      .then(async () => {
+        const response = await fetch(
+          `/api/public/sessions/${activeSessionId}/events`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ segments }),
+          }
+        )
+
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}))
+          segments.forEach((segment) =>
+            inflightItemIdsRef.current.delete(segment.sourceItemId)
+          )
+          throw new Error(
+            payload.error ?? "We couldn't save the latest transcript updates."
+          )
+        }
+
+        segments.forEach((segment) => {
+          inflightItemIdsRef.current.delete(segment.sourceItemId)
+          persistedItemIdsRef.current.add(segment.sourceItemId)
+        })
+      })
+  }
+
+  async function flushTranscriptQueue() {
+    await flushPromiseRef.current
+  }
+
   async function handleStart() {
     setErrorMessage(null)
     setStatus("requesting_mic")
+    teardownRealtime({ realtimeSessionRef, micStreamRef })
+    sessionIdRef.current = null
+    persistedItemIdsRef.current.clear()
+    inflightItemIdsRef.current.clear()
+    flushPromiseRef.current = Promise.resolve()
 
     try {
-      micStreamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true })
+      micStreamRef.current = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+      })
     } catch {
       setStatus("error")
       setErrorMessage(
@@ -112,20 +245,25 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
     setStatus("connecting")
 
     try {
-      const sessionResponse = await fetch(`/api/public/links/${linkToken}/sessions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ metadata: {} }),
-      })
+      const sessionResponse = await fetch(
+        `/api/public/links/${linkToken}/sessions`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ metadata: {} }),
+        }
+      )
 
       const sessionPayload = await sessionResponse.json()
 
       if (!sessionResponse.ok) {
         throw new Error(
-          sessionPayload.error ?? "We couldn't start the interview. Please refresh and try again."
+          sessionPayload.error ??
+            "We couldn't start the interview. Please refresh and try again."
         )
       }
 
+      sessionIdRef.current = sessionPayload.session.id
       setSessionId(sessionPayload.session.id)
       setRecoveryToken(sessionPayload.recoveryToken)
 
@@ -138,6 +276,7 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
       const secret = extractClientSecretValue(secretPayload)
 
       if (!secretResponse.ok || !secret) {
+        teardownRealtime({ realtimeSessionRef, micStreamRef })
         setStatus("fallback")
         setErrorMessage(
           secretPayload.error ??
@@ -151,12 +290,25 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
         name: "GatherAI Interviewer",
         instructions: buildBrowserInstructions(config),
       })
-      const session = new realtime.RealtimeSession(agent)
-      await session.connect({ apiKey: secret })
+      const micStream = micStreamRef.current
 
-      realtimeSessionRef.current = session as unknown as RealtimeHandle
+      if (!micStream) {
+        throw new Error(
+          "Your microphone disconnected before the interview could start."
+        )
+      }
+
+      const transport = new realtime.OpenAIRealtimeWebRTC({
+        mediaStream: micStream,
+      })
+      const session = new realtime.RealtimeSession(agent, { transport })
+      realtimeSessionRef.current = session
+      await session.connect({ apiKey: secret })
+      session.on("history_updated", queueTranscriptFlush)
+
       setStatus("live")
     } catch (error) {
+      teardownRealtime({ realtimeSessionRef, micStreamRef })
       setStatus("error")
       setErrorMessage(
         error instanceof Error
@@ -171,10 +323,10 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
     if (!handle) return
 
     if (status === "live") {
-      handle.mute?.(true)
+      handle.mute(true)
       setStatus("paused")
     } else if (status === "paused") {
-      handle.mute?.(false)
+      handle.mute(false)
       setStatus("live")
     }
   }
@@ -183,21 +335,38 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
     if (!sessionId) return
 
     startTransition(async () => {
-      const response = await fetch(`/api/public/sessions/${sessionId}/complete`, {
-        method: "POST",
-      })
-      const payload = await response.json()
-
-      if (!response.ok) {
+      try {
+        await flushTranscriptQueue()
+      } catch (error) {
+        teardownRealtime({ realtimeSessionRef, micStreamRef })
         setStatus("error")
         setErrorMessage(
-          payload.error ?? "We couldn't wrap up the interview. Please refresh and try again."
+          error instanceof Error
+            ? error.message
+            : "We couldn't save the latest transcript updates."
         )
         return
       }
 
-      void realtimeSessionRef.current?.disconnect?.()
-      micStreamRef.current?.getTracks().forEach((track) => track.stop())
+      const response = await fetch(
+        `/api/public/sessions/${sessionId}/complete`,
+        {
+          method: "POST",
+        }
+      )
+      const payload = await response.json()
+
+      if (!response.ok) {
+        teardownRealtime({ realtimeSessionRef, micStreamRef })
+        setStatus("error")
+        setErrorMessage(
+          payload.error ??
+            "We couldn't wrap up the interview. Please refresh and try again."
+        )
+        return
+      }
+
+      teardownRealtime({ realtimeSessionRef, micStreamRef })
       setStatus("complete")
     })
   }
@@ -222,10 +391,12 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
         <CardContent>
           {!isLive ? (
             <div className="rounded-[28px] border border-border/70 bg-background/80 p-5">
-              <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">
+              <p className="text-sm tracking-[0.24em] text-muted-foreground uppercase">
                 What we&apos;d like to learn
               </p>
-              <p className="mt-3 text-base leading-7 text-foreground">{config.objective}</p>
+              <p className="mt-3 text-base leading-7 text-foreground">
+                {config.objective}
+              </p>
             </div>
           ) : null}
 
@@ -256,7 +427,9 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-2xl border border-border/70 bg-background/70 p-4">
-              <p className="text-sm font-semibold text-foreground">How it works</p>
+              <p className="text-sm font-semibold text-foreground">
+                How it works
+              </p>
               <ul className="mt-3 space-y-2 text-sm leading-6 text-muted-foreground">
                 <li>One question at a time.</li>
                 <li>Take as long as you want to answer.</li>
@@ -265,7 +438,9 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
             </div>
 
             <div className="rounded-2xl border border-border/70 bg-background/70 p-4">
-              <p className="text-sm font-semibold text-foreground">How you&apos;re identified</p>
+              <p className="text-sm font-semibold text-foreground">
+                How you&apos;re identified
+              </p>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
                 {config.anonymityMode === "anonymous"
                   ? "Fully anonymous — no name or role is attached to what you say."
@@ -361,7 +536,7 @@ function LiveSurface({
       <div className="flex items-center justify-between gap-3">
         <VoiceStatus state={voiceState} />
         <span
-          className="text-sm tabular-nums text-muted-foreground"
+          className="text-sm text-muted-foreground tabular-nums"
           aria-label={`${formatMinutes(elapsedSeconds)} of roughly ${durationCapMinutes} minutes`}
         >
           {formatMinutes(elapsedSeconds)} / ~{durationCapMinutes} min
@@ -369,15 +544,26 @@ function LiveSurface({
       </div>
 
       <p className="text-base leading-7 text-muted-foreground">
-        {paused ? "Paused. Press resume when you're ready." : "I'm listening. Take your time."}
+        {paused
+          ? "Paused. Press resume when you're ready."
+          : "I'm listening. Take your time."}
       </p>
 
       <div className="flex flex-wrap gap-3">
         <Button variant="outline" size="lg" onClick={onTogglePause}>
-          {paused ? <PlayCircle className="size-4" /> : <PauseCircle className="size-4" />}
+          {paused ? (
+            <PlayCircle className="size-4" />
+          ) : (
+            <PauseCircle className="size-4" />
+          )}
           {paused ? "Resume" : "Pause"}
         </Button>
-        <Button variant="secondary" size="lg" onClick={onComplete} disabled={completing}>
+        <Button
+          variant="secondary"
+          size="lg"
+          onClick={onComplete}
+          disabled={completing}
+        >
           I&apos;m done
         </Button>
       </div>
@@ -397,8 +583,8 @@ function CompletionSurface() {
             Thanks — that was genuinely useful.
           </h2>
           <p className="max-w-md text-sm leading-7 text-muted-foreground">
-            Your voice isn&apos;t saved. Only the transcript helps shape the workshop. You can
-            close this tab.
+            Your voice isn&apos;t saved. Only the transcript helps shape the
+            workshop. You can close this tab.
           </p>
         </div>
       </CardContent>

@@ -2,15 +2,16 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { ChartLine, House, MicrophoneStage, SignIn } from "@phosphor-icons/react/dist/ssr"
+import { ChartLine, House, MicrophoneStage } from "@phosphor-icons/react/dist/ssr"
 
+import { signOutAction } from "@/app/app/actions"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 const navItems = [
   { href: "/app", label: "Overview", icon: House },
   { href: "/app/projects", label: "Projects", icon: ChartLine },
-  { href: "/sign-in", label: "Auth", icon: SignIn },
 ]
 
 interface AppShellProps {
@@ -82,9 +83,16 @@ export function AppShell({
                 </p>
               </>
             ) : (
-              <p className="text-sm leading-6 text-muted-foreground">
-                Signed in as {userEmail ?? "you"}.
-              </p>
+              <>
+                <p className="text-sm leading-6 text-muted-foreground">
+                  Signed in as {userEmail ?? "you"}.
+                </p>
+                <form action={signOutAction}>
+                  <Button variant="ghost" size="sm" className="w-full justify-start px-0">
+                    Sign out
+                  </Button>
+                </form>
+              </>
             )}
           </div>
         </aside>

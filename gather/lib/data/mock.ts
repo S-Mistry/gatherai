@@ -1,4 +1,7 @@
-import { buildInitialRuntimeState, DEFAULT_RESUME_WINDOW_HOURS } from "@/lib/domain/state-machine"
+import {
+  buildInitialRuntimeState,
+  DEFAULT_RESUME_WINDOW_HOURS,
+} from "@/lib/domain/state-machine"
 import type {
   AnonymityMode,
   AnalysisJob,
@@ -13,7 +16,10 @@ import type {
   WorkspaceSummary,
 } from "@/lib/domain/types"
 import { buildCompletionJobs } from "@/lib/jobs/analysis"
-import { signRecoveryToken, verifyRecoveryToken } from "@/lib/auth/recovery-token"
+import {
+  signRecoveryToken,
+  verifyRecoveryToken,
+} from "@/lib/auth/recovery-token"
 
 interface MockStore {
   workspace: WorkspaceSummary
@@ -51,12 +57,14 @@ function seedConfig(projectId: string): ProjectConfigVersion {
     requiredQuestions: [
       {
         id: "q-outcomes",
-        prompt: "What outcomes would make this workshop feel worthwhile for you?",
+        prompt:
+          "What outcomes would make this workshop feel worthwhile for you?",
         goal: "Capture success criteria.",
       },
       {
         id: "q-friction",
-        prompt: "Where does the current operating model create the most friction?",
+        prompt:
+          "Where does the current operating model create the most friction?",
         goal: "Identify process pain points.",
       },
       {
@@ -66,7 +74,8 @@ function seedConfig(projectId: string): ProjectConfigVersion {
       },
       {
         id: "q-alignment",
-        prompt: "Where do you see alignment or misalignment across teams today?",
+        prompt:
+          "Where do you see alignment or misalignment across teams today?",
         goal: "Expose contradictions and consensus.",
       },
     ],
@@ -101,10 +110,13 @@ function seedGeneratedOutput(sessionId: string): SessionOutputGenerated {
     sessionId,
     cleanedTranscript:
       "The participant emphasized unclear approvals, duplicated reporting, and weak escalation paths.",
+    summary:
+      "The respondent emphasized unclear approvals, duplicated reporting, and weak escalation paths.",
     questionAnswers: [
       {
         questionId: "q-outcomes",
-        prompt: "What outcomes would make this workshop feel worthwhile for you?",
+        prompt:
+          "What outcomes would make this workshop feel worthwhile for you?",
         answer:
           "A clear decision model and explicit ownership for exceptions would make the workshop worthwhile.",
         confidence: 0.88,
@@ -112,7 +124,8 @@ function seedGeneratedOutput(sessionId: string): SessionOutputGenerated {
           {
             sessionId,
             segmentIds: ["seg-amelia-1", "seg-amelia-2"],
-            rationale: "Participant named decision rights and exception ownership as desired outcomes.",
+            rationale:
+              "Participant named decision rights and exception ownership as desired outcomes.",
           },
         ],
       },
@@ -121,13 +134,15 @@ function seedGeneratedOutput(sessionId: string): SessionOutputGenerated {
       {
         id: "theme-decisions",
         title: "Decision bottlenecks",
-        summary: "Approvals stall because ownership is diffused across regions.",
+        summary:
+          "Approvals stall because ownership is diffused across regions.",
         frequency: 1,
         evidence: [
           {
             sessionId,
             segmentIds: ["seg-amelia-3"],
-            rationale: "Participant described stalled approvals and unclear ownership.",
+            rationale:
+              "Participant described stalled approvals and unclear ownership.",
           },
         ],
       },
@@ -150,7 +165,8 @@ function seedGeneratedOutput(sessionId: string): SessionOutputGenerated {
       {
         id: "opp-escalation",
         label: "Clarify escalation paths",
-        summary: "The workshop should define when local teams escalate to central operations.",
+        summary:
+          "The workshop should define when local teams escalate to central operations.",
         evidence: [
           {
             sessionId,
@@ -164,12 +180,14 @@ function seedGeneratedOutput(sessionId: string): SessionOutputGenerated {
       {
         id: "risk-fatigue",
         label: "Change fatigue",
-        summary: "Teams may resist another process redesign without quick wins.",
+        summary:
+          "Teams may resist another process redesign without quick wins.",
         evidence: [
           {
             sessionId,
             segmentIds: ["seg-amelia-5"],
-            rationale: "Participant flagged skepticism after previous redesign efforts.",
+            rationale:
+              "Participant flagged skepticism after previous redesign efforts.",
           },
         ],
       },
@@ -178,7 +196,8 @@ function seedGeneratedOutput(sessionId: string): SessionOutputGenerated {
       {
         id: "quote-1",
         label: "Key quote",
-        summary: "\"We do not need another framework; we need a way to stop waiting on three approvals.\"",
+        summary:
+          '"We do not need another framework; we need a way to stop waiting on three approvals."',
         evidence: [
           {
             sessionId,
@@ -435,7 +454,8 @@ function seedStore(): MockStore {
         {
           id: "syn-theme-1",
           title: "Decision rights are blurred",
-          summary: "Stakeholders repeatedly describe approvals that span multiple owners without a final decider.",
+          summary:
+            "Stakeholders repeatedly describe approvals that span multiple owners without a final decider.",
           frequency: 2,
           evidence: [
             {
@@ -446,7 +466,8 @@ function seedStore(): MockStore {
             {
               sessionId: "sess-liam",
               segmentIds: ["seg-liam-1"],
-              rationale: "In-progress session points to regional sign-off bottlenecks.",
+              rationale:
+                "In-progress session points to regional sign-off bottlenecks.",
             },
           ],
         },
@@ -484,17 +505,19 @@ function seedStore(): MockStore {
           id: "quote-theme-1",
           label: "Decision bottlenecks",
           summary:
-            "\"We do not need another framework; we need a way to stop waiting on three approvals.\"",
+            '"We do not need another framework; we need a way to stop waiting on three approvals."',
           evidence: [
             {
               sessionId: "sess-amelia",
               segmentIds: ["seg-amelia-3"],
-              rationale: "Quote captures the strongest operational frustration.",
+              rationale:
+                "Quote captures the strongest operational frustration.",
             },
           ],
         },
       ],
-      warning: "Synthesis confidence is still early because only two sessions are included.",
+      warning:
+        "Synthesis confidence is still early because only two sessions are included.",
       promptVersionId: "prompt-synthesis-v1",
       modelVersionId: "model-gpt-4.1-mini",
       createdAt: iso(-15),
@@ -518,7 +541,8 @@ function seedStore(): MockStore {
         {
           key: "answer_specificity",
           score: 0.87,
-          rationale: "Answers included concrete process examples and direct language.",
+          rationale:
+            "Answers included concrete process examples and direct language.",
         },
         {
           key: "faithfulness",
@@ -548,7 +572,8 @@ function seedStore(): MockStore {
         {
           key: "question_coverage",
           score: 0.42,
-          rationale: "Only half the required questions were covered before the session ended.",
+          rationale:
+            "Only half the required questions were covered before the session ended.",
         },
         {
           key: "answer_specificity",
@@ -558,12 +583,14 @@ function seedStore(): MockStore {
         {
           key: "faithfulness",
           score: 0.6,
-          rationale: "Outputs are faithful but shallow because evidence is sparse.",
+          rationale:
+            "Outputs are faithful but shallow because evidence is sparse.",
         },
         {
           key: "repetition",
           score: 0.18,
-          rationale: "Participant repeated the same framing with little novelty.",
+          rationale:
+            "Participant repeated the same framing with little novelty.",
         },
         {
           key: "workshop_usefulness",
@@ -611,18 +638,28 @@ export function getWorkspaceSnapshot() {
   const store = getStore()
   const sessions = Object.values(store.sessions)
   const projects = store.projects.map((project) => {
-    const projectSessions = sessions.filter((session) => session.projectId === project.id)
+    const projectSessions = sessions.filter(
+      (session) => session.projectId === project.id
+    )
     const completedSessions = projectSessions.filter(
-      (session) => session.status === "complete" && !session.excludedFromSynthesis
+      (session) =>
+        session.status === "complete" && !session.excludedFromSynthesis
     )
 
     return {
       ...project,
       sessionCounts: {
-        inProgress: projectSessions.filter((session) => session.status === "in_progress").length,
-        completed: projectSessions.filter((session) => session.status === "complete").length,
-        abandoned: projectSessions.filter((session) => session.status === "abandoned").length,
-        flagged: projectSessions.filter((session) => session.qualityFlag).length,
+        inProgress: projectSessions.filter(
+          (session) => session.status === "in_progress"
+        ).length,
+        completed: projectSessions.filter(
+          (session) => session.status === "complete"
+        ).length,
+        abandoned: projectSessions.filter(
+          (session) => session.status === "abandoned"
+        ).length,
+        flagged: projectSessions.filter((session) => session.qualityFlag)
+          .length,
       },
       activeThemes: store.syntheses[project.id]?.crossInterviewThemes ?? [],
       includedSessions: completedSessions.length,
@@ -675,21 +712,39 @@ export function getSessionReview(projectId: string, sessionId: string) {
   }
 
   const store = getStore()
+  const generatedOutput = store.generatedOutputs[sessionId]
+  const override = store.outputOverrides[sessionId]
+  const effectiveOutput =
+    generatedOutput && override?.editedSummary
+      ? {
+          ...generatedOutput,
+          summary: override.editedSummary,
+        }
+      : generatedOutput
 
   return {
     project: detail.project,
     configVersion: detail.configVersion,
     session,
     transcript: store.transcripts[sessionId] ?? [],
-    generatedOutput: store.generatedOutputs[sessionId],
-    override: store.outputOverrides[sessionId],
+    transcriptStatus:
+      (store.transcripts[sessionId] ?? []).length > 0 ? "ready" : "empty",
+    generatedStatus: generatedOutput ? "ready" : "pending",
+    qualityStatus: store.qualityScores[sessionId] ? "ready" : "pending",
+    analysisFailure: undefined,
+    analysisJobs: store.jobs.filter((job) => job.sessionId === sessionId),
+    generatedOutput,
+    effectiveOutput: effectiveOutput ?? generatedOutput,
+    override,
     qualityScore: store.qualityScores[sessionId],
   }
 }
 
 export function getPublicInterviewConfig(linkToken: string) {
   const store = getStore()
-  const project = store.projects.find((record) => record.publicLinkToken === linkToken)
+  const project = store.projects.find(
+    (record) => record.publicLinkToken === linkToken
+  )
 
   if (!project) {
     return null
@@ -717,7 +772,9 @@ export function createParticipantSession(
   metadata: Record<string, string> = {}
 ) {
   const store = getStore()
-  const project = store.projects.find((record) => record.publicLinkToken === linkToken)
+  const project = store.projects.find(
+    (record) => record.publicLinkToken === linkToken
+  )
 
   if (!project) {
     return null
@@ -735,7 +792,8 @@ export function createParticipantSession(
     projectId: project.id,
     projectConfigVersionId: config.id,
     publicLinkToken: linkToken,
-    respondentLabel: config.anonymityMode === "named" ? "Respondent" : "Stakeholder",
+    respondentLabel:
+      config.anonymityMode === "named" ? "Respondent" : "Stakeholder",
     status: "in_progress",
     startedAt,
     lastActivityAt: startedAt,
@@ -772,7 +830,10 @@ export function resumeParticipantSession(sessionId: string, token: string) {
 
 export function appendTranscriptSegments(
   sessionId: string,
-  segments: Omit<TranscriptSegment, "id" | "createdAt" | "orderIndex" | "sessionId">[]
+  segments: Omit<
+    TranscriptSegment,
+    "id" | "createdAt" | "orderIndex" | "sessionId"
+  >[]
 ) {
   const store = getStore()
   const session = store.sessions[sessionId]
@@ -908,7 +969,8 @@ export function createProjectFromForm(input: {
     versionNumber: 1,
     createdAt,
     objective: input.objective || "Capture workshop discovery inputs.",
-    areasOfInterest: areasOfInterest.length > 0 ? areasOfInterest : ["alignment"],
+    areasOfInterest:
+      areasOfInterest.length > 0 ? areasOfInterest : ["alignment"],
     requiredQuestions:
       requiredQuestions.length > 0
         ? requiredQuestions
@@ -945,7 +1007,8 @@ export function createProjectFromForm(input: {
     topProblems: [],
     suggestedWorkshopAgenda: [],
     notableQuotesByTheme: [],
-    warning: "Synthesis will strengthen after the first completed interviews arrive.",
+    warning:
+      "Synthesis will strengthen after the first completed interviews arrive.",
     promptVersionId: "prompt-synthesis-v1",
     modelVersionId: "model-gpt-4.1-mini",
     createdAt,
@@ -975,7 +1038,10 @@ export function enqueueSynthesisRefresh(projectId: string) {
   return job
 }
 
-export function setSessionExcludedFromSynthesis(sessionId: string, excluded: boolean) {
+export function setSessionExcludedFromSynthesis(
+  sessionId: string,
+  excluded: boolean
+) {
   const session = getStore().sessions[sessionId]
 
   if (!session) {

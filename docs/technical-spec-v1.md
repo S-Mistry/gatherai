@@ -43,7 +43,8 @@ Last updated: April 15, 2026
   - route handler validates the link token, creates or resumes the session, and returns a signed recovery token plus session metadata
   - browser requests an OpenAI realtime client secret from a server route
   - browser connects to OpenAI Realtime over WebRTC
-  - browser batches transcript and state events back to public route handlers
+  - browser subscribes to realtime history updates and persists completed participant and agent transcript items back to public route handlers
+  - transcript ingest uses stable realtime source item IDs so reconnects and retry flushes stay idempotent
 - Consultant path:
   - browser loads `/sign-in`
   - page starts Supabase Google OAuth by default or exposes the magic-link fallback when the deploy-time auth flag enables it
@@ -52,8 +53,9 @@ Last updated: April 15, 2026
   - server components and server actions fetch consultant-scoped data from Supabase
   - RLS restricts reads and writes to the consultant workspace
 - Analysis path:
-  - session completion enqueues transcript cleaning, extraction, quality scoring, and synthesis jobs
-  - Vercel route handlers and cron sweeps claim queued jobs and process them
+  - session completion enqueues transcript cleaning, extraction, and quality scoring jobs
+  - the completion route immediately claims and processes that session's queued jobs in deterministic order, then enqueues and runs project synthesis
+  - internal dispatch routes and cron sweeps remain recovery paths for queued or stuck jobs
   - Braintrust traces and online scores are stored asynchronously
 
 ## 4. Routes and APIs
@@ -76,7 +78,7 @@ Last updated: April 15, 2026
 - `/app`
   - workspace dashboard
 - `/app/projects`
-  - project list
+  - project list, with optional `filter=live|completed|needs-review` dashboard drill-down
 - `/app/projects/new`
   - project creation
 - `/app/projects/[projectId]`
@@ -93,9 +95,9 @@ Last updated: April 15, 2026
 - `POST /api/public/sessions/[sessionId]/client-secret`
   - mint an OpenAI realtime client secret after validating session eligibility
 - `POST /api/public/sessions/[sessionId]/events`
-  - ingest transcript segments and runtime state changes
+  - ingest transcript segments and runtime state changes, keyed by optional realtime source item IDs for idempotent persistence
 - `POST /api/public/sessions/[sessionId]/complete`
-  - finalize the session and enqueue downstream jobs
+  - finalize the session, enqueue downstream session analysis jobs, and trigger immediate session-scoped dispatch
 
 ### 4.4 Internal APIs
 
@@ -126,11 +128,11 @@ Last updated: April 15, 2026
 - `SessionRuntimeState`
   - current question pointer, counts, timers, novelty signals, pause state, and completion state
 - `TranscriptSegment`
-  - one ordered utterance from `participant`, `agent`, or `system`
+  - one ordered utterance from `participant`, `agent`, or `system`, with an optional stable realtime source item ID
 - `EvidenceRef`
   - claim provenance linking `sessionId` and `segmentIds`
 - `SessionOutputGenerated`
-  - immutable generated extraction artifact
+  - immutable generated extraction artifact containing both cleaned transcript text and a separate generated summary layer
 - `SessionOutputOverride`
   - consultant-written corrections or suppressions
 - `ProjectSynthesisGenerated`
@@ -146,6 +148,7 @@ Last updated: April 15, 2026
 
 - Every participant session stores the exact `project_config_version_id` used when the interview started.
 - Raw transcript segments are append-only.
+- Transcript persistence is idempotent by `session_id + source_item_id` when a realtime source item ID is present.
 - Generated artifacts are immutable.
 - Overrides are layered separately and merged at read time.
 - Evidence references are required for major generated claims.
@@ -221,6 +224,7 @@ Last updated: April 15, 2026
 - jobs are inserted with `status = 'queued'`
 - workers claim jobs via SQL function using `FOR UPDATE SKIP LOCKED`
 - route handlers call public RPC wrappers that delegate to `app.claim_analysis_jobs` and `app.release_stale_analysis_jobs`
+- session completion also uses a session-scoped dispatch path so the respondent review is populated immediately after completion
 - retries increment `attempt_count` and set `next_attempt_at`
 - cron sweeps reclaim stuck `processing` jobs whose lock has expired
 - synthesis refresh jobs are deduplicated per project and config generation window where possible
@@ -250,6 +254,7 @@ Last updated: April 15, 2026
 - projects list with status chips
 - project detail with config version history, session table, quality flags, and synthesis summary
 - session review page with evidence-backed claims and editable overrides
+- session review page distinguishes transcript and analysis `pending`, `failed`, and `ready` states instead of showing placeholder copy as persisted content
 
 ### 10.2 Participant UX
 

@@ -52,22 +52,30 @@ export default async function ConsultantHomePage() {
             label="Projects"
             value={String(snapshot.projects.length)}
             hint="Active workshop prep."
+            href="/app/projects"
+            ariaLabel={`Projects: ${snapshot.projects.length}. Open the projects list.`}
           />
           <MetricCard
             label="Live now"
             value={String(aggregate.inProgress)}
             hint={`${aggregate.inProgress} interviews in progress.`}
+            href="/app/projects?filter=live"
+            ariaLabel={`Live now: ${aggregate.inProgress}. Open projects with interviews in progress.`}
           />
           <MetricCard
             label="Completed"
             value={String(aggregate.completed)}
             hint="Ready for review."
+            href="/app/projects?filter=completed"
+            ariaLabel={`Completed: ${aggregate.completed}. Open projects with completed interviews.`}
           />
           <MetricCard
             label="Needs review"
             value={String(aggregate.flagged)}
             hint="Short answers or unclear responses."
             accent="Review before trusting synthesis."
+            href="/app/projects?filter=needs-review"
+            ariaLabel={`Needs review: ${aggregate.flagged}. Open projects with flagged interviews.`}
           />
         </div>
       </section>

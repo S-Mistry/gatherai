@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr"
+import { redirect } from "next/navigation"
 
 import {
   getSafeAuthNextPath,
@@ -8,6 +9,7 @@ import {
   resolveConsultantAuthMode,
   resolveSupabaseOAuthProvider,
 } from "@/lib/auth/consultant-auth"
+import { getOptionalConsultantSession } from "@/lib/auth/session"
 import { requestMagicLinkAction } from "@/app/sign-in/actions"
 import { MagicLinkForm } from "@/components/marketing/magic-link-form"
 import { Badge } from "@/components/ui/badge"
@@ -22,6 +24,12 @@ type SignInPageProps = {
 
 export default async function SignInPage({ searchParams }: SignInPageProps) {
   const resolvedSearchParams = (await searchParams) ?? {}
+  const user = await getOptionalConsultantSession()
+
+  if (user) {
+    redirect("/app")
+  }
+
   const authMode = resolveConsultantAuthMode()
   const oauthProvider = resolveSupabaseOAuthProvider()
   const next = getSafeAuthNextPath(

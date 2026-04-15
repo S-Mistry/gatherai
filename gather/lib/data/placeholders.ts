@@ -45,8 +45,8 @@ export function buildGeneratedOutputPlaceholder(
   return {
     id: `pending-${session.id}`,
     sessionId: session.id,
-    cleanedTranscript:
-      "Analysis has not run yet. Complete the interview and dispatch queued jobs to persist generated outputs.",
+    cleanedTranscript: "",
+    summary: "",
     questionAnswers: config.requiredQuestions.map((question) => ({
       questionId: question.id,
       prompt: question.prompt,
@@ -59,7 +59,9 @@ export function buildGeneratedOutputPlaceholder(
     opportunities: [],
     risks: [],
     keyQuotes: [],
-    unresolvedQuestions: config.requiredQuestions.map((question) => question.prompt),
+    unresolvedQuestions: config.requiredQuestions.map(
+      (question) => question.prompt
+    ),
     confidenceScore: 0,
     stakeholderProfile: session.metadata,
     promptVersionId: "pending",
@@ -76,7 +78,10 @@ export function buildSessionOutput(
   modelVersionId: string
 ): SessionOutputGenerated {
   const participantSegments = participantTranscript(transcript)
-  const cleanedTranscript = participantSegments.map((segment) => segment.text).join(" ").trim()
+  const cleanedTranscript = participantSegments
+    .map((segment) => segment.text)
+    .join(" ")
+    .trim()
   const primaryAnswer =
     participantSegments[0]?.text ??
     "No participant answer has been captured yet for this interview."
@@ -94,13 +99,17 @@ export function buildSessionOutput(
   return {
     id: `generated-${session.id}`,
     sessionId: session.id,
-    cleanedTranscript: cleanedTranscript || "No participant transcript captured yet.",
+    cleanedTranscript:
+      cleanedTranscript || "No participant transcript captured yet.",
+    summary:
+      primaryAnswer ===
+      "No participant answer has been captured yet for this interview."
+        ? primaryAnswer
+        : `The respondent emphasized ${primaryAnswer.toLowerCase()}`,
     questionAnswers: config.requiredQuestions.map((question, index) => ({
       questionId: question.id,
       prompt: question.prompt,
-      answer:
-        participantSegments[index]?.text ??
-        primaryAnswer,
+      answer: participantSegments[index]?.text ?? primaryAnswer,
       confidence: Number(Math.max(0.2, confidence - index * 0.05).toFixed(2)),
       evidence,
     })),
@@ -121,7 +130,9 @@ export function buildSessionOutput(
     painPoints: [
       {
         id: `pain-${session.id}-1`,
-        label: focusAreas[0] ? `${focusAreas[0]} friction` : "Interview friction",
+        label: focusAreas[0]
+          ? `${focusAreas[0]} friction`
+          : "Interview friction",
         summary: primaryAnswer,
         evidence,
       },
@@ -138,10 +149,9 @@ export function buildSessionOutput(
       {
         id: `risk-${session.id}-1`,
         label: "Open risk",
-        summary:
-          config.prohibitedTopics[0]
-            ? `Avoid drifting into ${config.prohibitedTopics[0]} while exploring the stakeholder's concerns.`
-            : "A longer transcript is needed before risks can be assessed with confidence.",
+        summary: config.prohibitedTopics[0]
+          ? `Avoid drifting into ${config.prohibitedTopics[0]} while exploring the stakeholder's concerns.`
+          : "A longer transcript is needed before risks can be assessed with confidence.",
         evidence,
       },
     ],
@@ -158,7 +168,9 @@ export function buildSessionOutput(
       ],
     })),
     unresolvedQuestions: config.requiredQuestions
-      .filter((question) => session.runtimeState.remainingQuestionIds.includes(question.id))
+      .filter((question) =>
+        session.runtimeState.remainingQuestionIds.includes(question.id)
+      )
       .map((question) => question.prompt),
     confidenceScore: Number(confidence.toFixed(2)),
     stakeholderProfile: session.metadata,
@@ -186,13 +198,19 @@ export function buildQualityScore(
     1,
     participantSegments.map((segment) => segment.text).join(" ").length / 320
   )
-  const repetition = Number(Math.max(0, 1 - session.runtimeState.repetitionScore).toFixed(2))
+  const repetition = Number(
+    Math.max(0, 1 - session.runtimeState.repetitionScore).toFixed(2)
+  )
   const usefulness = Number(
     Math.min(1, 0.3 + coverage * 0.4 + specificity * 0.3).toFixed(2)
   )
   const overall = Number(
-    ((coverage * 0.35 + specificity * 0.25 + repetition * 0.15 + usefulness * 0.25) || 0)
-      .toFixed(2)
+    (
+      coverage * 0.35 +
+        specificity * 0.25 +
+        repetition * 0.15 +
+        usefulness * 0.25 || 0
+    ).toFixed(2)
   )
   const lowQuality = overall < 0.55
 
@@ -200,27 +218,32 @@ export function buildQualityScore(
     {
       key: "question_coverage",
       score: Number(coverage.toFixed(2)),
-      rationale: "Measures how many required questions have enough transcript evidence.",
+      rationale:
+        "Measures how many required questions have enough transcript evidence.",
     },
     {
       key: "answer_specificity",
       score: Number(specificity.toFixed(2)),
-      rationale: "Measures whether participant answers include concrete detail rather than short placeholders.",
+      rationale:
+        "Measures whether participant answers include concrete detail rather than short placeholders.",
     },
     {
       key: "repetition",
       score: repetition,
-      rationale: "Uses the runtime repetition signal as a coarse proxy for novelty.",
+      rationale:
+        "Uses the runtime repetition signal as a coarse proxy for novelty.",
     },
     {
       key: "faithfulness",
       score: transcript.length > 0 ? 0.85 : 0.2,
-      rationale: "Placeholder analysis is grounded only in persisted transcript segments.",
+      rationale:
+        "Placeholder analysis is grounded only in persisted transcript segments.",
     },
     {
       key: "workshop_usefulness",
       score: usefulness,
-      rationale: "Measures whether the session is sufficiently complete to influence workshop planning.",
+      rationale:
+        "Measures whether the session is sufficiently complete to influence workshop planning.",
     },
   ]
 
@@ -249,7 +272,8 @@ export function buildEmptyProjectSynthesis(
     topProblems: [],
     suggestedWorkshopAgenda: [],
     notableQuotesByTheme: [],
-    warning: "Synthesis will strengthen after the first completed interviews arrive.",
+    warning:
+      "Synthesis will strengthen after the first completed interviews arrive.",
     promptVersionId,
     modelVersionId,
     createdAt: new Date().toISOString(),
@@ -268,7 +292,11 @@ export function buildProjectSynthesis(
   )
 
   if (includedSessions.length === 0 || outputs.length === 0) {
-    return buildEmptyProjectSynthesis(project.id, promptVersionId, modelVersionId)
+    return buildEmptyProjectSynthesis(
+      project.id,
+      promptVersionId,
+      modelVersionId
+    )
   }
 
   const themeCount = new Map<
@@ -277,6 +305,7 @@ export function buildProjectSynthesis(
       summary: string
       frequency: number
       evidence: EvidenceRef[]
+      sessionSummaries: string[]
     }
   >()
 
@@ -286,11 +315,15 @@ export function buildProjectSynthesis(
       if (existing) {
         existing.frequency += Math.max(theme.frequency, 1)
         existing.evidence.push(...theme.evidence)
+        if (output.summary) {
+          existing.sessionSummaries.push(output.summary)
+        }
       } else {
         themeCount.set(theme.title, {
           summary: theme.summary,
           frequency: Math.max(theme.frequency, 1),
           evidence: [...theme.evidence],
+          sessionSummaries: output.summary ? [output.summary] : [],
         })
       }
     })
@@ -301,7 +334,10 @@ export function buildProjectSynthesis(
     .map(([title, value], index) => ({
       id: `synthesis-theme-${project.id}-${index + 1}`,
       title,
-      summary: value.summary,
+      summary:
+        value.sessionSummaries[0] && value.sessionSummaries[0] !== value.summary
+          ? `${value.summary} ${value.sessionSummaries[0]}`
+          : value.summary,
       frequency: value.frequency,
       evidence: value.evidence.slice(0, 3),
     }))
@@ -330,7 +366,9 @@ export function buildProjectSynthesis(
     "Agree an exception-handling pilot",
     "Lock follow-up owners and timing",
   ]).slice(0, 4)
-  const notableQuotesByTheme = outputs.flatMap((output) => output.keyQuotes).slice(0, 3)
+  const notableQuotesByTheme = outputs
+    .flatMap((output) => output.keyQuotes)
+    .slice(0, 3)
 
   return {
     id: `synthesis-${project.id}-${Date.now()}`,
