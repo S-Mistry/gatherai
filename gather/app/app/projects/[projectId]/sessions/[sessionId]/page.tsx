@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
-import { getSessionReview } from "@/lib/data/mock"
+import { getSessionReview } from "@/lib/data/repository"
 
 interface SessionReviewPageProps {
   params: Promise<{
@@ -21,7 +21,7 @@ export default async function SessionReviewPage({
   params,
 }: SessionReviewPageProps) {
   const { projectId, sessionId } = await params
-  const review = getSessionReview(projectId, sessionId)
+  const review = await getSessionReview(projectId, sessionId)
 
   if (!review) {
     notFound()

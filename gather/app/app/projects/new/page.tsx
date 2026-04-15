@@ -9,11 +9,11 @@ export default function NewProjectPage() {
   return (
     <div className="space-y-6">
       <section className="panel">
-        <Badge variant="accent">New discovery project</Badge>
-        <h1 className="mt-4 text-4xl font-semibold">Configure the next workshop interview project</h1>
+        <Badge variant="accent">New project</Badge>
+        <h1 className="mt-4 text-4xl font-semibold">New discovery project</h1>
         <p className="mt-3 max-w-3xl text-base leading-7 text-muted-foreground">
-          The MVP prioritizes configuration that drives coverage: objective, areas of interest,
-          required questions, duration cap, and anonymity mode.
+          Set the objective, pick the topics, and draft the questions. You can edit everything
+          after sharing the link.
         </p>
       </section>
 
@@ -21,7 +21,7 @@ export default function NewProjectPage() {
         <CardHeader>
           <CardTitle>Project setup</CardTitle>
           <CardDescription>
-            Saving creates the project plus the initial configuration version.
+            We&apos;ll create the project and generate its participant link on save.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -56,22 +56,22 @@ export default function NewProjectPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <label htmlFor="areasOfInterest" className="text-sm font-medium">
-                  Areas of interest
+                  Topics to cover
                 </label>
                 <Textarea
                   id="areasOfInterest"
                   name="areasOfInterest"
-                  placeholder="One per line"
+                  placeholder="One topic per line — e.g., 'Approval bottlenecks'"
                 />
               </div>
               <div className="space-y-2">
                 <label htmlFor="requiredQuestions" className="text-sm font-medium">
-                  Required questions
+                  Must-ask questions
                 </label>
                 <Textarea
                   id="requiredQuestions"
                   name="requiredQuestions"
-                  placeholder="One required question per line"
+                  placeholder="One question per line"
                 />
               </div>
             </div>
@@ -79,7 +79,7 @@ export default function NewProjectPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <label htmlFor="durationCapMinutes" className="text-sm font-medium">
-                  Duration cap (minutes)
+                  How long? (minutes)
                 </label>
                 <Input
                   id="durationCapMinutes"
@@ -92,24 +92,24 @@ export default function NewProjectPage() {
               </div>
               <div className="space-y-2">
                 <label htmlFor="anonymityMode" className="text-sm font-medium">
-                  Anonymity mode
+                  How stakeholders are identified
                 </label>
                 <select
                   id="anonymityMode"
                   name="anonymityMode"
                   defaultValue="pseudonymous"
-                  className="w-full rounded-2xl border border-border/70 bg-white/80 px-4 py-3 text-sm shadow-sm outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 dark:bg-card/70"
+                  className="w-full rounded-2xl border border-border/70 bg-white/80 px-4 py-3 text-sm shadow-sm outline-none focus-visible:border-primary/50 focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-card/70"
                 >
-                  <option value="named">Named</option>
-                  <option value="pseudonymous">Pseudonymous</option>
-                  <option value="anonymous">Anonymous</option>
+                  <option value="named">By name</option>
+                  <option value="pseudonymous">By role (e.g., &apos;Stakeholder A&apos;)</option>
+                  <option value="anonymous">Fully anonymous</option>
                 </select>
               </div>
             </div>
 
             <div className="flex justify-end">
               <Button type="submit" size="lg">
-                Save project
+                Create project
               </Button>
             </div>
           </form>

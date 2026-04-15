@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 
-import { appendTranscriptSegments } from "@/lib/data/mock"
+import { appendTranscriptSegments } from "@/lib/data/repository"
 
 const eventSchema = z.object({
   segments: z.array(
@@ -28,7 +28,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     return NextResponse.json({ error: "Invalid transcript event payload." }, { status: 400 })
   }
 
-  const appended = appendTranscriptSegments(sessionId, payload.data.segments)
+  const appended = await appendTranscriptSegments(sessionId, payload.data.segments)
 
   if (!appended) {
     return NextResponse.json({ error: "Session not found." }, { status: 404 })

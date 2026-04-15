@@ -29,18 +29,16 @@ export function AppShell({
   return (
     <div className="page-gradient min-h-screen">
       <div className="mx-auto flex min-h-screen max-w-7xl flex-col gap-6 px-4 py-5 sm:px-6 lg:flex-row lg:px-8">
-        <aside className="panel flex w-full shrink-0 flex-col gap-6 lg:w-80">
+        <aside className="panel flex w-full shrink-0 flex-col gap-6 lg:w-72">
           <div className="space-y-3">
             <Badge variant="accent" className="gap-2">
               <MicrophoneStage className="size-4" />
               GatherAI
             </Badge>
             <div>
-              <h1 className="text-2xl font-semibold text-balance">
-                AI workshop discovery control room
-              </h1>
+              <h1 className="text-2xl font-semibold text-balance">Workspace</h1>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                Voice-first stakeholder discovery with transcript-backed synthesis.
+                Stakeholder interviews, made simple.
               </p>
             </div>
           </div>
@@ -56,8 +54,10 @@ export function AppShell({
                 <Link
                   key={item.href}
                   href={item.href}
+                  aria-current={active ? "page" : undefined}
                   className={cn(
                     "flex items-center justify-between rounded-2xl border px-4 py-3 text-sm font-medium transition",
+                    "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
                     active
                       ? "border-primary/20 bg-primary/12 text-primary"
                       : "border-transparent bg-transparent text-muted-foreground hover:border-border/70 hover:bg-card/80 hover:text-foreground"
@@ -74,17 +74,18 @@ export function AppShell({
           </nav>
 
           <div className="mt-auto space-y-3 rounded-2xl border border-border/70 bg-background/75 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-medium">Environment</p>
-              <Badge variant={demoMode ? "warning" : "success"}>
-                {demoMode ? "Demo mode" : "Live mode"}
-              </Badge>
-            </div>
-            <p className="text-sm leading-6 text-muted-foreground">
-              {demoMode
-                ? "Supabase and OpenAI are not configured yet, so the app is running on mock data and scaffolded routes."
-                : `Signed in as ${userEmail ?? "consultant"}.`}
-            </p>
+            {demoMode ? (
+              <>
+                <Badge variant="warning">Demo mode</Badge>
+                <p className="text-sm leading-6 text-muted-foreground">
+                  Sign-in is disabled in demo mode.
+                </p>
+              </>
+            ) : (
+              <p className="text-sm leading-6 text-muted-foreground">
+                Signed in as {userEmail ?? "you"}.
+              </p>
+            )}
           </div>
         </aside>
 

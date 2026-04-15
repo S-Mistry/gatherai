@@ -1,7 +1,9 @@
 import { Geist_Mono, Montserrat } from "next/font/google"
 
 import "./globals.css"
+import { ThemeBootstrap } from "@/components/theme-bootstrap"
 import { ThemeProvider } from "@/components/theme-provider"
+import { Toaster } from "@/components/ui/toast"
 import { cn } from "@/lib/utils"
 
 const montserrat = Montserrat({
@@ -30,7 +32,10 @@ export default function RootLayout({
       )}
     >
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeBootstrap />
+        <ThemeProvider>
+          <Toaster>{children}</Toaster>
+        </ThemeProvider>
       </body>
     </html>
   )

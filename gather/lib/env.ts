@@ -3,13 +3,17 @@ import { z } from "zod"
 const envSchema = z.object({
   NEXT_PUBLIC_APP_URL: z.string().url().optional(),
   NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1).optional(),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().min(1).optional(),
+  SUPABASE_SECRET_KEY: z.string().min(1).optional(),
+  SUPABASE_ACCESS_TOKEN: z.string().min(1).optional(),
+  CONSULTANT_AUTH_MODE: z.string().optional(),
+  SUPABASE_OAUTH_PROVIDER: z.string().optional(),
   OPENAI_API_KEY: z.string().min(1).optional(),
   OPENAI_REALTIME_MODEL: z.string().min(1).default("gpt-realtime"),
   OPENAI_VOICE_NAME: z.string().min(1).default("alloy"),
   BRAINTRUST_API_KEY: z.string().min(1).optional(),
   BRAINTRUST_PROJECT: z.string().min(1).default("gatherai-mvp"),
+  RECOVERY_TOKEN_SECRET: z.string().min(1).optional(),
   CRON_SECRET: z.string().min(1).optional(),
 })
 
@@ -19,8 +23,8 @@ export const appUrl = env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
 
 export const isSupabaseConfigured = Boolean(
   env.NEXT_PUBLIC_SUPABASE_URL &&
-    env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
-    env.SUPABASE_SERVICE_ROLE_KEY
+    env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY &&
+    env.SUPABASE_SECRET_KEY
 )
 
 export const isRealtimeConfigured = Boolean(env.OPENAI_API_KEY)

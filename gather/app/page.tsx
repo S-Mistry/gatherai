@@ -4,12 +4,8 @@ import { ArrowRight, ChartLine, LockLaminated, MicrophoneStage } from "@phosphor
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { listProjects } from "@/lib/data/mock"
 
 export default function Page() {
-  const projects = listProjects()
-  const activeProject = projects[0]
-
   return (
     <main className="page-gradient min-h-screen">
       <div className="mx-auto flex max-w-7xl flex-col gap-10 px-4 py-6 sm:px-6 lg:px-8">
@@ -18,28 +14,29 @@ export default function Page() {
             <div className="space-y-6">
               <Badge variant="accent" className="gap-2">
                 <MicrophoneStage className="size-4" />
-                Voice-first workshop discovery
+                For workshop facilitators
               </Badge>
               <div className="space-y-4">
                 <h1 className="max-w-3xl text-5xl font-semibold leading-tight text-balance sm:text-6xl">
-                  Interview stakeholders at scale without losing transcript evidence.
+                  Run 20 stakeholder conversations before your workshop — without running 20
+                  calls.
                 </h1>
                 <p className="max-w-2xl text-lg leading-8 text-muted-foreground">
-                  GatherAI turns pre-workshop discovery into a structured voice workflow:
-                  share one public link, run consistent AI interviews, and surface themes,
-                  contradictions, and workshop agenda inputs backed by transcript evidence.
+                  Share one link. A thoughtful AI interviewer listens to each stakeholder for
+                  10–15 minutes and hands you back themes, contradictions, and an agenda — every
+                  line traceable to a real quote.
                 </p>
               </div>
 
               <div className="flex flex-wrap gap-3">
                 <Button asChild size="lg">
-                  <Link href="/app">
-                    Open consultant workspace
+                  <Link href="/sign-in">
+                    Go to workspace
                     <ArrowRight className="size-4" />
                   </Link>
                 </Button>
                 <Button asChild variant="outline" size="lg">
-                  <Link href={`/i/${activeProject.publicLinkToken}`}>Preview participant link</Link>
+                  <Link href="/sign-in">See what stakeholders see</Link>
                 </Button>
               </div>
             </div>
@@ -47,43 +44,33 @@ export default function Page() {
             <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-1">
               <Card className="bg-primary text-primary-foreground">
                 <CardHeader>
-                  <CardDescription className="text-primary-foreground/75">
-                    Active projects
-                  </CardDescription>
-                  <CardTitle className="text-5xl text-primary-foreground">
-                    {projects.length}
-                  </CardTitle>
+                  <CardTitle className="text-primary-foreground">Runs in a browser</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm leading-6 text-primary-foreground/80">
-                    The current scaffold includes a consultant dashboard, participant interview
-                    entry, and analysis queue architecture.
+                  <p className="text-sm leading-6 text-primary-foreground/85">
+                    No app install. Stakeholders click a link and start talking.
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardDescription>Realtime stance</CardDescription>
-                  <CardTitle>WebRTC + server-minted secrets</CardTitle>
+                  <CardTitle>Evidence, not vibes</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm leading-6 text-muted-foreground">
-                    Browser participants connect to OpenAI Realtime over WebRTC while privileged
-                    session minting stays in route handlers.
+                    Every theme links back to the transcript segment it came from.
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardDescription>Governance stance</CardDescription>
-                  <CardTitle>Generated AGENTS, frozen docs, explicit decisions</CardTitle>
+                  <CardTitle>Consistent interviews</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm leading-6 text-muted-foreground">
-                    Repo instructions are generated from canonical docs and drift-checked before
-                    merges.
+                    Same must-ask questions, same depth, across every stakeholder.
                   </p>
                 </CardContent>
               </Card>
@@ -94,39 +81,39 @@ export default function Page() {
         <section className="grid gap-4 lg:grid-cols-3">
           <Card>
             <CardHeader>
-              <Badge variant="neutral">Consultant control</Badge>
-              <CardTitle className="mt-3">Versioned project configuration</CardTitle>
+              <ChartLine className="size-6 text-primary" />
+              <CardTitle className="mt-3">Set it up in minutes</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm leading-6 text-muted-foreground">
-                Define objectives, areas of interest, required questions, metadata prompts, and
-                anonymity mode without losing provenance for existing sessions.
+                Write the objective, list the topics, add your must-ask questions. Share the link
+                the same afternoon.
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <Badge variant="neutral">Participant flow</Badge>
-              <CardTitle className="mt-3">Low-friction voice interviews</CardTitle>
+              <MicrophoneStage className="size-6 text-primary" />
+              <CardTitle className="mt-3">Stakeholders just talk</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm leading-6 text-muted-foreground">
-                Disclosure-first entry, optional metadata, browser voice transport, interruption,
-                hard duration caps, and resumable session tokens.
+                One tap to start. The AI interviewer asks one thing at a time and follows up
+                where it matters. Stakeholders can pause or end whenever.
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <Badge variant="neutral">Evidence and evals</Badge>
-              <CardTitle className="mt-3">Immutable generations with layered overrides</CardTitle>
+              <LockLaminated className="size-6 text-primary" />
+              <CardTitle className="mt-3">You walk in prepared</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm leading-6 text-muted-foreground">
-                Transcript segments, evidence refs, Braintrust-compatible quality scoring, and a
-                Supabase-backed job queue for extraction and synthesis.
+                Themes, contradictions, and a suggested agenda — each bullet linked to the quote
+                it came from.
               </p>
             </CardContent>
           </Card>
@@ -135,68 +122,33 @@ export default function Page() {
         <section className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
           <Card>
             <CardHeader>
-              <Badge variant="accent">Current scaffold</Badge>
-              <CardTitle className="mt-3">What is implemented in code</CardTitle>
+              <CardTitle>Ready when you are</CardTitle>
+              <CardDescription>
+                Sign in to create your first project, or preview the stakeholder experience.
+              </CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
-              {[
-                {
-                  icon: ChartLine,
-                  title: "Consultant surfaces",
-                  text: "Overview dashboard, project list, project detail, version summary, session review, and synthesis refresh.",
-                },
-                {
-                  icon: MicrophoneStage,
-                  title: "Participant entry",
-                  text: "Public project route, session bootstrap, resume token flow, realtime client-secret route, and transcript event ingestion.",
-                },
-                {
-                  icon: LockLaminated,
-                  title: "Security baseline",
-                  text: "Supabase Auth and RLS schema design, service-role boundaries, opaque public links, and signed session recovery tokens.",
-                },
-                {
-                  icon: ArrowRight,
-                  title: "Governance pipeline",
-                  text: "Frozen PRD and spec docs, generated AGENTS instructions, pre-commit drift checks, and CI verification.",
-                },
-              ].map((item) => (
-                <div
-                  key={item.title}
-                  className="rounded-3xl border border-border/70 bg-background/70 p-5"
-                >
-                  <item.icon className="size-6 text-primary" />
-                  <h2 className="mt-4 text-lg font-semibold">{item.title}</h2>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.text}</p>
-                </div>
-              ))}
+            <CardContent className="flex flex-wrap gap-3">
+              <Button asChild size="lg">
+                <Link href="/sign-in">
+                  Go to workspace
+                  <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="lg">
+                <Link href="/sign-in">See what stakeholders see</Link>
+              </Button>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardDescription>Fast paths</CardDescription>
-              <CardTitle>Open the parts that matter</CardTitle>
+              <CardTitle>Built for pre-workshop discovery</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <Button asChild size="lg" className="w-full justify-between">
-                <Link href="/app">
-                  Consultant workspace
-                  <ArrowRight className="size-4" />
-                </Link>
-              </Button>
-              <Button asChild variant="outline" size="lg" className="w-full justify-between">
-                <Link href="/sign-in">
-                  Magic-link auth setup
-                  <ArrowRight className="size-4" />
-                </Link>
-              </Button>
-              <Button asChild variant="secondary" size="lg" className="w-full justify-between">
-                <Link href={`/i/${activeProject.publicLinkToken}`}>
-                  Participant preview
-                  <ArrowRight className="size-4" />
-                </Link>
-              </Button>
+            <CardContent>
+              <p className="text-sm leading-6 text-muted-foreground">
+                Most workshops start with guesswork. This one doesn&apos;t. Hear from every
+                stakeholder before you walk into the room.
+              </p>
             </CardContent>
           </Card>
         </section>

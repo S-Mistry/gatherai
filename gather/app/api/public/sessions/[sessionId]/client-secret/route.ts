@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server"
 
-import { getParticipantSession, getPublicInterviewConfig } from "@/lib/data/mock"
+import {
+  getParticipantSession,
+  getPublicInterviewConfig,
+} from "@/lib/data/repository"
 import { isRealtimeConfigured } from "@/lib/env"
 import { mintRealtimeClientSecret } from "@/lib/openai/realtime"
 
@@ -12,13 +15,13 @@ interface RouteContext {
 
 export async function POST(_request: Request, { params }: RouteContext) {
   const { sessionId } = await params
-  const session = getParticipantSession(sessionId)
+  const session = await getParticipantSession(sessionId)
 
   if (!session) {
     return NextResponse.json({ error: "Session not found." }, { status: 404 })
   }
 
-  const publicConfig = getPublicInterviewConfig(session.publicLinkToken)
+  const publicConfig = await getPublicInterviewConfig(session.publicLinkToken)
 
   if (!publicConfig) {
     return NextResponse.json({ error: "Project link is no longer valid." }, { status: 404 })
@@ -28,7 +31,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
     return NextResponse.json(
       {
         error:
-          "OpenAI realtime environment is not configured yet. Add OPENAI_API_KEY to enable WebRTC voice sessions.",
+          "Voice sessions aren't available right now. Try refreshing — if it keeps happening, let the consultant know.",
       },
       { status: 503 }
     )

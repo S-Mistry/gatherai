@@ -1,8 +1,12 @@
 {
   "name": "gatherai-workspace",
   "private": true,
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "scripts": {
     "dev": "npm --prefix gather run dev",
+    "supabase:bootstrap": "npm --prefix gather run supabase:bootstrap",
     "docs:sync": "node ./scripts/build-agents.mjs --write",
     "docs:check": "node ./scripts/build-agents.mjs --check",
     "hooks:install": "git config core.hooksPath .githooks"

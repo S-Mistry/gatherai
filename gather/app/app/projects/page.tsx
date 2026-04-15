@@ -1,24 +1,21 @@
 import Link from "next/link"
+import { FolderOpen } from "@phosphor-icons/react/dist/ssr"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { listProjects } from "@/lib/data/mock"
+import { EmptyState } from "@/components/ui/empty-state"
+import { listProjects } from "@/lib/data/repository"
 
-export default function ProjectsPage() {
-  const projects = listProjects()
+export default async function ProjectsPage() {
+  const projects = await listProjects()
 
   return (
     <div className="space-y-6">
       <section className="panel flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-3">
-          <Badge variant="accent">Projects</Badge>
           <div>
-            <h1 className="text-4xl font-semibold">Discovery projects</h1>
-            <p className="mt-3 text-base leading-7 text-muted-foreground">
-              Each project keeps its own configuration versions, public participant link, session
-              reviews, and synthesis.
-            </p>
+            <h1 className="text-4xl font-semibold">Projects</h1>
           </div>
         </div>
         <Button asChild size="lg">
@@ -26,8 +23,20 @@ export default function ProjectsPage() {
         </Button>
       </section>
 
-      <section className="grid gap-4">
-        {projects.map((project) => (
+      {projects.length === 0 ? (
+        <EmptyState
+          icon={FolderOpen}
+          title="No projects yet."
+          description="Create one to share a link with stakeholders."
+          action={
+            <Button asChild>
+              <Link href="/app/projects/new">New project</Link>
+            </Button>
+          }
+        />
+      ) : (
+        <section className="grid gap-4">
+          {projects.map((project) => (
           <Card key={project.id}>
             <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="space-y-2">
@@ -48,12 +57,13 @@ export default function ProjectsPage() {
                 <p>Included in synthesis: {project.includedSessions}</p>
               </div>
               <Button asChild variant="outline">
-                <Link href={`/app/projects/${project.id}`}>Open project</Link>
+                <Link href={`/app/projects/${project.id}`}>Open</Link>
               </Button>
             </CardContent>
           </Card>
-        ))}
-      </section>
+          ))}
+        </section>
+      )}
     </div>
   )
 }

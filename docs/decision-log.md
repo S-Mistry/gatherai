@@ -16,8 +16,8 @@ Last updated: April 14, 2026
 
 ### D-003 Auth and tenancy
 - Status: accepted
-- Decision: consultants use Supabase email magic-link auth. Each consultant has exactly one workspace in v1.
-- Consequence: collaborator accounts and multi-user tenant administration are out of scope.
+- Decision: consultants use Supabase Auth with Google OAuth by default, while email magic links remain a feature-flagged fallback. Each consultant has exactly one workspace in v1.
+- Consequence: collaborator accounts and multi-user tenant administration are out of scope, and the deploy-time auth mode flag controls whether `/sign-in` shows Google OAuth or the legacy magic-link flow.
 
 ### D-004 Participant identity
 - Status: accepted
@@ -63,6 +63,11 @@ Last updated: April 14, 2026
 - Status: accepted
 - Decision: browser voice uses OpenAI Realtime over WebRTC with server-minted ephemeral client secrets.
 - Consequence: realtime session minting stays server-side, and browser code must not expose project API keys.
+
+### D-013 Supabase key model
+- Status: accepted
+- Decision: standardize on Supabase publishable keys for browser and SSR clients, secret keys for server-only operations, and keep the Supabase access token limited to setup tooling.
+- Consequence: the app environment contract uses `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, and `SUPABASE_ACCESS_TOKEN`; legacy `anon` and `service_role` key names are out of scope for v1.
 
 ## Reference Notes
 - OpenAI Realtime docs describe WebRTC as ideal for browser and client-side interactions and document server-side controls for realtime sessions.

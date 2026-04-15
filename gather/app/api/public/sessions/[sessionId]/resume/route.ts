@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 
-import { resumeParticipantSession } from "@/lib/data/mock"
+import { resumeParticipantSession } from "@/lib/data/repository"
 
 const resumeSchema = z.object({
   recoveryToken: z.string().min(1),
@@ -21,7 +21,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     return NextResponse.json({ error: "Missing recovery token." }, { status: 400 })
   }
 
-  const session = resumeParticipantSession(sessionId, payload.data.recoveryToken)
+  const session = await resumeParticipantSession(sessionId, payload.data.recoveryToken)
 
   if (!session) {
     return NextResponse.json({ error: "Session cannot be resumed." }, { status: 404 })

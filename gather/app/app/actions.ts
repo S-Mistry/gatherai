@@ -8,10 +8,10 @@ import {
   enqueueSynthesisRefresh,
   saveSessionOverride,
   setSessionExcludedFromSynthesis,
-} from "@/lib/data/mock"
+} from "@/lib/data/repository"
 
 export async function createProjectAction(formData: FormData) {
-  const record = createProjectFromForm({
+  const record = await createProjectFromForm({
     name: String(formData.get("name") ?? ""),
     clientName: String(formData.get("clientName") ?? ""),
     objective: String(formData.get("objective") ?? ""),
@@ -28,7 +28,7 @@ export async function createProjectAction(formData: FormData) {
 
 export async function refreshSynthesisAction(formData: FormData) {
   const projectId = String(formData.get("projectId") ?? "")
-  enqueueSynthesisRefresh(projectId)
+  await enqueueSynthesisRefresh(projectId)
   revalidatePath(`/app/projects/${projectId}`)
 }
 
@@ -37,7 +37,7 @@ export async function toggleSessionExclusionAction(formData: FormData) {
   const sessionId = String(formData.get("sessionId") ?? "")
   const excluded = String(formData.get("excluded") ?? "false") === "true"
 
-  setSessionExcludedFromSynthesis(sessionId, excluded)
+  await setSessionExcludedFromSynthesis(sessionId, excluded)
   revalidatePath(`/app/projects/${projectId}`)
   revalidatePath(`/app/projects/${projectId}/sessions/${sessionId}`)
 }
@@ -48,6 +48,6 @@ export async function saveSessionOverrideAction(formData: FormData) {
   const editedSummary = String(formData.get("editedSummary") ?? "")
   const consultantNotes = String(formData.get("consultantNotes") ?? "")
 
-  saveSessionOverride(sessionId, editedSummary, consultantNotes)
+  await saveSessionOverride(sessionId, editedSummary, consultantNotes)
   revalidatePath(`/app/projects/${projectId}/sessions/${sessionId}`)
 }

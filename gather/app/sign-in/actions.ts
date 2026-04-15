@@ -1,5 +1,6 @@
 "use server"
 
+import { resolveConsultantAuthMode } from "@/lib/auth/consultant-auth"
 import { appUrl, isSupabaseConfigured } from "@/lib/env"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 
@@ -12,6 +13,13 @@ export async function requestMagicLinkAction(
   _previousState: MagicLinkState,
   formData: FormData
 ): Promise<MagicLinkState> {
+  if (resolveConsultantAuthMode() !== "supabase_magic_link") {
+    return {
+      status: "error",
+      message: "Magic-link sign-in is disabled in this environment.",
+    }
+  }
+
   const email = formData.get("email")
 
   if (typeof email !== "string" || !email) {
@@ -25,7 +33,7 @@ export async function requestMagicLinkAction(
     return {
       status: "error",
       message:
-        "Supabase is not configured yet. Add the environment variables in gather/.env.example to enable magic-link auth.",
+        "Supabase is not configured yet. Add the publishable and secret key environment variables in gather/.env.example to enable consultant sign-in.",
     }
   }
 

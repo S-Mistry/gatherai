@@ -13,7 +13,7 @@ export async function createServerSupabaseClient() {
 
   return createServerClient(
     env.NEXT_PUBLIC_SUPABASE_URL!,
-    env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
       cookies: {
         getAll() {
@@ -33,14 +33,14 @@ export async function createServerSupabaseClient() {
   )
 }
 
-export function createServiceRoleSupabaseClient() {
+export function createSecretSupabaseClient() {
   if (!isSupabaseConfigured) {
     return null
   }
 
   return createClient(
     env.NEXT_PUBLIC_SUPABASE_URL!,
-    env.SUPABASE_SERVICE_ROLE_KEY!,
+    env.SUPABASE_SECRET_KEY!,
     {
       auth: {
         persistSession: false,

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { env } from "@/lib/env"
-import { processQueuedJobs } from "@/lib/data/mock"
+import { recoverAndProcessQueuedJobs } from "@/lib/data/repository"
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized cron request." }, { status: 401 })
   }
 
-  const jobs = processQueuedJobs(8)
+  const jobs = await recoverAndProcessQueuedJobs(8)
 
   return NextResponse.json({
     recovered: jobs.length,

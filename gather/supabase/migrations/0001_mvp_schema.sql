@@ -2,28 +2,99 @@ create extension if not exists pgcrypto;
 
 create schema if not exists app;
 
-create type public.interview_mode as enum ('strict', 'adaptive');
-create type public.anonymity_mode as enum ('named', 'pseudonymous', 'anonymous');
-create type public.session_status as enum (
-  'pre_start',
-  'in_progress',
-  'paused',
-  'complete',
-  'abandoned'
-);
-create type public.analysis_job_type as enum (
-  'transcript_cleaning',
-  'session_extraction',
-  'quality_scoring',
-  'project_synthesis'
-);
-create type public.analysis_job_status as enum (
-  'queued',
-  'processing',
-  'completed',
-  'failed'
-);
-create type public.transcript_speaker as enum ('participant', 'agent', 'system');
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_type
+    where typnamespace = 'public'::regnamespace
+      and typname = 'interview_mode'
+  ) then
+    create type public.interview_mode as enum ('strict', 'adaptive');
+  end if;
+end;
+$$;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_type
+    where typnamespace = 'public'::regnamespace
+      and typname = 'anonymity_mode'
+  ) then
+    create type public.anonymity_mode as enum ('named', 'pseudonymous', 'anonymous');
+  end if;
+end;
+$$;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_type
+    where typnamespace = 'public'::regnamespace
+      and typname = 'session_status'
+  ) then
+    create type public.session_status as enum (
+      'pre_start',
+      'in_progress',
+      'paused',
+      'complete',
+      'abandoned'
+    );
+  end if;
+end;
+$$;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_type
+    where typnamespace = 'public'::regnamespace
+      and typname = 'analysis_job_type'
+  ) then
+    create type public.analysis_job_type as enum (
+      'transcript_cleaning',
+      'session_extraction',
+      'quality_scoring',
+      'project_synthesis'
+    );
+  end if;
+end;
+$$;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_type
+    where typnamespace = 'public'::regnamespace
+      and typname = 'analysis_job_status'
+  ) then
+    create type public.analysis_job_status as enum (
+      'queued',
+      'processing',
+      'completed',
+      'failed'
+    );
+  end if;
+end;
+$$;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_type
+    where typnamespace = 'public'::regnamespace
+      and typname = 'transcript_speaker'
+  ) then
+    create type public.transcript_speaker as enum ('participant', 'agent', 'system');
+  end if;
+end;
+$$;
 
 create or replace function app.set_updated_at()
 returns trigger
@@ -293,6 +364,8 @@ create or replace function app.has_workspace_access(target_workspace_id uuid)
 returns boolean
 language sql
 stable
+security definer
+set search_path = public
 as $$
   select exists (
     select 1
@@ -306,6 +379,8 @@ create or replace function app.has_project_access(target_project_id uuid)
 returns boolean
 language sql
 stable
+security definer
+set search_path = public
 as $$
   select exists (
     select 1
@@ -320,6 +395,8 @@ create or replace function app.has_session_access(target_session_id uuid)
 returns boolean
 language sql
 stable
+security definer
+set search_path = public
 as $$
   select exists (
     select 1

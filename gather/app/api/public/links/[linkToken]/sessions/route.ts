@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 
-import { createParticipantSession, getPublicInterviewConfig } from "@/lib/data/mock"
+import {
+  createParticipantSession,
+  getPublicInterviewConfig,
+} from "@/lib/data/repository"
 
 const sessionRequestSchema = z.object({
   metadata: z.record(z.string(), z.string()).optional(),
@@ -19,18 +22,18 @@ export async function POST(request: Request, { params }: RouteContext) {
 
   if (!payload.success) {
     return NextResponse.json(
-      { error: "Invalid session bootstrap payload." },
+      { error: "We couldn't start the interview. Please refresh and try again." },
       { status: 400 }
     )
   }
 
-  const publicConfig = getPublicInterviewConfig(linkToken)
+  const publicConfig = await getPublicInterviewConfig(linkToken)
 
   if (!publicConfig) {
     return NextResponse.json({ error: "Invalid or expired project link." }, { status: 404 })
   }
 
-  const created = createParticipantSession(linkToken, payload.data.metadata)
+  const created = await createParticipantSession(linkToken, payload.data.metadata)
 
   if (!created) {
     return NextResponse.json({ error: "Unable to create participant session." }, { status: 500 })

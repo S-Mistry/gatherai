@@ -1,17 +1,25 @@
 "use client"
 
 import { useEffect, useRef, useState, useTransition } from "react"
-import { Microphone, PauseCircle, SealWarning } from "@phosphor-icons/react"
+import {
+  Microphone,
+  PauseCircle,
+  PlayCircle,
+  ShieldCheck,
+  WarningCircle,
+} from "@phosphor-icons/react"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { VoiceStatus, type VoiceState } from "@/components/ui/voice-status"
 import type { PublicInterviewConfig } from "@/lib/domain/types"
 
 type ShellStatus =
   | "ready"
-  | "provisioning"
-  | "connected"
+  | "requesting_mic"
+  | "connecting"
+  | "live"
+  | "paused"
   | "fallback"
   | "complete"
   | "error"
@@ -23,12 +31,14 @@ interface InterviewShellProps {
 
 type RealtimeHandle = {
   disconnect: () => Promise<void> | void
+  mute?: (muted: boolean) => void
 }
 
 function buildBrowserInstructions(config: PublicInterviewConfig) {
   return [
     `You are the workshop discovery interviewer for ${config.projectName}.`,
     `Objective: ${config.objective}`,
+    "Start with a short warm greeting and confirm the participant can hear you.",
     "Ask one primary question at a time.",
     "Stay warm, neutral, and concise.",
     "Summarize before moving to the next topic.",
@@ -57,41 +67,63 @@ function extractClientSecretValue(payload: unknown) {
   return null
 }
 
+function formatMinutes(seconds: number): string {
+  const minutes = Math.floor(seconds / 60)
+  return `${minutes}`
+}
+
 export function InterviewShell({ linkToken, config }: InterviewShellProps) {
   const [status, setStatus] = useState<ShellStatus>("ready")
-  const [message, setMessage] = useState(
-    "Review the disclosure, then start when you are ready."
-  )
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
-  const [recoveryToken, setRecoveryToken] = useState<string | null>(null)
+  const [, setRecoveryToken] = useState<string | null>(null)
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [pending, startTransition] = useTransition()
   const realtimeSessionRef = useRef<RealtimeHandle | null>(null)
+  const micStreamRef = useRef<MediaStream | null>(null)
 
   useEffect(() => {
     return () => {
       void realtimeSessionRef.current?.disconnect?.()
+      micStreamRef.current?.getTracks().forEach((track) => track.stop())
     }
   }, [])
 
+  useEffect(() => {
+    if (status !== "live") return
+    const id = window.setInterval(() => setElapsedSeconds((s) => s + 1), 1000)
+    return () => window.clearInterval(id)
+  }, [status])
+
   async function handleStart() {
-    setStatus("provisioning")
-    setMessage("Creating your session and preparing voice transport...")
+    setErrorMessage(null)
+    setStatus("requesting_mic")
+
+    try {
+      micStreamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true })
+    } catch {
+      setStatus("error")
+      setErrorMessage(
+        "We need microphone access to talk. Open your browser settings to allow it, then try again."
+      )
+      return
+    }
+
+    setStatus("connecting")
 
     try {
       const sessionResponse = await fetch(`/api/public/links/${linkToken}/sessions`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          metadata: {},
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ metadata: {} }),
       })
 
       const sessionPayload = await sessionResponse.json()
 
       if (!sessionResponse.ok) {
-        throw new Error(sessionPayload.error ?? "Unable to create the interview session.")
+        throw new Error(
+          sessionPayload.error ?? "We couldn't start the interview. Please refresh and try again."
+        )
       }
 
       setSessionId(sessionPayload.session.id)
@@ -99,9 +131,7 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
 
       const secretResponse = await fetch(
         `/api/public/sessions/${sessionPayload.session.id}/client-secret`,
-        {
-          method: "POST",
-        }
+        { method: "POST" }
       )
 
       const secretPayload = await secretResponse.json()
@@ -109,14 +139,12 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
 
       if (!secretResponse.ok || !secret) {
         setStatus("fallback")
-        setMessage(
+        setErrorMessage(
           secretPayload.error ??
-            "Realtime credentials are not configured yet. The participant flow is scaffolded and ready for env wiring."
+            "We can't start a live voice session right now. Try refreshing the page — if it keeps happening, let the consultant know."
         )
         return
       }
-
-      await navigator.mediaDevices.getUserMedia({ audio: true })
 
       const realtime = await import("@openai/agents/realtime")
       const agent = new realtime.RealtimeAgent({
@@ -127,51 +155,32 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
       await session.connect({ apiKey: secret })
 
       realtimeSessionRef.current = session as unknown as RealtimeHandle
-      setStatus("connected")
-      setMessage(
-        "Realtime voice transport is connected. Use the session controls below to persist transcript events and completion."
-      )
+      setStatus("live")
     } catch (error) {
       setStatus("error")
-      setMessage(error instanceof Error ? error.message : "Unable to start the voice session.")
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Your mic didn't connect. Check browser permissions and try again."
+      )
     }
   }
 
-  function handleDemoEvent() {
-    if (!sessionId) {
-      return
+  function handleTogglePause() {
+    const handle = realtimeSessionRef.current
+    if (!handle) return
+
+    if (status === "live") {
+      handle.mute?.(true)
+      setStatus("paused")
+    } else if (status === "paused") {
+      handle.mute?.(false)
+      setStatus("live")
     }
-
-    startTransition(async () => {
-      const response = await fetch(`/api/public/sessions/${sessionId}/events`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          segments: [
-            {
-              speaker: "participant",
-              text: "The main bottleneck is that no one knows who can approve exceptions without escalating.",
-            },
-          ],
-        }),
-      })
-
-      const payload = await response.json()
-
-      if (response.ok) {
-        setMessage(`Stored ${payload.accepted} transcript segment(s) for this session.`)
-      } else {
-        setMessage(payload.error ?? "Unable to store transcript events.")
-      }
-    })
   }
 
   function handleComplete() {
-    if (!sessionId) {
-      return
-    }
+    if (!sessionId) return
 
     startTransition(async () => {
       const response = await fetch(`/api/public/sessions/${sessionId}/complete`, {
@@ -181,124 +190,218 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
 
       if (!response.ok) {
         setStatus("error")
-        setMessage(payload.error ?? "Unable to complete the interview.")
+        setErrorMessage(
+          payload.error ?? "We couldn't wrap up the interview. Please refresh and try again."
+        )
         return
       }
 
+      void realtimeSessionRef.current?.disconnect?.()
+      micStreamRef.current?.getTracks().forEach((track) => track.stop())
       setStatus("complete")
-      setMessage(
-        `Interview completed. ${payload.jobCount} analysis job(s) queued for cleaning, extraction, scoring, and synthesis.`
-      )
     })
   }
+
+  if (status === "complete") {
+    return <CompletionSurface />
+  }
+
+  const isLive = status === "live" || status === "paused"
+  const voiceState: VoiceState =
+    status === "live" ? "listening" : status === "paused" ? "idle" : "idle"
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
       <Card className="space-y-6">
         <CardHeader>
-          <Badge variant="accent">Participant interview</Badge>
           <CardTitle className="text-3xl">{config.projectName}</CardTitle>
-          <CardDescription>
-            {config.disclosure} This project uses a {config.anonymityMode} identity mode and
-            targets a {config.durationCapMinutes}-minute conversation.
-          </CardDescription>
+          <p className="text-sm leading-6 text-muted-foreground">
+            About {config.durationCapMinutes} minutes. One question at a time.
+          </p>
         </CardHeader>
         <CardContent>
-          <div className="rounded-[28px] border border-border/70 bg-background/80 p-5">
-            <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">
-              Objective
-            </p>
-            <p className="mt-3 text-base leading-7 text-foreground">{config.objective}</p>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <Button size="lg" onClick={handleStart} disabled={pending || status === "connected"}>
-              <Microphone className="size-4" />
-              {status === "connected" ? "Voice connected" : "Start interview"}
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={handleDemoEvent}
-              disabled={!sessionId || pending}
-            >
-              <PauseCircle className="size-4" />
-              Store demo segment
-            </Button>
-            <Button
-              variant="secondary"
-              size="lg"
-              onClick={handleComplete}
-              disabled={!sessionId || pending || status === "complete"}
-            >
-              Complete session
-            </Button>
-          </div>
-
-          <div className="rounded-3xl border border-dashed border-border/70 bg-card/60 p-5">
-            <div className="flex items-start gap-3">
-              <SealWarning className="mt-0.5 size-5 text-primary" />
-              <div className="space-y-2">
-                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-                  Session status
-                </p>
-                <p className="text-base leading-7 text-foreground">{message}</p>
-                {sessionId ? (
-                  <div className="space-y-1 text-sm text-muted-foreground">
-                    <p>Session: {sessionId}</p>
-                    <p className="truncate">Recovery token: {recoveryToken}</p>
-                  </div>
-                ) : null}
-              </div>
+          {!isLive ? (
+            <div className="rounded-[28px] border border-border/70 bg-background/80 p-5">
+              <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">
+                What we&apos;d like to learn
+              </p>
+              <p className="mt-3 text-base leading-7 text-foreground">{config.objective}</p>
             </div>
-          </div>
+          ) : null}
+
+          {isLive ? (
+            <LiveSurface
+              voiceState={voiceState}
+              elapsedSeconds={elapsedSeconds}
+              durationCapMinutes={config.durationCapMinutes}
+              paused={status === "paused"}
+              onTogglePause={handleTogglePause}
+              onComplete={handleComplete}
+              completing={pending}
+            />
+          ) : (
+            <PreStartSurface
+              status={status}
+              errorMessage={errorMessage}
+              onStart={handleStart}
+            />
+          )}
         </CardContent>
       </Card>
 
-      <Card className="space-y-6">
-        <CardHeader>
-          <Badge variant="neutral">Before you start</Badge>
-          <CardTitle>Interview guideposts</CardTitle>
-          <CardDescription>
-            The AI interviewer stays focused on required discovery questions and stops at the
-            configured duration cap.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="rounded-2xl border border-border/70 bg-background/70 p-4">
-            <p className="text-sm font-semibold text-foreground">Anonymity mode</p>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              {config.anonymityMode === "anonymous"
-                ? "Responses are collected without explicit identity fields."
-                : config.anonymityMode === "pseudonymous"
-                  ? "Responses use a pseudonymous stakeholder label."
-                  : "Responses are attributed by name."}
-            </p>
-          </div>
+      {!isLive ? (
+        <Card className="space-y-6">
+          <CardHeader>
+            <CardTitle>A few things to know</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-2xl border border-border/70 bg-background/70 p-4">
+              <p className="text-sm font-semibold text-foreground">How it works</p>
+              <ul className="mt-3 space-y-2 text-sm leading-6 text-muted-foreground">
+                <li>One question at a time.</li>
+                <li>Take as long as you want to answer.</li>
+                <li>You can pause or end early — nothing is lost.</li>
+              </ul>
+            </div>
 
-          <div className="rounded-2xl border border-border/70 bg-background/70 p-4">
-            <p className="text-sm font-semibold text-foreground">Metadata prompts</p>
-            <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-              {config.metadataPrompts.map((prompt) => (
-                <li key={prompt.id}>
-                  {prompt.label}
-                  {prompt.required ? " (required)" : " (optional)"}
-                </li>
-              ))}
-            </ul>
-          </div>
+            <div className="rounded-2xl border border-border/70 bg-background/70 p-4">
+              <p className="text-sm font-semibold text-foreground">How you&apos;re identified</p>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                {config.anonymityMode === "anonymous"
+                  ? "Fully anonymous — no name or role is attached to what you say."
+                  : config.anonymityMode === "pseudonymous"
+                    ? "By role only — you'll appear as a labeled stakeholder, not by name."
+                    : "By name — the consultant will see who said what."}
+              </p>
+            </div>
 
-          <div className="rounded-2xl border border-border/70 bg-background/70 p-4">
-            <p className="text-sm font-semibold text-foreground">Operational notes</p>
-            <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-              <li>One core question at a time.</li>
-              <li>Two follow-ups by default unless novelty remains high.</li>
-              <li>Transcript-only storage in MVP.</li>
-              <li>Resume remains valid for 24 hours after last activity.</li>
-            </ul>
-          </div>
-        </CardContent>
-      </Card>
+            {config.metadataPrompts.length > 0 ? (
+              <div className="rounded-2xl border border-border/70 bg-background/70 p-4">
+                <p className="text-sm font-semibold text-foreground">
+                  A few quick questions first
+                </p>
+                <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+                  {config.metadataPrompts.map((prompt) => (
+                    <li key={prompt.id}>
+                      {prompt.label}
+                      {prompt.required ? "" : " (optional)"}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
+  )
+}
+
+function PreStartSurface({
+  status,
+  errorMessage,
+  onStart,
+}: {
+  status: ShellStatus
+  errorMessage: string | null
+  onStart: () => void
+}) {
+  const helper =
+    status === "requesting_mic"
+      ? "Allow microphone access to begin."
+      : status === "connecting"
+        ? "Setting up your microphone…"
+        : "Take a breath. Press start when you're ready."
+
+  const showError = status === "error" || status === "fallback"
+
+  return (
+    <div className="space-y-4" aria-live="polite">
+      <Button
+        size="lg"
+        onClick={onStart}
+        disabled={status === "requesting_mic" || status === "connecting"}
+        className="w-full sm:w-auto"
+      >
+        <Microphone className="size-4" />
+        {status === "connecting" ? "Connecting…" : "Start when ready"}
+      </Button>
+
+      <div className="flex items-start gap-2 text-sm leading-6 text-muted-foreground">
+        {showError ? (
+          <WarningCircle className="mt-0.5 size-4 text-destructive" />
+        ) : null}
+        <p className={showError ? "text-foreground" : undefined}>
+          {showError ? errorMessage : helper}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function LiveSurface({
+  voiceState,
+  elapsedSeconds,
+  durationCapMinutes,
+  paused,
+  onTogglePause,
+  onComplete,
+  completing,
+}: {
+  voiceState: VoiceState
+  elapsedSeconds: number
+  durationCapMinutes: number
+  paused: boolean
+  onTogglePause: () => void
+  onComplete: () => void
+  completing: boolean
+}) {
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between gap-3">
+        <VoiceStatus state={voiceState} />
+        <span
+          className="text-sm tabular-nums text-muted-foreground"
+          aria-label={`${formatMinutes(elapsedSeconds)} of roughly ${durationCapMinutes} minutes`}
+        >
+          {formatMinutes(elapsedSeconds)} / ~{durationCapMinutes} min
+        </span>
+      </div>
+
+      <p className="text-base leading-7 text-muted-foreground">
+        {paused ? "Paused. Press resume when you're ready." : "I'm listening. Take your time."}
+      </p>
+
+      <div className="flex flex-wrap gap-3">
+        <Button variant="outline" size="lg" onClick={onTogglePause}>
+          {paused ? <PlayCircle className="size-4" /> : <PauseCircle className="size-4" />}
+          {paused ? "Resume" : "Pause"}
+        </Button>
+        <Button variant="secondary" size="lg" onClick={onComplete} disabled={completing}>
+          I&apos;m done
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function CompletionSurface() {
+  return (
+    <Card className="text-center">
+      <CardContent className="flex flex-col items-center gap-4 py-12">
+        <div className="rounded-full border border-primary/30 bg-primary/10 p-3 text-primary">
+          <ShieldCheck className="size-7" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-semibold text-foreground">
+            Thanks — that was genuinely useful.
+          </h2>
+          <p className="max-w-md text-sm leading-7 text-muted-foreground">
+            Your voice isn&apos;t saved. Only the transcript helps shape the workshop. You can
+            close this tab.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
