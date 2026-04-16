@@ -1,0 +1,30 @@
+{
+  "sessions": [
+    {
+      "id": "sess-a",
+      "status": "complete",
+      "excludedFromSynthesis": false
+    },
+    {
+      "id": "sess-b",
+      "status": "complete",
+      "excludedFromSynthesis": true
+    },
+    {
+      "id": "sess-c",
+      "status": "in_progress",
+      "excludedFromSynthesis": false
+    }
+  ],
+  "outputs": [
+    {
+      "sessionId": "sess-a"
+    },
+    {
+      "sessionId": "sess-b"
+    },
+    {
+      "sessionId": "sess-c"
+    }
+  ]
+}

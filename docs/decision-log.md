@@ -1,6 +1,6 @@
 # Decision Log
 
-Last updated: April 14, 2026
+Last updated: April 16, 2026
 
 ## Locked Decisions
 
@@ -68,6 +68,16 @@ Last updated: April 14, 2026
 - Status: accepted
 - Decision: standardize on Supabase publishable keys for browser and SSR clients, secret keys for server-only operations, and keep the Supabase access token limited to setup tooling.
 - Consequence: the app environment contract uses `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, and `SUPABASE_ACCESS_TOKEN`; legacy `anon` and `service_role` key names are out of scope for v1.
+
+### D-014 Participant interviewer identity and start gate
+- Status: accepted
+- Decision: the participant-facing interviewer is named `Mia` in v1, she speaks first after the realtime session connects, and the interview timer starts only after a soft readiness signal such as "ready", "yes", "okay", or a substantive first answer.
+- Consequence: participant runtime instructions, status UI, and persisted runtime state must distinguish intro delivery from the timed interview start.
+
+### D-015 Structured analysis model split
+- Status: accepted
+- Decision: session extraction and quality scoring use `gpt-5.4-mini`, while project synthesis uses `gpt-5.4`, all through structured Responses API calls with validated evidence refs.
+- Consequence: the runtime environment contract includes dedicated analysis model variables, and generated outputs must not fall back to placeholder rows when structured extraction is unavailable.
 
 ## Reference Notes
 - OpenAI Realtime docs describe WebRTC as ideal for browser and client-side interactions and document server-side controls for realtime sessions.

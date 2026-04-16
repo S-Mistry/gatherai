@@ -6,59 +6,78 @@ export type VoiceState = "idle" | "listening" | "thinking" | "speaking"
 
 interface VoiceStatusProps {
   state: VoiceState
+  label?: string
   className?: string
 }
 
 const LABELS: Record<VoiceState, string> = {
-  idle: "Ready",
-  listening: "Listening",
-  thinking: "Thinking",
-  speaking: "Speaking",
+  idle: "Mia is waiting",
+  listening: "Mia is listening",
+  thinking: "Mia is thinking",
+  speaking: "Mia is speaking",
 }
 
-export function VoiceStatus({ state, className }: VoiceStatusProps) {
+export function VoiceStatus({ state, label, className }: VoiceStatusProps) {
+  const resolvedLabel = label ?? LABELS[state]
+
   return (
     <div
       role="status"
       aria-live="polite"
-      aria-label={LABELS[state]}
+      aria-label={resolvedLabel}
       className={cn(
-        "inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground",
+        "inline-flex items-center gap-3 rounded-full border border-border/70 bg-background/70 px-3.5 py-2 text-xs font-medium text-foreground",
         className
       )}
     >
-      <Indicator state={state} />
-      <span>{LABELS[state]}</span>
+      <Waveform state={state} />
+      <span>{resolvedLabel}</span>
     </div>
   )
 }
 
-function Indicator({ state }: { state: VoiceState }) {
-  if (state === "listening") {
-    return (
-      <span
-        aria-hidden
-        className="size-2 animate-pulse rounded-full bg-primary motion-reduce:animate-none"
-      />
-    )
-  }
-  if (state === "thinking") {
-    return (
-      <span aria-hidden className="flex items-center gap-0.5">
-        <span className="size-1 animate-bounce rounded-full bg-primary [animation-delay:-200ms] motion-reduce:animate-none" />
-        <span className="size-1 animate-bounce rounded-full bg-primary [animation-delay:-100ms] motion-reduce:animate-none" />
-        <span className="size-1 animate-bounce rounded-full bg-primary motion-reduce:animate-none" />
-      </span>
-    )
-  }
-  if (state === "speaking") {
-    return (
-      <span aria-hidden className="flex h-3 items-end gap-0.5">
-        <span className="w-0.5 animate-pulse rounded-full bg-primary h-2 [animation-delay:-150ms] motion-reduce:animate-none" />
-        <span className="w-0.5 animate-pulse rounded-full bg-primary h-3 motion-reduce:animate-none" />
-        <span className="w-0.5 animate-pulse rounded-full bg-primary h-1.5 [animation-delay:-300ms] motion-reduce:animate-none" />
-      </span>
-    )
-  }
-  return <span aria-hidden className="size-2 rounded-full bg-muted-foreground/50" />
+const WAVE_LEVELS: Record<VoiceState, number[]> = {
+  idle: [30, 48, 36, 54, 32],
+  listening: [48, 76, 60, 82, 54],
+  thinking: [28, 52, 72, 52, 28],
+  speaking: [62, 92, 72, 100, 60],
+}
+
+const WAVE_TONES: Record<VoiceState, string> = {
+  idle: "bg-slate-400/55 dark:bg-slate-300/45",
+  listening: "bg-primary",
+  thinking: "bg-amber-500 dark:bg-amber-300",
+  speaking: "bg-emerald-500 dark:bg-emerald-300",
+}
+
+function Waveform({ state }: { state: VoiceState }) {
+  const shouldAnimate = state !== "idle"
+
+  return (
+    <span
+      aria-hidden
+      className="inline-flex h-5 items-end gap-1 rounded-full border border-border/60 bg-background/60 px-2 py-1"
+    >
+      {WAVE_LEVELS[state].map((height, index) => (
+        <span
+          key={`${state}-${index}`}
+          className={cn(
+            "block w-1 rounded-full transition-all duration-300",
+            WAVE_TONES[state],
+            shouldAnimate && "animate-pulse motion-reduce:animate-none"
+          )}
+          style={{
+            height: `${height}%`,
+            animationDelay: `${index * 120}ms`,
+            animationDuration:
+              state === "speaking"
+                ? "700ms"
+                : state === "thinking"
+                  ? "900ms"
+                  : "1200ms",
+          }}
+        />
+      ))}
+    </span>
+  )
 }

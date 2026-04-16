@@ -1,6 +1,6 @@
 # Issue Log
 
-Last updated: April 15, 2026
+Last updated: April 16, 2026
 
 Use this file for confirmed repo-specific issues only. Keep entries short and practical.
 
@@ -66,3 +66,10 @@ Use this file for confirmed repo-specific issues only. Keep entries short and pr
 - Cause: The app shipped code that reads and writes `transcript_segments.source_item_id` before the backing migration was applied to the active Supabase project.
 - Avoid: Any schema-dependent participant runtime change must ship with its migration and be applied with `npm --prefix gather run supabase:bootstrap` before runtime verification.
 - Fix/Check: Confirm `from("transcript_segments").select("source_item_id").limit(1)` succeeds, then complete an interview and verify transcript rows persist without the save error.
+
+## I-010 Placeholder analysis persisted as ready-state output
+
+- Problem: Respondent review and synthesis could show nonsense insights such as greetings, config text, and fabricated quote pills while the UI still marked analysis as ready.
+- Cause: Session extraction and project synthesis persisted deterministic placeholder artifacts instead of real model outputs, reused the first participant turns as evidence across claims, and aggregated synthesis inputs before filtering excluded sessions.
+- Avoid: Do not persist placeholder analysis rows as generated output. Validate every claim against exact participant segment IDs, drop claims without usable evidence, and filter synthesis inputs to completed non-excluded sessions before aggregation.
+- Fix/Check: Complete an interview whose first participant turn is only a greeting, confirm the summary does not repeat the greeting, verify every evidence pill highlights the cited transcript rows only, and exclude a session to confirm it disappears from regenerated synthesis.

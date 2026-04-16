@@ -39,6 +39,10 @@ export function buildInitialRuntimeState(
     coverageConfidence: 0,
     summaryPending: false,
     hardStopAt,
+    introDeliveredAt: undefined,
+    readinessDetectedAt: undefined,
+    interviewStartedAt: undefined,
+    pausedAt: undefined,
   }
 }
 

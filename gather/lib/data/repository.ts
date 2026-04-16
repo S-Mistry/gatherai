@@ -9,10 +9,15 @@ import {
 import {
   buildEmptyProjectSynthesis,
   buildGeneratedOutputPlaceholder,
-  buildProjectSynthesis,
-  buildQualityScore,
-  buildSessionOutput,
 } from "@/lib/data/placeholders"
+import {
+  generateProjectSynthesisAnalysis,
+  generateSessionOutputAnalysis,
+  evaluateSessionQualityAnalysis,
+  PROJECT_SYNTHESIS_PROMPT_VERSION_TEXT,
+  QUALITY_SCORE_PROMPT_VERSION_TEXT,
+  SESSION_OUTPUT_PROMPT_VERSION_TEXT,
+} from "@/lib/openai/analysis"
 import {
   buildInitialRuntimeState,
   DEFAULT_RESUME_WINDOW_HOURS,
@@ -32,12 +37,14 @@ import type {
   QuestionDefinition,
   SessionOutputGenerated,
   SessionOutputOverride,
+  SessionRuntimeState,
   SessionStatus,
   TranscriptSegment,
   TranscriptSpeaker,
   WorkspaceSummary,
 } from "@/lib/domain/types"
 import { SESSION_ANALYSIS_JOB_TYPES } from "@/lib/jobs/analysis"
+import { env } from "@/lib/env"
 import {
   createSecretSupabaseClient,
   createServerSupabaseClient,
@@ -206,6 +213,17 @@ interface CreatedProjectGraph {
   projectRow: ProjectRow
   configRow: ProjectConfigVersionRow
   publicLinkToken: string
+}
+
+interface SessionRuntimePatch {
+  state?: SessionRuntimeState["state"]
+  activeQuestionId?: string | null
+  elapsedSeconds?: number
+  questionElapsedSeconds?: number
+  introDeliveredAt?: string
+  readinessDetectedAt?: string
+  interviewStartedAt?: string
+  pausedAt?: string | null
 }
 
 type ServerClient = NonNullable<
@@ -463,6 +481,22 @@ function mapSession(
         typeof runtimeState.hardStopAt === "string"
           ? runtimeState.hardStopAt
           : row.resume_expires_at,
+      introDeliveredAt:
+        typeof runtimeState.introDeliveredAt === "string"
+          ? runtimeState.introDeliveredAt
+          : undefined,
+      readinessDetectedAt:
+        typeof runtimeState.readinessDetectedAt === "string"
+          ? runtimeState.readinessDetectedAt
+          : undefined,
+      interviewStartedAt:
+        typeof runtimeState.interviewStartedAt === "string"
+          ? runtimeState.interviewStartedAt
+          : undefined,
+      pausedAt:
+        typeof runtimeState.pausedAt === "string"
+          ? runtimeState.pausedAt
+          : undefined,
     },
   }
 }
@@ -1142,6 +1176,69 @@ async function getSessionBundle(sessionId: string) {
   }
 }
 
+function mergeRuntimeStatePatch(
+  session: ParticipantSession,
+  config: ProjectConfigVersion,
+  patch: SessionRuntimePatch
+): SessionRuntimeState {
+  const nextState: SessionRuntimeState = {
+    ...session.runtimeState,
+  }
+
+  if (patch.state) {
+    nextState.state = patch.state
+  }
+
+  if (patch.activeQuestionId !== undefined) {
+    nextState.activeQuestionId = patch.activeQuestionId ?? undefined
+  }
+
+  if (typeof patch.elapsedSeconds === "number" && Number.isFinite(patch.elapsedSeconds)) {
+    nextState.elapsedSeconds = Math.max(0, Math.round(patch.elapsedSeconds))
+  }
+
+  if (
+    typeof patch.questionElapsedSeconds === "number" &&
+    Number.isFinite(patch.questionElapsedSeconds)
+  ) {
+    nextState.questionElapsedSeconds = Math.max(
+      0,
+      Math.round(patch.questionElapsedSeconds)
+    )
+  }
+
+  if (typeof patch.introDeliveredAt === "string" && patch.introDeliveredAt.trim()) {
+    nextState.introDeliveredAt = patch.introDeliveredAt
+  }
+
+  if (
+    typeof patch.readinessDetectedAt === "string" &&
+    patch.readinessDetectedAt.trim()
+  ) {
+    nextState.readinessDetectedAt = patch.readinessDetectedAt
+  }
+
+  if (
+    typeof patch.interviewStartedAt === "string" &&
+    patch.interviewStartedAt.trim()
+  ) {
+    nextState.interviewStartedAt = patch.interviewStartedAt
+    const interviewStartedAt = new Date(patch.interviewStartedAt)
+
+    if (!Number.isNaN(interviewStartedAt.getTime())) {
+      nextState.hardStopAt = new Date(
+        interviewStartedAt.getTime() + config.durationCapMinutes * 60 * 1000
+      ).toISOString()
+    }
+  }
+
+  if (patch.pausedAt !== undefined) {
+    nextState.pausedAt = patch.pausedAt ?? undefined
+  }
+
+  return nextState
+}
+
 async function releaseStaleAnalysisJobs(lockTimeoutMinutes = 15) {
   const client = requireSecretClient()
   const result = await client.rpc("release_stale_analysis_jobs", {
@@ -1348,24 +1445,22 @@ async function persistSessionOutput(
   const promptVersionId = await ensurePromptVersion(
     client,
     project.workspace_id,
-    "session-output",
-    "v1",
-    "Deterministic placeholder output derived from transcript evidence."
+    "session-output/v2",
+    "1",
+    SESSION_OUTPUT_PROMPT_VERSION_TEXT
   )
   const modelVersionId = await ensureModelVersion(
     client,
     project.workspace_id,
-    "session-output",
-    "application",
-    "placeholder-v1"
+    "session-output/v2",
+    "openai",
+    env.OPENAI_SESSION_ANALYSIS_MODEL
   )
-  const output = buildSessionOutput(
+  const output = await generateSessionOutputAnalysis({
     session,
     config,
     transcript,
-    promptVersionId,
-    modelVersionId
-  )
+  })
 
   const result = await client
     .from("session_outputs_generated")
@@ -1404,7 +1499,48 @@ async function persistQualityScore(
   transcript: TranscriptSegment[]
 ) {
   const client = requireSecretClient()
-  const quality = buildQualityScore(session, config, transcript)
+  const [projectResult, generatedResult] = await Promise.all([
+    client
+      .from("projects")
+      .select("workspace_id")
+      .eq("id", session.projectId)
+      .single<{ workspace_id: string }>(),
+    client
+      .from("session_outputs_generated")
+      .select("*")
+      .eq("session_id", session.id)
+      .single<SessionOutputGeneratedRow>(),
+  ])
+  const project = expectData(
+    projectResult,
+    "Unable to load project for quality score persistence"
+  )
+  const generatedOutput = mapGeneratedOutput(
+    expectData(
+      generatedResult,
+      "Quality scoring requires a generated session output."
+    )
+  )
+  const promptVersionId = await ensurePromptVersion(
+    client,
+    project.workspace_id,
+    "quality-score/v2",
+    "1",
+    QUALITY_SCORE_PROMPT_VERSION_TEXT
+  )
+  const modelVersionId = await ensureModelVersion(
+    client,
+    project.workspace_id,
+    "quality-score/v2",
+    "openai",
+    env.OPENAI_SESSION_ANALYSIS_MODEL
+  )
+  const quality = await evaluateSessionQualityAnalysis({
+    session,
+    config,
+    transcript,
+    output: generatedOutput,
+  })
 
   const [qualityResult, sessionResult] = await Promise.all([
     client
@@ -1423,7 +1559,10 @@ async function persistQualityScore(
       .single<QualityScoreRow>(),
     client
       .from("participant_sessions")
-      .update({ quality_flag: quality.lowQuality })
+      .update({
+        quality_flag: quality.lowQuality,
+        last_activity_at: new Date().toISOString(),
+      })
       .eq("id", session.id),
   ])
 
@@ -1433,9 +1572,15 @@ async function persistQualityScore(
     )
   }
 
-  return mapQualityScore(
+  const score = mapQualityScore(
     expectData(qualityResult, "Unable to persist quality score")
   )
+
+  return {
+    ...score,
+    promptVersionId,
+    modelVersionId,
+  }
 }
 
 async function persistProjectSynthesis(projectId: string) {
@@ -1515,29 +1660,27 @@ async function persistProjectSynthesis(projectId: string) {
   const promptVersionId = await ensurePromptVersion(
     client,
     workspaceId,
-    "project-synthesis",
-    "v1",
-    "Deterministic placeholder synthesis derived from completed session outputs."
+    "project-synthesis/v2",
+    "1",
+    PROJECT_SYNTHESIS_PROMPT_VERSION_TEXT
   )
   const modelVersionId = await ensureModelVersion(
     client,
     workspaceId,
-    "project-synthesis",
-    "application",
-    "placeholder-v1"
+    "project-synthesis/v2",
+    "openai",
+    env.OPENAI_PROJECT_SYNTHESIS_MODEL
   )
   const project = mapProject(
     projectRow,
     configRow?.id ?? "",
     linkRow?.link_token ?? ""
   )
-  const synthesis = buildProjectSynthesis(
+  const synthesis = await generateProjectSynthesisAnalysis({
     project,
     sessions,
     outputs,
-    promptVersionId,
-    modelVersionId
-  )
+  })
 
   const result = await client
     .from("project_syntheses_generated")
@@ -1578,7 +1721,7 @@ async function processAnalysisJob(job: AnalysisJob) {
     fail(`Session ${job.sessionId} was not found for analysis job ${job.id}.`)
   }
 
-  if (job.type === "transcript_cleaning" || job.type === "session_extraction") {
+  if (job.type === "session_extraction") {
     await persistSessionOutput(bundle.session, bundle.config, bundle.transcript)
   }
 
@@ -1737,6 +1880,28 @@ export async function getWorkspaceSnapshot() {
     }
   })
 
+  const projectNameById = new Map(projects.map((p) => [p.id, p.name]))
+  const recentNeedsReviewSessions = sessionRows
+    .filter(
+      (row) =>
+        row.status === "complete" &&
+        row.quality_flag &&
+        !row.excluded_from_synthesis
+    )
+    .sort(
+      (a, b) =>
+        new Date(b.last_activity_at).getTime() -
+        new Date(a.last_activity_at).getTime()
+    )
+    .slice(0, 6)
+    .map((row) => ({
+      sessionId: row.id,
+      projectId: row.project_id,
+      projectName: projectNameById.get(row.project_id) ?? "Project",
+      respondentLabel: row.respondent_label,
+      lastActivityAt: row.last_activity_at,
+    }))
+
   return {
     workspace: buildWorkspaceSummary(
       context.workspace,
@@ -1744,6 +1909,7 @@ export async function getWorkspaceSnapshot() {
       context.user
     ),
     projects,
+    recentNeedsReviewSessions,
   }
 }
 
@@ -1948,29 +2114,31 @@ export async function getSessionReview(projectId: string, sessionId: string) {
         job.type === "quality_scoring") &&
       (job.status === "queued" || job.status === "processing")
   )
-  const generatedStatus = generatedResult.data
-    ? "ready"
-    : sessionJobFailures.some(
-          (job) =>
-            job.type === "transcript_cleaning" ||
-            job.type === "session_extraction"
-        )
-      ? "failed"
-      : sessionJobsPending || session.status === "complete"
-        ? "pending"
-        : "idle"
-  const qualityStatus = qualityResult.data
-    ? "ready"
-    : sessionJobFailures.some((job) => job.type === "quality_scoring")
-      ? "failed"
-      : sessionJobsPending || session.status === "complete"
-        ? "pending"
-        : "idle"
+  const generatedStatus: "ready" | "failed" | "pending" | "idle" =
+    generatedResult.data
+      ? "ready"
+      : sessionJobFailures.some(
+            (job) =>
+              job.type === "transcript_cleaning" ||
+              job.type === "session_extraction"
+          )
+        ? "failed"
+        : sessionJobsPending || session.status === "complete"
+          ? "pending"
+          : "idle"
+  const qualityStatus: "ready" | "failed" | "pending" | "idle" =
+    qualityResult.data
+      ? "ready"
+      : sessionJobFailures.some((job) => job.type === "quality_scoring")
+        ? "failed"
+        : sessionJobsPending || session.status === "complete"
+          ? "pending"
+          : "idle"
   const transcript = expectRows(
     transcriptResult,
     "Unable to load transcript"
   ).map((row) => mapTranscript(row as TranscriptSegmentRow))
-  const transcriptStatus =
+  const transcriptStatus: "ready" | "failed" | "pending" | "empty" =
     transcript.length > 0
       ? "ready"
       : generatedStatus === "failed"
@@ -1998,6 +2166,8 @@ export async function getSessionReview(projectId: string, sessionId: string) {
     qualityScore: qualityResult.data
       ? mapQualityScore(qualityResult.data)
       : undefined,
+    siblingSessions: detail.sessions,
+    siblingQualityScores: detail.qualityScores,
   }
 }
 
@@ -2019,6 +2189,8 @@ export async function getPublicInterviewConfig(linkToken: string) {
       "Thanks for taking part. This short interview helps shape a workshop agenda that reflects what stakeholders actually need.",
     disclosure:
       "You are speaking with an AI interviewer. Your conversation is transcribed for workshop discovery. Audio is not stored in this MVP.",
+    areasOfInterest: bundle.config.areasOfInterest,
+    requiredQuestions: bundle.config.requiredQuestions,
     metadataPrompts: bundle.config.metadataPrompts,
   }
 }
@@ -2091,12 +2263,15 @@ export async function resumeParticipantSession(
   return bundle.session
 }
 
-export async function appendTranscriptSegments(
+export async function appendSessionEvents(
   sessionId: string,
-  segments: Omit<
-    TranscriptSegment,
-    "id" | "createdAt" | "orderIndex" | "sessionId"
-  >[]
+  payload: {
+    segments?: Omit<
+      TranscriptSegment,
+      "id" | "createdAt" | "orderIndex" | "sessionId"
+    >[]
+    runtime?: SessionRuntimePatch
+  }
 ) {
   const bundle = await getSessionBundle(sessionId)
 
@@ -2104,6 +2279,7 @@ export async function appendTranscriptSegments(
     return null
   }
 
+  const segments = payload.segments ?? []
   const sourceItemIds = [
     ...new Set(
       segments
@@ -2136,39 +2312,56 @@ export async function appendTranscriptSegments(
   const dedupedSegments = segments.filter((segment) =>
     segment.sourceItemId ? !existingSourceIds.has(segment.sourceItemId) : true
   )
+  const createdAt = new Date().toISOString()
+  let latestSegmentOrder = 0
 
-  if (dedupedSegments.length === 0) {
-    return []
+  if (dedupedSegments.length > 0) {
+    const latestSegmentResult = await bundle.client
+      .from("transcript_segments")
+      .select("order_index")
+      .eq("session_id", sessionId)
+      .order("order_index", { ascending: false })
+      .limit(1)
+
+    const latestSegment = expectRows(
+      latestSegmentResult,
+      "Unable to inspect transcript ordering"
+    )[0] as { order_index: number } | undefined
+
+    latestSegmentOrder = latestSegment?.order_index ?? 0
   }
 
-  const latestSegmentResult = await bundle.client
-    .from("transcript_segments")
-    .select("order_index")
-    .eq("session_id", sessionId)
-    .order("order_index", { ascending: false })
-    .limit(1)
-
-  const latestSegment = expectRows(
-    latestSegmentResult,
-    "Unable to inspect transcript ordering"
-  )[0] as { order_index: number } | undefined
-  const createdAt = new Date().toISOString()
   const insertRows = dedupedSegments.map((segment, index) => ({
     session_id: sessionId,
     source_item_id: segment.sourceItemId ?? null,
     speaker: segment.speaker,
     content: segment.text,
-    order_index: (latestSegment?.order_index ?? 0) + index + 1,
+    order_index: latestSegmentOrder + index + 1,
     start_offset_ms: segment.startOffsetMs ?? null,
     end_offset_ms: segment.endOffsetMs ?? null,
     created_at: createdAt,
   }))
+  const updatedRuntimeState = payload.runtime
+    ? mergeRuntimeStatePatch(bundle.session, bundle.config, payload.runtime)
+    : bundle.session.runtimeState
+  const updatePayload: {
+    last_activity_at: string
+    runtime_state?: SessionRuntimeState
+  } = {
+    last_activity_at: createdAt,
+  }
+
+  if (payload.runtime) {
+    updatePayload.runtime_state = updatedRuntimeState
+  }
 
   const [insertResult, updateResult] = await Promise.all([
-    bundle.client.from("transcript_segments").insert(insertRows).select("*"),
+    insertRows.length > 0
+      ? bundle.client.from("transcript_segments").insert(insertRows).select("*")
+      : Promise.resolve({ data: [] as TranscriptSegmentRow[], error: null }),
     bundle.client
       .from("participant_sessions")
-      .update({ last_activity_at: createdAt })
+      .update(updatePayload)
       .eq("id", sessionId),
   ])
 
@@ -2183,7 +2376,10 @@ export async function appendTranscriptSegments(
   )
 }
 
-export async function completeParticipantSession(sessionId: string) {
+export async function completeParticipantSession(
+  sessionId: string,
+  runtimePatch?: Pick<SessionRuntimePatch, "elapsedSeconds" | "questionElapsedSeconds">
+) {
   const bundle = await getSessionBundle(sessionId)
 
   if (!bundle) {
@@ -2198,10 +2394,11 @@ export async function completeParticipantSession(sessionId: string) {
   }
 
   const completedAt = new Date().toISOString()
-  const updatedRuntimeState = {
-    ...bundle.session.runtimeState,
-    state: "complete" as const,
-  }
+  const updatedRuntimeState = mergeRuntimeStatePatch(bundle.session, bundle.config, {
+    ...runtimePatch,
+    state: "complete",
+    pausedAt: null,
+  })
 
   const [sessionResult, jobsResult] = await Promise.all([
     bundle.client
@@ -2248,6 +2445,45 @@ export async function getParticipantSession(sessionId: string) {
   return bundle?.session ?? null
 }
 
+export async function getSessionAnalysisTracePayload(sessionId: string) {
+  const bundle = await getSessionBundle(sessionId)
+
+  if (!bundle) {
+    return null
+  }
+
+  const client = requireSecretClient()
+  const [generatedResult, qualityResult] = await Promise.all([
+    client
+      .from("session_outputs_generated")
+      .select("*")
+      .eq("session_id", sessionId)
+      .maybeSingle<SessionOutputGeneratedRow>(),
+    client
+      .from("quality_scores")
+      .select("*")
+      .eq("session_id", sessionId)
+      .maybeSingle<QualityScoreRow>(),
+  ])
+
+  if (generatedResult.error) {
+    fail(`Unable to load generated session output: ${generatedResult.error.message}`)
+  }
+
+  if (qualityResult.error) {
+    fail(`Unable to load quality score: ${qualityResult.error.message}`)
+  }
+
+  return {
+    session: bundle.session,
+    transcript: bundle.transcript,
+    outputs: generatedResult.data
+      ? mapGeneratedOutput(generatedResult.data)
+      : undefined,
+    score: qualityResult.data ? mapQualityScore(qualityResult.data) : undefined,
+  }
+}
+
 export async function createProjectFromForm(input: {
   name: string
   clientName: string
@@ -2277,62 +2513,6 @@ export async function createProjectFromForm(input: {
       context.workspace.id,
       normalizedInput
     ))
-  const secretClient = createSecretSupabaseClient()
-
-  if (!secretClient) {
-    console.warn(
-      "Skipping initial placeholder synthesis because the Supabase secret client is unavailable."
-    )
-  } else {
-    try {
-      const promptVersionId = await ensurePromptVersion(
-        secretClient,
-        context.workspace.id,
-        "project-synthesis",
-        "v1",
-        "Deterministic placeholder synthesis derived from completed session outputs."
-      )
-      const modelVersionId = await ensureModelVersion(
-        secretClient,
-        context.workspace.id,
-        "project-synthesis",
-        "application",
-        "placeholder-v1"
-      )
-      const placeholderSynthesis = buildEmptyProjectSynthesis(
-        createdProject.projectRow.id,
-        promptVersionId,
-        modelVersionId
-      )
-      const synthesisResult = await secretClient
-        .from("project_syntheses_generated")
-        .insert({
-          project_id: createdProject.projectRow.id,
-          included_session_ids: [],
-          payload: {
-            crossInterviewThemes: [],
-            contradictionMap: [],
-            topProblems: [],
-            suggestedWorkshopAgenda: [],
-            notableQuotesByTheme: [],
-            warning: placeholderSynthesis.warning,
-          },
-          prompt_version_id: promptVersionId,
-          model_version_id: modelVersionId,
-        })
-
-      if (synthesisResult.error) {
-        console.error(
-          `Unable to create initial placeholder synthesis for project ${createdProject.projectRow.id}: ${synthesisResult.error.message}`
-        )
-      }
-    } catch (error) {
-      console.error(
-        `Unable to initialize placeholder synthesis for project ${createdProject.projectRow.id}.`,
-        error
-      )
-    }
-  }
 
   return {
     project: mapProject(

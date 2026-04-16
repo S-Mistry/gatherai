@@ -13,11 +13,20 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { VoiceStatus, type VoiceState } from "@/components/ui/voice-status"
 import type { PublicInterviewConfig } from "@/lib/domain/types"
+import {
+  PARTICIPANT_INTERVIEWER_NAME,
+  buildRealtimeInstructions,
+} from "@/lib/openai/realtime-config"
+import { detectInterviewStartSignal } from "@/lib/participant/runtime"
 
 type RealtimeHistoryItem = import("@openai/agents/realtime").RealtimeItem
 type RealtimeHistoryContentPart =
   import("@openai/agents/realtime").RealtimeMessageItem["content"][number]
 type RealtimeSessionHandle = import("@openai/agents/realtime").RealtimeSession
+type RealtimeTransportHandle =
+  import("@openai/agents/realtime").OpenAIRealtimeWebRTC
+type RealtimeTransportEvent =
+  import("@openai/agents/realtime").TransportEvent
 
 type TranscriptSpeaker = "participant" | "agent"
 
@@ -44,27 +53,19 @@ interface TranscriptPayloadSegment {
 
 function teardownRealtime({
   realtimeSessionRef,
+  realtimeTransportRef,
   micStreamRef,
 }: {
   realtimeSessionRef: { current: RealtimeSessionHandle | null }
+  realtimeTransportRef: { current: RealtimeTransportHandle | null }
   micStreamRef: { current: MediaStream | null }
 }) {
   realtimeSessionRef.current?.close()
   realtimeSessionRef.current = null
+  realtimeTransportRef.current = null
 
   micStreamRef.current?.getTracks().forEach((track) => track.stop())
   micStreamRef.current = null
-}
-
-function buildBrowserInstructions(config: PublicInterviewConfig) {
-  return [
-    `You are the workshop discovery interviewer for ${config.projectName}.`,
-    `Objective: ${config.objective}`,
-    "Start with a short warm greeting and confirm the participant can hear you.",
-    "Ask one primary question at a time.",
-    "Stay warm, neutral, and concise.",
-    "Summarize before moving to the next topic.",
-  ].join(" ")
 }
 
 function extractClientSecretValue(payload: unknown) {
@@ -144,29 +145,119 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [, setRecoveryToken] = useState<string | null>(null)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const [voiceState, setVoiceState] = useState<VoiceState>("idle")
+  const [interviewStarted, setInterviewStarted] = useState(false)
   const [pending, startTransition] = useTransition()
   const realtimeSessionRef = useRef<RealtimeSessionHandle | null>(null)
+  const realtimeTransportRef = useRef<RealtimeTransportHandle | null>(null)
   const micStreamRef = useRef<MediaStream | null>(null)
   const sessionIdRef = useRef<string | null>(null)
+  const statusRef = useRef<ShellStatus>("ready")
+  const interviewStartedRef = useRef(false)
+  const introDeliveredRef = useRef(false)
   const persistedItemIdsRef = useRef<Set<string>>(new Set())
   const inflightItemIdsRef = useRef<Set<string>>(new Set())
   const flushPromiseRef = useRef<Promise<void>>(Promise.resolve())
 
   useEffect(() => {
-    return () => teardownRealtime({ realtimeSessionRef, micStreamRef })
+    return () =>
+      teardownRealtime({ realtimeSessionRef, realtimeTransportRef, micStreamRef })
   }, [])
 
   useEffect(() => {
-    if (status !== "live") return
+    if (status !== "live" || !interviewStarted) return
     const id = window.setInterval(() => setElapsedSeconds((s) => s + 1), 1000)
     return () => window.clearInterval(id)
-  }, [status])
+  }, [interviewStarted, status])
 
   useEffect(() => {
     sessionIdRef.current = sessionId
   }, [sessionId])
 
+  useEffect(() => {
+    statusRef.current = status
+  }, [status])
+
+  useEffect(() => {
+    interviewStartedRef.current = interviewStarted
+  }, [interviewStarted])
+
+  async function postRuntimeEvent(runtime: Record<string, unknown>) {
+    const activeSessionId = sessionIdRef.current
+
+    if (!activeSessionId) {
+      return
+    }
+
+    const response = await fetch(`/api/public/sessions/${activeSessionId}/events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ runtime }),
+    })
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}))
+      throw new Error(
+        payload.error ?? "We couldn't save the latest interview state update."
+      )
+    }
+  }
+
+  function maybeStartInterview(history: RealtimeHistoryItem[]) {
+    if (interviewStartedRef.current) {
+      return
+    }
+
+    const participantSegments = extractTranscriptSegments(history).filter(
+      (segment) => segment.speaker === "participant"
+    )
+    const latestParticipantTurn = participantSegments[participantSegments.length - 1]
+
+    if (!latestParticipantTurn) {
+      return
+    }
+
+    const startSignal = detectInterviewStartSignal(latestParticipantTurn.text)
+
+    if (!startSignal) {
+      return
+    }
+
+    const timestamp = new Date().toISOString()
+    const activeQuestionId = config.requiredQuestions[0]?.id ?? null
+    interviewStartedRef.current = true
+    setInterviewStarted(true)
+    setElapsedSeconds(0)
+    setVoiceState("idle")
+    void postRuntimeEvent({
+      state: "question_active",
+      activeQuestionId,
+      elapsedSeconds: 0,
+      readinessDetectedAt: timestamp,
+      interviewStartedAt: timestamp,
+      pausedAt: null,
+    }).catch((error) => {
+      console.error("Unable to persist interview start state.", error)
+    })
+  }
+
+  function handleTransportEvent(event: RealtimeTransportEvent) {
+    if (statusRef.current === "paused") {
+      return
+    }
+
+    if (event.type === "input_audio_buffer.speech_started") {
+      setVoiceState("listening")
+      return
+    }
+
+    if (event.type === "input_audio_buffer.speech_stopped") {
+      setVoiceState("thinking")
+    }
+  }
+
   function queueTranscriptFlush(history: RealtimeHistoryItem[]) {
+    maybeStartInterview(history)
     const activeSessionId = sessionIdRef.current
 
     if (!activeSessionId) {
@@ -224,7 +315,12 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
   async function handleStart() {
     setErrorMessage(null)
     setStatus("requesting_mic")
-    teardownRealtime({ realtimeSessionRef, micStreamRef })
+    setVoiceState("idle")
+    setElapsedSeconds(0)
+    setInterviewStarted(false)
+    interviewStartedRef.current = false
+    introDeliveredRef.current = false
+    teardownRealtime({ realtimeSessionRef, realtimeTransportRef, micStreamRef })
     sessionIdRef.current = null
     persistedItemIdsRef.current.clear()
     inflightItemIdsRef.current.clear()
@@ -276,7 +372,7 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
       const secret = extractClientSecretValue(secretPayload)
 
       if (!secretResponse.ok || !secret) {
-        teardownRealtime({ realtimeSessionRef, micStreamRef })
+        teardownRealtime({ realtimeSessionRef, realtimeTransportRef, micStreamRef })
         setStatus("fallback")
         setErrorMessage(
           secretPayload.error ??
@@ -287,8 +383,8 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
 
       const realtime = await import("@openai/agents/realtime")
       const agent = new realtime.RealtimeAgent({
-        name: "GatherAI Interviewer",
-        instructions: buildBrowserInstructions(config),
+        name: PARTICIPANT_INTERVIEWER_NAME,
+        instructions: buildRealtimeInstructions(config),
       })
       const micStream = micStreamRef.current
 
@@ -301,14 +397,46 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
       const transport = new realtime.OpenAIRealtimeWebRTC({
         mediaStream: micStream,
       })
+      realtimeTransportRef.current = transport
       const session = new realtime.RealtimeSession(agent, { transport })
       realtimeSessionRef.current = session
       await session.connect({ apiKey: secret })
+      session.on("transport_event", handleTransportEvent)
+      session.on("agent_start", () => {
+        if (statusRef.current !== "paused") {
+          setVoiceState("thinking")
+        }
+      })
+      session.on("audio_start", () => {
+        setVoiceState("speaking")
+
+        if (!introDeliveredRef.current) {
+          introDeliveredRef.current = true
+          void postRuntimeEvent({
+            state: "intro",
+            introDeliveredAt: new Date().toISOString(),
+          }).catch((error) => {
+            console.error("Unable to persist intro state.", error)
+          })
+        }
+      })
+      session.on("audio_stopped", () => {
+        if (statusRef.current !== "paused") {
+          setVoiceState("idle")
+        }
+      })
+      session.on("audio_interrupted", () => {
+        if (statusRef.current !== "paused") {
+          setVoiceState("idle")
+        }
+      })
       session.on("history_updated", queueTranscriptFlush)
 
       setStatus("live")
+      setVoiceState("thinking")
+      transport.requestResponse()
     } catch (error) {
-      teardownRealtime({ realtimeSessionRef, micStreamRef })
+      teardownRealtime({ realtimeSessionRef, realtimeTransportRef, micStreamRef })
       setStatus("error")
       setErrorMessage(
         error instanceof Error
@@ -325,9 +453,25 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
     if (status === "live") {
       handle.mute(true)
       setStatus("paused")
+      setVoiceState("idle")
+      void postRuntimeEvent({
+        state: "paused",
+        elapsedSeconds,
+        pausedAt: new Date().toISOString(),
+      }).catch((error) => {
+        console.error("Unable to persist pause state.", error)
+      })
     } else if (status === "paused") {
       handle.mute(false)
       setStatus("live")
+      setVoiceState("idle")
+      void postRuntimeEvent({
+        state: interviewStartedRef.current ? "question_active" : "intro",
+        elapsedSeconds,
+        pausedAt: null,
+      }).catch((error) => {
+        console.error("Unable to persist resume state.", error)
+      })
     }
   }
 
@@ -338,7 +482,7 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
       try {
         await flushTranscriptQueue()
       } catch (error) {
-        teardownRealtime({ realtimeSessionRef, micStreamRef })
+        teardownRealtime({ realtimeSessionRef, realtimeTransportRef, micStreamRef })
         setStatus("error")
         setErrorMessage(
           error instanceof Error
@@ -352,12 +496,16 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
         `/api/public/sessions/${sessionId}/complete`,
         {
           method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            elapsedSeconds,
+          }),
         }
       )
       const payload = await response.json()
 
       if (!response.ok) {
-        teardownRealtime({ realtimeSessionRef, micStreamRef })
+        teardownRealtime({ realtimeSessionRef, realtimeTransportRef, micStreamRef })
         setStatus("error")
         setErrorMessage(
           payload.error ??
@@ -366,7 +514,8 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
         return
       }
 
-      teardownRealtime({ realtimeSessionRef, micStreamRef })
+      teardownRealtime({ realtimeSessionRef, realtimeTransportRef, micStreamRef })
+      setVoiceState("idle")
       setStatus("complete")
     })
   }
@@ -376,9 +525,6 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
   }
 
   const isLive = status === "live" || status === "paused"
-  const voiceState: VoiceState =
-    status === "live" ? "listening" : status === "paused" ? "idle" : "idle"
-
   return (
     <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
       <Card className="space-y-6">
@@ -405,6 +551,7 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
               voiceState={voiceState}
               elapsedSeconds={elapsedSeconds}
               durationCapMinutes={config.durationCapMinutes}
+              interviewStarted={interviewStarted}
               paused={status === "paused"}
               onTogglePause={handleTogglePause}
               onComplete={handleComplete}
@@ -518,6 +665,7 @@ function LiveSurface({
   voiceState,
   elapsedSeconds,
   durationCapMinutes,
+  interviewStarted,
   paused,
   onTogglePause,
   onComplete,
@@ -526,15 +674,24 @@ function LiveSurface({
   voiceState: VoiceState
   elapsedSeconds: number
   durationCapMinutes: number
+  interviewStarted: boolean
   paused: boolean
   onTogglePause: () => void
   onComplete: () => void
   completing: boolean
 }) {
+  const statusLabel = paused
+    ? `${PARTICIPANT_INTERVIEWER_NAME} is paused`
+    : voiceState === "idle"
+      ? interviewStarted
+        ? `${PARTICIPANT_INTERVIEWER_NAME} is waiting`
+        : `${PARTICIPANT_INTERVIEWER_NAME} is introducing the interview`
+      : `${PARTICIPANT_INTERVIEWER_NAME} is ${voiceState}`
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3">
-        <VoiceStatus state={voiceState} />
+        <VoiceStatus state={voiceState} label={statusLabel} />
         <span
           className="text-sm text-muted-foreground tabular-nums"
           aria-label={`${formatMinutes(elapsedSeconds)} of roughly ${durationCapMinutes} minutes`}
@@ -546,7 +703,9 @@ function LiveSurface({
       <p className="text-base leading-7 text-muted-foreground">
         {paused
           ? "Paused. Press resume when you're ready."
-          : "I'm listening. Take your time."}
+          : interviewStarted
+            ? "I'm listening. Take your time."
+            : `${PARTICIPANT_INTERVIEWER_NAME} will introduce herself first. Say ready when you'd like to begin.`}
       </p>
 
       <div className="flex flex-wrap gap-3">

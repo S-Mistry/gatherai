@@ -1,0 +1,7 @@
+{
+  "affirmative": ["ready", "Yes", "okay", "let's go"],
+  "ignore": ["Hej", "can you hear me", "yep, got you"],
+  "substantive": [
+    "The approvals are a mess because two teams sign off on the same work."
+  ]
+}

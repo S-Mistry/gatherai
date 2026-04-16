@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { ChartLine, House, MicrophoneStage } from "@phosphor-icons/react/dist/ssr"
+import { MicrophoneStage } from "@phosphor-icons/react/dist/ssr"
 
 import { signOutAction } from "@/app/app/actions"
 import { Badge } from "@/components/ui/badge"
@@ -10,8 +10,12 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 const navItems = [
-  { href: "/app", label: "Overview", icon: House },
-  { href: "/app/projects", label: "Projects", icon: ChartLine },
+  { href: "/app", label: "Overview", match: (p: string) => p === "/app" },
+  {
+    href: "/app/projects",
+    label: "Projects",
+    match: (p: string) => p.startsWith("/app/projects"),
+  },
 ]
 
 interface AppShellProps {
@@ -20,85 +24,71 @@ interface AppShellProps {
   demoMode: boolean
 }
 
-export function AppShell({
-  children,
-  userEmail,
-  demoMode,
-}: AppShellProps) {
+export function AppShell({ children, userEmail, demoMode }: AppShellProps) {
   const pathname = usePathname()
 
   return (
-    <div className="page-gradient min-h-screen">
-      <div className="mx-auto flex min-h-screen max-w-7xl flex-col gap-6 px-4 py-5 sm:px-6 lg:flex-row lg:px-8">
-        <aside className="panel flex w-full shrink-0 flex-col gap-6 lg:w-72">
-          <div className="space-y-3">
-            <Badge variant="accent" className="gap-2">
-              <MicrophoneStage className="size-4" />
+    <div className="page-gradient flex min-h-screen flex-col">
+      <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur">
+        <div className="mx-auto flex h-14 max-w-7xl items-center gap-6 px-4 sm:px-6 lg:px-8">
+          <Link
+            href="/app"
+            className="focus-ring flex items-center gap-2 rounded-md"
+          >
+            <span className="flex size-6 items-center justify-center rounded-md bg-primary/12 text-primary">
+              <MicrophoneStage className="size-3.5" weight="fill" />
+            </span>
+            <span className="text-sm font-semibold tracking-tight">
               GatherAI
-            </Badge>
-            <div>
-              <h1 className="text-2xl font-semibold text-balance">Workspace</h1>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                Stakeholder interviews, made simple.
-              </p>
-            </div>
-          </div>
+            </span>
+          </Link>
 
-          <nav className="space-y-2">
+          <nav className="flex items-center gap-1" aria-label="Primary">
             {navItems.map((item) => {
-              const Icon = item.icon
-              const active =
-                pathname === item.href ||
-                (item.href !== "/app" && pathname.startsWith(item.href))
-
+              const active = item.match(pathname)
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex items-center justify-between rounded-2xl border px-4 py-3 text-sm font-medium transition",
-                    "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                    "focus-ring relative rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors",
                     active
-                      ? "border-primary/20 bg-primary/12 text-primary"
-                      : "border-transparent bg-transparent text-muted-foreground hover:border-border/70 hover:bg-card/80 hover:text-foreground"
+                      ? "text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  <span className="flex items-center gap-3">
-                    <Icon className="size-4" />
-                    {item.label}
-                  </span>
-                  {active ? <span className="size-2 rounded-full bg-primary" /> : null}
+                  {item.label}
+                  {active ? (
+                    <span className="absolute inset-x-2.5 -bottom-[11px] h-0.5 rounded-full bg-primary" />
+                  ) : null}
                 </Link>
               )
             })}
           </nav>
 
-          <div className="mt-auto space-y-3 rounded-2xl border border-border/70 bg-background/75 p-4">
+          <div className="ml-auto flex items-center gap-3">
             {demoMode ? (
-              <>
-                <Badge variant="warning">Demo mode</Badge>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  Sign-in is disabled in demo mode.
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  Signed in as {userEmail ?? "you"}.
-                </p>
-                <form action={signOutAction}>
-                  <Button variant="ghost" size="sm" className="w-full justify-start px-0">
-                    Sign out
-                  </Button>
-                </form>
-              </>
-            )}
+              <Badge variant="warning">Demo</Badge>
+            ) : userEmail ? (
+              <span className="hidden max-w-[14rem] truncate text-xs text-muted-foreground sm:inline">
+                {userEmail}
+              </span>
+            ) : null}
+            {!demoMode ? (
+              <form action={signOutAction}>
+                <Button variant="ghost" size="sm">
+                  Sign out
+                </Button>
+              </form>
+            ) : null}
           </div>
-        </aside>
+        </div>
+      </header>
 
-        <main className="min-w-0 flex-1">{children}</main>
-      </div>
+      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8">
+        {children}
+      </main>
     </div>
   )
 }

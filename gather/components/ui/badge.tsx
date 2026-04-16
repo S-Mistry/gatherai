@@ -10,7 +10,7 @@ const variants = {
   danger: "border-rose-500/25 bg-rose-500/12 text-rose-700 dark:text-rose-300",
 } as const
 
-interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
+export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   variant?: keyof typeof variants
 }
 

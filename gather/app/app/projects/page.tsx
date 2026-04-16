@@ -1,16 +1,10 @@
 import Link from "next/link"
-import { FolderOpen } from "@phosphor-icons/react/dist/ssr"
+import { ArrowRight, FolderOpen } from "@phosphor-icons/react/dist/ssr"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import { EmptyState } from "@/components/ui/empty-state"
+import { cn } from "@/lib/utils"
 import { listProjects } from "@/lib/data/repository"
 
 type SearchParams = Record<string, string | string[] | undefined>
@@ -89,16 +83,20 @@ export default async function ProjectsPage({
   const activeFilterConfig = activeFilter ? filterConfig[activeFilter] : null
 
   return (
-    <div className="space-y-6">
-      <section className="panel flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-3">
-          <div>
-            <h1 className="text-4xl font-semibold">Projects</h1>
-          </div>
+    <div className="stack gap-5">
+      <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-baseline gap-3">
+          <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
+          <span className="text-xs tabular-nums text-muted-foreground">
+            {allProjects.length}
+          </span>
         </div>
-        <Button asChild size="lg">
-          <Link href="/app/projects/new">New project</Link>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <FilterChips activeFilter={activeFilter} />
+          <Button asChild size="sm">
+            <Link href="/app/projects/new">New project</Link>
+          </Button>
+        </div>
       </section>
 
       {allProjects.length === 0 ? (
@@ -112,75 +110,138 @@ export default async function ProjectsPage({
             </Button>
           }
         />
+      ) : projects.length === 0 ? (
+        <EmptyState
+          icon={FolderOpen}
+          title={activeFilterConfig?.emptyTitle ?? "No matching projects."}
+          description={
+            activeFilterConfig?.emptyDescription ??
+            "Adjust the current filter to see more projects."
+          }
+          action={
+            <Button asChild variant="outline">
+              <Link href="/app/projects">Show all projects</Link>
+            </Button>
+          }
+        />
       ) : (
-        <>
-          {activeFilterConfig ? (
-            <section className="flex flex-col gap-3 rounded-3xl border border-border/70 bg-background/70 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="space-y-2">
-                <Badge variant="accent">{activeFilterConfig.label}</Badge>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  {activeFilterConfig.description}
-                </p>
-              </div>
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/app/projects">Show all projects</Link>
-              </Button>
-            </section>
-          ) : null}
+        <section className="overflow-hidden rounded-2xl border border-border/70 bg-background/60">
+          <ul>
+            {projects.map((project, idx) => (
+              <li
+                key={project.id}
+                className={cn(
+                  "grid grid-cols-1 gap-2 px-4 py-3 transition-colors hover:bg-primary/5",
+                  "md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1.4fr)_auto] md:items-center md:gap-4",
+                  idx > 0 && "border-t border-border/60"
+                )}
+              >
+                <div className="min-w-0 space-y-0.5">
+                  <Link
+                    href={`/app/projects/${project.id}`}
+                    className="block truncate text-sm font-semibold text-foreground hover:text-primary"
+                  >
+                    {project.name}
+                  </Link>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {project.clientName}
+                  </p>
+                </div>
 
-          {projects.length === 0 ? (
-            <EmptyState
-              icon={FolderOpen}
-              title={activeFilterConfig?.emptyTitle ?? "No matching projects."}
-              description={
-                activeFilterConfig?.emptyDescription ??
-                "Adjust the current filter to see more projects."
-              }
-              action={
-                <Button asChild variant="outline">
-                  <Link href="/app/projects">Show all projects</Link>
-                </Button>
-              }
-            />
-          ) : (
-            <section className="grid gap-4">
-              {projects.map((project) => (
-                <Card key={project.id}>
-                  <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="space-y-2">
-                      <CardTitle>{project.name}</CardTitle>
-                      <CardDescription>
-                        {project.clientName} • {project.sessionCounts.completed}{" "}
-                        completed • {project.sessionCounts.inProgress} in
-                        progress
-                      </CardDescription>
-                    </div>
-                    <Badge
-                      variant={
-                        project.sessionCounts.flagged > 0
-                          ? "warning"
-                          : "success"
-                      }
-                    >
-                      {project.status}
-                    </Badge>
-                  </CardHeader>
-                  <CardContent className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-3 sm:gap-6">
-                      <p>Abandoned: {project.sessionCounts.abandoned}</p>
-                      <p>Flagged: {project.sessionCounts.flagged}</p>
-                      <p>Included in synthesis: {project.includedSessions}</p>
-                    </div>
-                    <Button asChild variant="outline">
-                      <Link href={`/app/projects/${project.id}`}>Open</Link>
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </section>
-          )}
-        </>
+                <div>
+                  <Badge
+                    variant={
+                      project.sessionCounts.flagged > 0
+                        ? "warning"
+                        : project.status === "ready"
+                          ? "success"
+                          : "neutral"
+                    }
+                  >
+                    {project.status}
+                  </Badge>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground tabular-nums">
+                  <span>
+                    <span className="font-semibold text-foreground">
+                      {project.sessionCounts.completed}
+                    </span>{" "}
+                    done
+                  </span>
+                  <span>
+                    <span className="font-semibold text-foreground">
+                      {project.sessionCounts.inProgress}
+                    </span>{" "}
+                    live
+                  </span>
+                  <span>
+                    <span className="font-semibold text-foreground">
+                      {project.sessionCounts.flagged}
+                    </span>{" "}
+                    flagged
+                  </span>
+                  <span>
+                    <span className="font-semibold text-foreground">
+                      {project.includedSessions}
+                    </span>{" "}
+                    in synthesis
+                  </span>
+                </div>
+
+                <div className="flex justify-end">
+                  <Link
+                    href={`/app/projects/${project.id}`}
+                    className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/70 px-2.5 py-1 text-[11px] font-semibold text-foreground transition-colors hover:border-primary/40 hover:bg-primary/8 hover:text-primary"
+                  >
+                    Open
+                    <ArrowRight className="size-3" />
+                  </Link>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
+    </div>
+  )
+}
+
+function FilterChips({ activeFilter }: { activeFilter: ProjectFilter | null }) {
+  const filters: Array<{ key: ProjectFilter | null; label: string }> = [
+    { key: null, label: "All" },
+    { key: "live", label: "Live" },
+    { key: "completed", label: "Completed" },
+    { key: "needs-review", label: "Needs review" },
+  ]
+  return (
+    <div
+      role="tablist"
+      aria-label="Filter projects"
+      className="flex flex-wrap items-center gap-1"
+    >
+      {filters.map((filter) => {
+        const isActive = filter.key === activeFilter
+        const href = filter.key
+          ? `/app/projects?filter=${filter.key}`
+          : "/app/projects"
+        return (
+          <Link
+            key={filter.label}
+            href={href}
+            role="tab"
+            aria-selected={isActive}
+            className={cn(
+              "focus-ring chip transition-colors",
+              isActive
+                ? "border-primary/40 bg-primary/12 text-primary"
+                : "text-muted-foreground hover:border-primary/40 hover:text-foreground"
+            )}
+          >
+            {filter.label}
+          </Link>
+        )
+      })}
     </div>
   )
 }

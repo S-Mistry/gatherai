@@ -3,36 +3,18 @@ import { headers } from "next/headers"
 import { notFound } from "next/navigation"
 
 import { RefreshSynthesisButton } from "@/components/dashboard/refresh-synthesis-button"
-import { SessionExclusionToggle } from "@/components/dashboard/session-exclusion-toggle"
+import { SessionsTable } from "@/components/dashboard/sessions-table"
 import { ThemeEvidenceDrawer } from "@/components/dashboard/theme-evidence-drawer"
 import { Badge } from "@/components/ui/badge"
 import { Breadcrumb } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CopyLink } from "@/components/ui/copy-link"
-import { RelativeTime } from "@/components/ui/relative-time"
 import { getProjectDetail } from "@/lib/data/repository"
 
 interface ProjectDetailPageProps {
   params: Promise<{
     projectId: string
   }>
-}
-
-function statusVariant(status: string) {
-  if (status === "complete") {
-    return "success" as const
-  }
-
-  if (status === "abandoned") {
-    return "danger" as const
-  }
-
-  if (status === "in_progress") {
-    return "accent" as const
-  }
-
-  return "neutral" as const
 }
 
 export default async function ProjectDetailPage({
@@ -52,8 +34,10 @@ export default async function ProjectDetailPage({
     ? `${protocol}://${host}/i/${detail.project.publicLinkToken}`
     : `/i/${detail.project.publicLinkToken}`
 
+  const stats = computeSessionStats(detail.sessions)
+
   return (
-    <div className="space-y-5">
+    <div className="stack gap-5">
       <Breadcrumb
         items={[
           { label: "Workspace", href: "/app" },
@@ -61,21 +45,29 @@ export default async function ProjectDetailPage({
           { label: detail.project.name },
         ]}
       />
-      <section className="panel space-y-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-3">
-            <Badge variant="accent">{detail.project.clientName}</Badge>
-            <div>
-              <h1 className="text-3xl font-semibold tracking-tight text-balance">
-                {detail.project.name}
-              </h1>
-              <p className="mt-3 max-w-3xl text-base leading-7 text-muted-foreground">
-                {detail.configVersion.objective}
-              </p>
+
+      <section className="panel-flush">
+        <header className="flex flex-col gap-4 px-6 py-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="stack max-w-3xl gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="accent">{detail.project.clientName}</Badge>
+              <span className="text-[10px] tracking-[0.22em] text-muted-foreground uppercase">
+                Version {detail.configVersion.versionNumber}
+              </span>
             </div>
+            <h1 className="text-xl font-semibold tracking-tight text-balance">
+              {detail.project.name}
+            </h1>
+            <p className="text-sm leading-6 text-muted-foreground">
+              {detail.configVersion.objective}
+            </p>
           </div>
-          <div className="flex flex-col gap-3 lg:items-end">
-            <CopyLink value={shareUrl} label="Copy link" className="w-full lg:w-[360px]" />
+          <div className="stack gap-2 lg:items-end">
+            <CopyLink
+              value={shareUrl}
+              label="Copy link"
+              className="w-full lg:w-[340px]"
+            />
             <div className="flex flex-wrap gap-2">
               <Button asChild variant="outline" size="sm">
                 <Link href={`/i/${detail.project.publicLinkToken}`}>Preview</Link>
@@ -83,128 +75,174 @@ export default async function ProjectDetailPage({
               <RefreshSynthesisButton projectId={detail.project.id} />
             </div>
           </div>
-        </div>
+        </header>
 
-        <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-          <Card>
-            <CardHeader>
-              <CardDescription>Version {detail.configVersion.versionNumber}</CardDescription>
-              <CardTitle>Interview setup</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
-              <div>
-                <p className="eyebrow">Topics</p>
-                <ul className="mt-3 space-y-2 text-sm leading-6 text-muted-foreground">
-                  {detail.configVersion.areasOfInterest.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <p className="eyebrow">Must-ask questions</p>
-                <ul className="mt-3 space-y-2 text-sm leading-6 text-muted-foreground">
-                  {detail.configVersion.requiredQuestions.map((question) => (
-                    <li key={question.id}>{question.prompt}</li>
-                  ))}
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="divider" />
 
-          <Card>
-            <CardHeader>
-              <CardTitle>What we&apos;re hearing</CardTitle>
-              {detail.synthesis.warning ? (
-                <CardDescription>{detail.synthesis.warning}</CardDescription>
-              ) : null}
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <p className="eyebrow">Top pain points</p>
-                <ul className="mt-3 space-y-2 text-sm leading-6 text-muted-foreground">
-                  {detail.synthesis.topProblems.map((problem) => (
-                    <li key={problem}>{problem}</li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <p className="eyebrow">Suggested agenda</p>
-                <ol className="mt-3 space-y-2 text-sm leading-6 text-muted-foreground">
-                  {detail.synthesis.suggestedWorkshopAgenda.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ol>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <section className="flex flex-wrap gap-2 px-6 py-4">
+          <StatChip label="Done" value={stats.completed} />
+          <StatChip label="Live" value={stats.live} />
+          <StatChip label="Flagged" value={stats.flagged} tone="warning" />
+          <StatChip
+            label="In synthesis"
+            value={stats.includedInSynthesis}
+            tone="accent"
+          />
+        </section>
+
+        <div className="divider" />
+
+        <section className="stack gap-5 px-6 py-5">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="eyebrow-sm">What we&apos;re hearing</h2>
+            {detail.synthesis.warning ? (
+              <Badge variant="warning">{detail.synthesis.warning}</Badge>
+            ) : null}
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+            <BulletBlock
+              label="Top pain points"
+              items={detail.synthesis.topProblems}
+              emptyMessage="No pain points surfaced yet."
+            />
+            <div className="stack gap-5">
+              <BulletBlock
+                label="Suggested agenda"
+                items={detail.synthesis.suggestedWorkshopAgenda}
+                ordered
+                emptyMessage="Agenda recommendations appear once synthesis runs."
+              />
+              <div className="divider" />
+              <p className="eyebrow-sm">Interview setup</p>
+              <BulletBlock
+                label="Topics"
+                items={detail.configVersion.areasOfInterest}
+                emptyMessage="No topics configured."
+              />
+              <BulletBlock
+                label="Must-ask questions"
+                items={detail.configVersion.requiredQuestions.map((q) => q.prompt)}
+                emptyMessage="No required questions configured."
+              />
+            </div>
+          </div>
+        </section>
+
+        <div className="divider" />
+
+        <section className="stack gap-3 px-6 py-5">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="eyebrow-sm">Themes across interviews</h2>
+            <span className="text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
+              click to expand
+            </span>
+          </div>
+          <ThemeEvidenceDrawer themes={detail.synthesis.crossInterviewThemes} />
+        </section>
+
+        <div className="divider" />
+
+        <section className="stack gap-3 px-6 py-5">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="eyebrow-sm">Sessions</h2>
+            <span className="text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
+              {detail.sessions.length}{" "}
+              {detail.sessions.length === 1 ? "interview" : "interviews"}
+            </span>
+          </div>
+          <SessionsTable
+            projectId={projectId}
+            sessions={detail.sessions}
+            qualityScores={detail.qualityScores}
+          />
+        </section>
+
       </section>
+    </div>
+  )
+}
 
-      <section className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Themes across interviews</CardTitle>
-            <CardDescription>Click a theme to see the quotes it came from.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ThemeEvidenceDrawer themes={detail.synthesis.crossInterviewThemes} />
-          </CardContent>
-        </Card>
+function computeSessionStats(
+  sessions: { status: string; qualityFlag: boolean; excludedFromSynthesis: boolean }[]
+) {
+  return sessions.reduce(
+    (acc, session) => {
+      if (session.status === "complete") {
+        acc.completed += 1
+        if (!session.excludedFromSynthesis) {
+          acc.includedInSynthesis += 1
+        }
+      }
+      if (session.status === "in_progress") {
+        acc.live += 1
+      }
+      if (session.qualityFlag) {
+        acc.flagged += 1
+      }
+      return acc
+    },
+    { completed: 0, live: 0, flagged: 0, includedInSynthesis: 0 }
+  )
+}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Sessions</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {detail.sessions.map((session) => {
-              const qualityScore = detail.qualityScores[session.id]
+function StatChip({
+  label,
+  value,
+  tone = "neutral",
+}: {
+  label: string
+  value: number
+  tone?: "neutral" | "warning" | "accent"
+}) {
+  const valueColor =
+    tone === "warning"
+      ? "text-amber-700 dark:text-amber-300"
+      : tone === "accent"
+        ? "text-primary"
+        : "text-foreground"
+  return (
+    <span className="chip gap-2 px-3 py-1.5">
+      <span
+        className={`text-base font-semibold tabular-nums leading-none ${valueColor}`}
+      >
+        {value}
+      </span>
+      <span className="text-[11px] tracking-[0.16em] text-muted-foreground uppercase">
+        {label}
+      </span>
+    </span>
+  )
+}
 
-              return (
-                <div
-                  key={session.id}
-                  className="rounded-3xl border border-border/70 bg-background/70 p-5"
-                >
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="text-lg font-semibold">{session.respondentLabel}</h2>
-                        <Badge variant={statusVariant(session.status)}>{session.status}</Badge>
-                        {session.qualityFlag ? (
-                          <Badge variant="warning">Needs review</Badge>
-                        ) : null}
-                        {session.excludedFromSynthesis ? (
-                          <Badge variant="danger">Excluded</Badge>
-                        ) : null}
-                      </div>
-                      <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                        Last active <RelativeTime date={session.lastActivityAt} />
-                      </p>
-                      {qualityScore ? (
-                        <p className="text-sm leading-6 text-muted-foreground">
-                          Quality {Math.round(qualityScore.overall * 100)}%
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="flex flex-wrap gap-3">
-                      <Button asChild variant="outline" size="sm">
-                        <Link href={`/app/projects/${projectId}/sessions/${session.id}`}>
-                          Review
-                        </Link>
-                      </Button>
-                      <SessionExclusionToggle
-                        projectId={projectId}
-                        sessionId={session.id}
-                        excluded={session.excludedFromSynthesis}
-                        respondentLabel={session.respondentLabel}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </CardContent>
-        </Card>
-      </section>
+function BulletBlock({
+  label,
+  items,
+  ordered = false,
+  emptyMessage,
+}: {
+  label: string
+  items: string[]
+  ordered?: boolean
+  emptyMessage: string
+}) {
+  const ListTag = ordered ? "ol" : "ul"
+  return (
+    <div className="stack gap-2">
+      <p className="eyebrow-sm">{label}</p>
+      {items.length === 0 ? (
+        <p className="text-sm leading-6 text-muted-foreground">
+          {emptyMessage}
+        </p>
+      ) : (
+        <ListTag
+          className={`stack gap-1.5 text-sm leading-6 text-foreground ${ordered ? "list-decimal pl-5 marker:text-muted-foreground" : "list-disc pl-5 marker:text-muted-foreground"}`}
+        >
+          {items.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ListTag>
+      )}
     </div>
   )
 }

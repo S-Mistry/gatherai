@@ -1,8 +1,14 @@
 import { env, isBraintrustConfigured } from "@/lib/env"
-import type { ParticipantSession, QualityScore, SessionOutputGenerated } from "@/lib/domain/types"
+import type {
+  ParticipantSession,
+  QualityScore,
+  SessionOutputGenerated,
+  TranscriptSegment,
+} from "@/lib/domain/types"
 
 export interface BraintrustTracePayload {
   session: ParticipantSession
+  transcript?: TranscriptSegment[]
   outputs?: SessionOutputGenerated
   score?: QualityScore
 }

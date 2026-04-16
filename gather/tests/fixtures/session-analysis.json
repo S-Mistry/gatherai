@@ -1,0 +1,156 @@
+{
+  "config": {
+    "id": "cfg-1",
+    "projectId": "proj-1",
+    "versionNumber": 1,
+    "createdAt": "2026-04-16T10:00:00.000Z",
+    "objective": "Understand what should change before the workshop.",
+    "areasOfInterest": ["approval speed", "decision ownership"],
+    "requiredQuestions": [
+      {
+        "id": "q-outcomes",
+        "prompt": "What would make this workshop useful for you?",
+        "goal": "Capture success criteria."
+      },
+      {
+        "id": "q-friction",
+        "prompt": "Where is the biggest day-to-day friction today?",
+        "goal": "Find operational pain points."
+      }
+    ],
+    "durationCapMinutes": 15,
+    "interviewMode": "strict",
+    "anonymityMode": "pseudonymous",
+    "toneStyle": "Warm and concise.",
+    "metadataPrompts": [],
+    "prohibitedTopics": [],
+    "followUpLimit": 2
+  },
+  "transcript": [
+    {
+      "id": "seg-agent-1",
+      "sessionId": "sess-1",
+      "speaker": "agent",
+      "text": "Hi, I'm Mia. I'll explain how this works and then you can say ready when you'd like to begin.",
+      "createdAt": "2026-04-16T10:00:00.000Z",
+      "orderIndex": 1
+    },
+    {
+      "id": "seg-participant-1",
+      "sessionId": "sess-1",
+      "speaker": "participant",
+      "text": "Hej.",
+      "createdAt": "2026-04-16T10:00:05.000Z",
+      "orderIndex": 2
+    },
+    {
+      "id": "seg-agent-2",
+      "sessionId": "sess-1",
+      "speaker": "agent",
+      "text": "Great. What would make this workshop useful for you?",
+      "createdAt": "2026-04-16T10:00:08.000Z",
+      "orderIndex": 3
+    },
+    {
+      "id": "seg-participant-2",
+      "sessionId": "sess-1",
+      "speaker": "participant",
+      "text": "The biggest problem is approvals. Finance and operations both sign off, so nothing moves quickly.",
+      "createdAt": "2026-04-16T10:00:14.000Z",
+      "orderIndex": 4
+    },
+    {
+      "id": "seg-participant-3",
+      "sessionId": "sess-1",
+      "speaker": "participant",
+      "text": "We need one owner for exceptions.",
+      "createdAt": "2026-04-16T10:00:20.000Z",
+      "orderIndex": 5
+    }
+  ],
+  "output": {
+    "id": "out-1",
+    "sessionId": "sess-1",
+    "cleanedTranscript": "Participant: The biggest problem is approvals. Finance and operations both sign off, so nothing moves quickly. We need one owner for exceptions.",
+    "summary": "Approvals are too slow and exception ownership is unclear.",
+    "questionAnswers": [
+      {
+        "questionId": "q-outcomes",
+        "prompt": "What would make this workshop useful for you?",
+        "answer": "The workshop should clarify who owns approvals and exceptions.",
+        "confidence": 0.88,
+        "evidence": [
+          {
+            "sessionId": "sess-1",
+            "segmentIds": ["seg-participant-2", "seg-participant-3"],
+            "rationale": "The respondent explained the approval bottleneck and asked for one owner."
+          }
+        ]
+      }
+    ],
+    "themes": [
+      {
+        "id": "theme-1",
+        "title": "Approval bottlenecks",
+        "summary": "Multiple teams approve the same work.",
+        "frequency": 1,
+        "evidence": [
+          {
+            "sessionId": "sess-1",
+            "segmentIds": ["seg-participant-2"],
+            "rationale": "The respondent described duplicated sign-off."
+          }
+        ]
+      }
+    ],
+    "painPoints": [
+      {
+        "id": "pain-1",
+        "label": "Duplicate approvals",
+        "summary": "Finance and operations both sign off on the same work.",
+        "evidence": [
+          {
+            "sessionId": "sess-1",
+            "segmentIds": ["seg-participant-2"],
+            "rationale": "The respondent explicitly described dual approvals."
+          }
+        ]
+      }
+    ],
+    "opportunities": [
+      {
+        "id": "opp-1",
+        "label": "Clarify exception ownership",
+        "summary": "The workshop should decide who owns edge-case approval calls.",
+        "evidence": [
+          {
+            "sessionId": "sess-1",
+            "segmentIds": ["seg-participant-3"],
+            "rationale": "The respondent asked for one owner for exceptions."
+          }
+        ]
+      }
+    ],
+    "risks": [],
+    "keyQuotes": [
+      {
+        "id": "quote-1",
+        "label": "Representative quote",
+        "summary": "Finance and operations both sign off, so nothing moves quickly.",
+        "evidence": [
+          {
+            "sessionId": "sess-1",
+            "segmentIds": ["seg-participant-2"],
+            "rationale": "Direct quote from the respondent."
+          }
+        ]
+      }
+    ],
+    "unresolvedQuestions": ["What should be delegated?"],
+    "confidenceScore": 0.78,
+    "stakeholderProfile": {},
+    "promptVersionId": "prompt-1",
+    "modelVersionId": "model-1",
+    "createdAt": "2026-04-16T10:05:00.000Z"
+  }
+}

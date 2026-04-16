@@ -763,6 +763,8 @@ export function getPublicInterviewConfig(linkToken: string) {
       "Thanks for taking part. This short interview helps shape a workshop agenda that reflects what stakeholders actually need.",
     disclosure:
       "You are speaking with an AI interviewer. Your conversation is transcribed for workshop discovery. Audio is not stored in this MVP.",
+    areasOfInterest: config.areasOfInterest,
+    requiredQuestions: config.requiredQuestions,
     metadataPrompts: config.metadataPrompts,
   }
 }
@@ -828,12 +830,15 @@ export function resumeParticipantSession(sessionId: string, token: string) {
   return session
 }
 
-export function appendTranscriptSegments(
+export function appendSessionEvents(
   sessionId: string,
-  segments: Omit<
-    TranscriptSegment,
-    "id" | "createdAt" | "orderIndex" | "sessionId"
-  >[]
+  payload: {
+    segments?: Omit<
+      TranscriptSegment,
+      "id" | "createdAt" | "orderIndex" | "sessionId"
+    >[]
+    runtime?: Partial<ParticipantSession["runtimeState"]>
+  }
 ) {
   const store = getStore()
   const session = store.sessions[sessionId]
@@ -842,6 +847,7 @@ export function appendTranscriptSegments(
     return null
   }
 
+  const segments = payload.segments ?? []
   const existing = store.transcripts[sessionId] ?? []
   const createdAt = new Date().toISOString()
 
@@ -855,11 +861,20 @@ export function appendTranscriptSegments(
 
   store.transcripts[sessionId] = [...existing, ...appended]
   session.lastActivityAt = createdAt
+  if (payload.runtime) {
+    session.runtimeState = {
+      ...session.runtimeState,
+      ...payload.runtime,
+    }
+  }
 
   return appended
 }
 
-export function completeParticipantSession(sessionId: string) {
+export function completeParticipantSession(
+  sessionId: string,
+  runtimePatch?: Partial<ParticipantSession["runtimeState"]>
+) {
   const store = getStore()
   const session = store.sessions[sessionId]
 
@@ -870,7 +885,12 @@ export function completeParticipantSession(sessionId: string) {
   session.status = "complete"
   session.completedAt = new Date().toISOString()
   session.lastActivityAt = session.completedAt
-  session.runtimeState.state = "complete"
+  session.runtimeState = {
+    ...session.runtimeState,
+    ...runtimePatch,
+    state: "complete",
+    pausedAt: undefined,
+  }
 
   const jobs = buildCompletionJobs(session.id, session.projectId)
   store.jobs.push(...jobs)

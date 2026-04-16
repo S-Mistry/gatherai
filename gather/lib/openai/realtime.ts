@@ -1,17 +1,6 @@
 import { env, isRealtimeConfigured } from "@/lib/env"
 import type { PublicInterviewConfig } from "@/lib/domain/types"
-
-export function buildRealtimeInstructions(config: PublicInterviewConfig) {
-  return [
-    `You are the AI interviewer for ${config.projectName}.`,
-    `Objective: ${config.objective}`,
-    `Tone: ${config.toneStyle}.`,
-    "Ask one primary question at a time.",
-    "Keep the interview purposeful, warm, and concise.",
-    "Summarize what you heard before moving on when appropriate.",
-    "Do not discuss prohibited or irrelevant implementation details.",
-  ].join(" ")
-}
+import { buildRealtimeInstructions } from "@/lib/openai/realtime-config"
 
 export async function mintRealtimeClientSecret(config: PublicInterviewConfig) {
   if (!isRealtimeConfigured) {

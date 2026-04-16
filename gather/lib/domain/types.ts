@@ -86,6 +86,8 @@ export interface PublicInterviewConfig {
   toneStyle: string
   intro: string
   disclosure: string
+  areasOfInterest: string[]
+  requiredQuestions: QuestionDefinition[]
   metadataPrompts: MetadataPrompt[]
 }
 
@@ -119,6 +121,10 @@ export interface SessionRuntimeState {
   coverageConfidence: number
   summaryPending: boolean
   hardStopAt: string
+  introDeliveredAt?: string
+  readinessDetectedAt?: string
+  interviewStartedAt?: string
+  pausedAt?: string
 }
 
 export interface TranscriptSegment {

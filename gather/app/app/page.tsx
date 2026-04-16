@@ -1,15 +1,9 @@
 import Link from "next/link"
-import { FolderOpen } from "@phosphor-icons/react/dist/ssr"
+import { ArrowRight, FlagPennant, FolderOpen } from "@phosphor-icons/react/dist/ssr"
 
+import { ContinueReviewingRail } from "@/components/dashboard/continue-reviewing-rail"
 import { MetricCard } from "@/components/dashboard/metric-card"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import { EmptyState } from "@/components/ui/empty-state"
 import { getWorkspaceSnapshot } from "@/lib/data/repository"
 
@@ -26,28 +20,26 @@ export default async function ConsultantHomePage() {
   )
 
   const firstProject = snapshot.projects[0] ?? null
+  const flaggedCount = snapshot.recentNeedsReviewSessions.length
 
   return (
-    <div className="space-y-6">
-      <section className="panel space-y-6">
-        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-          <div className="space-y-3">
-            <p className="text-xs tracking-[0.24em] text-muted-foreground uppercase">
-              Welcome back.
-            </p>
-            <div>
-              <h1 className="text-4xl font-semibold text-balance">
-                {snapshot.workspace.name}
-              </h1>
-            </div>
+    <div className="stack gap-5">
+      <section className="panel-flush">
+        <header className="flex flex-col justify-between gap-3 px-6 py-5 lg:flex-row lg:items-end">
+          <div className="stack gap-1">
+            <p className="eyebrow-sm">Welcome back</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-balance">
+              {snapshot.workspace.name}
+            </h1>
           </div>
-
-          <Button asChild size="lg">
+          <Button asChild size="sm">
             <Link href="/app/projects/new">New project</Link>
           </Button>
-        </div>
+        </header>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="divider" />
+
+        <section className="grid gap-3 px-6 py-5 md:grid-cols-2 xl:grid-cols-4">
           <MetricCard
             label="Projects"
             value={String(snapshot.projects.length)}
@@ -77,53 +69,91 @@ export default async function ConsultantHomePage() {
             href="/app/projects?filter=needs-review"
             ariaLabel={`Needs review: ${aggregate.flagged}. Open projects with flagged interviews.`}
           />
-        </div>
-      </section>
+        </section>
 
-      <section className="grid gap-4">
+        <div className="divider" />
+
         {firstProject ? (
-          <Card>
-            <CardHeader>
-              <CardDescription>Active project</CardDescription>
-              <CardTitle>{firstProject.name}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-border/70 bg-background/70 p-4">
-                  <p className="eyebrow">Recent activity</p>
-                  <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                    {firstProject.sessionCounts.inProgress} in progress,{" "}
-                    {firstProject.sessionCounts.completed} completed,{" "}
-                    {firstProject.sessionCounts.abandoned} abandoned.
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-border/70 bg-background/70 p-4">
-                  <p className="eyebrow">Themes emerging</p>
-                  <ul className="mt-3 space-y-2 text-sm leading-6 text-muted-foreground">
-                    {firstProject.activeThemes.map((theme) => (
-                      <li key={theme.id}>{theme.title}</li>
-                    ))}
-                  </ul>
-                </div>
+          <section className="stack gap-3 px-6 py-5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="stack gap-1">
+                <p className="eyebrow-sm">Active project</p>
+                <h2 className="text-lg font-semibold tracking-tight text-foreground">
+                  {firstProject.name}
+                </h2>
               </div>
+              <Button asChild variant="ghost" size="sm">
+                <Link
+                  href={`/app/projects/${firstProject.id}`}
+                  className="inline-flex items-center gap-1"
+                >
+                  Open
+                  <ArrowRight className="size-3.5" />
+                </Link>
+              </Button>
+            </div>
 
-              <Button asChild variant="outline">
-                <Link href={`/app/projects/${firstProject.id}`}>Open</Link>
-              </Button>
-            </CardContent>
-          </Card>
+            <div className="flex flex-wrap gap-2">
+              <span className="chip">
+                <span className="font-semibold tabular-nums text-foreground">
+                  {firstProject.sessionCounts.completed}
+                </span>
+                done
+              </span>
+              <span className="chip">
+                <span className="font-semibold tabular-nums text-foreground">
+                  {firstProject.sessionCounts.inProgress}
+                </span>
+                live
+              </span>
+              <span className="chip">
+                <span className="font-semibold tabular-nums text-foreground">
+                  {firstProject.sessionCounts.abandoned}
+                </span>
+                abandoned
+              </span>
+            </div>
+
+            {firstProject.activeThemes.length > 0 ? (
+              <div className="stack gap-2">
+                <p className="eyebrow-sm">Themes emerging</p>
+                <ul className="stack gap-1.5 list-disc pl-5 text-sm leading-6 text-muted-foreground marker:text-muted-foreground">
+                  {firstProject.activeThemes.map((theme) => (
+                    <li key={theme.id}>{theme.title}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </section>
         ) : (
-          <EmptyState
-            icon={FolderOpen}
-            title="No projects yet."
-            description="Create one to share a link with stakeholders."
-            action={
-              <Button asChild>
-                <Link href="/app/projects/new">New project</Link>
-              </Button>
-            }
-          />
+          <section className="px-6 py-5">
+            <EmptyState
+              icon={FolderOpen}
+              title="No projects yet."
+              description="Create one to share a link with stakeholders."
+              action={
+                <Button asChild>
+                  <Link href="/app/projects/new">New project</Link>
+                </Button>
+              }
+            />
+          </section>
         )}
+
+        <div className="divider" />
+
+        <section className="stack gap-3 px-6 py-5">
+          <div className="flex items-center justify-between gap-3">
+            <p className="eyebrow-sm">Continue reviewing</p>
+            {flaggedCount > 0 ? (
+              <span className="inline-flex items-center gap-1 text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
+                <FlagPennant className="size-3" />
+                {flaggedCount} flagged
+              </span>
+            ) : null}
+          </div>
+          <ContinueReviewingRail sessions={snapshot.recentNeedsReviewSessions} />
+        </section>
       </section>
     </div>
   )

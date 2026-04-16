@@ -11,6 +11,8 @@ const envSchema = z.object({
   OPENAI_API_KEY: z.string().min(1).optional(),
   OPENAI_REALTIME_MODEL: z.string().min(1).default("gpt-realtime"),
   OPENAI_VOICE_NAME: z.string().min(1).default("alloy"),
+  OPENAI_SESSION_ANALYSIS_MODEL: z.string().min(1).default("gpt-5.4-mini"),
+  OPENAI_PROJECT_SYNTHESIS_MODEL: z.string().min(1).default("gpt-5.4"),
   BRAINTRUST_API_KEY: z.string().min(1).optional(),
   BRAINTRUST_PROJECT: z.string().min(1).default("gatherai-mvp"),
   RECOVERY_TOKEN_SECRET: z.string().min(1).optional(),

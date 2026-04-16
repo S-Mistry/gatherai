@@ -1,12 +1,5 @@
 import Link from "next/link"
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
 interface MetricCardProps {
@@ -18,6 +11,11 @@ interface MetricCardProps {
   ariaLabel?: string
 }
 
+const tileBase = cn(
+  "stack gap-2 rounded-2xl border border-border/70 bg-background/70 p-4",
+  "transition-colors"
+)
+
 export function MetricCard({
   label,
   value,
@@ -28,20 +26,14 @@ export function MetricCard({
 }: MetricCardProps) {
   const content = (
     <>
-      <CardHeader>
-        <CardDescription className="text-xs tracking-[0.24em] uppercase">
-          {label}
-        </CardDescription>
-        <CardTitle className="text-3xl font-semibold tracking-tight tabular-nums">
-          {value}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-1">
-        <p className="text-sm leading-6 text-muted-foreground">{hint}</p>
-        {accent ? (
-          <p className="text-sm font-medium text-primary">{accent}</p>
-        ) : null}
-      </CardContent>
+      <p className="eyebrow-sm">{label}</p>
+      <p className="text-3xl font-semibold tabular-nums tracking-tight text-foreground">
+        {value}
+      </p>
+      <p className="text-xs leading-5 text-muted-foreground">{hint}</p>
+      {accent ? (
+        <p className="text-xs font-medium leading-5 text-primary">{accent}</p>
+      ) : null}
     </>
   )
 
@@ -51,9 +43,8 @@ export function MetricCard({
         href={href}
         aria-label={ariaLabel ?? `${label}: ${value}`}
         className={cn(
-          "panel block cursor-pointer space-y-3 transition",
-          "focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
-          "hover:border-border/70 hover:bg-card/80 hover:text-foreground"
+          tileBase,
+          "focus-ring hover:border-primary/40 hover:bg-primary/8"
         )}
       >
         {content}
@@ -61,5 +52,5 @@ export function MetricCard({
     )
   }
 
-  return <Card className="space-y-3">{content}</Card>
+  return <div className={tileBase}>{content}</div>
 }

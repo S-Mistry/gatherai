@@ -1,6 +1,6 @@
 # Technical Spec v1
 
-Last updated: April 15, 2026
+Last updated: April 16, 2026
 
 ## 1. Scope
 
@@ -43,6 +43,9 @@ Last updated: April 15, 2026
   - route handler validates the link token, creates or resumes the session, and returns a signed recovery token plus session metadata
   - browser requests an OpenAI realtime client secret from a server route
   - browser connects to OpenAI Realtime over WebRTC
+  - the realtime session explicitly triggers Mia's opening response so the participant does not need to speak first
+  - participant runtime persists intro, readiness, pause, resume, and completion state updates alongside transcript items
+  - the timed interview starts only after a soft readiness signal or a substantive first answer
   - browser subscribes to realtime history updates and persists completed participant and agent transcript items back to public route handlers
   - transcript ingest uses stable realtime source item IDs so reconnects and retry flushes stay idempotent
 - Consultant path:
@@ -54,7 +57,11 @@ Last updated: April 15, 2026
   - RLS restricts reads and writes to the consultant workspace
 - Analysis path:
   - session completion enqueues transcript cleaning, extraction, and quality scoring jobs
+  - transcript cleaning is deterministic: normalize whitespace, preserve speaker order, merge consecutive same-speaker fragments when safe, and mark low-signal greeting or channel-check turns for downstream analysis
+  - session extraction uses the OpenAI Responses API with strict structured outputs, full transcript context, and evidence validation against exact participant segment IDs
+  - quality scoring combines deterministic structural checks with a model-assisted faithfulness and workshop-usefulness pass
   - the completion route immediately claims and processes that session's queued jobs in deterministic order, then enqueues and runs project synthesis
+  - project synthesis uses only completed, non-excluded effective session outputs and rejects claims without valid cited evidence
   - internal dispatch routes and cron sweeps remain recovery paths for queued or stuck jobs
   - Braintrust traces and online scores are stored asynchronously
 
@@ -95,9 +102,9 @@ Last updated: April 15, 2026
 - `POST /api/public/sessions/[sessionId]/client-secret`
   - mint an OpenAI realtime client secret after validating session eligibility
 - `POST /api/public/sessions/[sessionId]/events`
-  - ingest transcript segments and runtime state changes, keyed by optional realtime source item IDs for idempotent persistence
+  - ingest transcript segments plus runtime state changes such as intro delivered, readiness detected, and pause or resume, keyed by optional realtime source item IDs for idempotent persistence
 - `POST /api/public/sessions/[sessionId]/complete`
-  - finalize the session, enqueue downstream session analysis jobs, and trigger immediate session-scoped dispatch
+  - finalize the session, persist final elapsed interview timing, enqueue downstream session analysis jobs, and trigger immediate session-scoped dispatch
 
 ### 4.4 Internal APIs
 
@@ -126,7 +133,7 @@ Last updated: April 15, 2026
 - `ParticipantSession`
   - public session record pinned to one `project_config_version_id`
 - `SessionRuntimeState`
-  - current question pointer, counts, timers, novelty signals, pause state, and completion state
+  - current question pointer, intro and readiness lifecycle markers, elapsed interview timing, novelty signals, pause state, and completion state
 - `TranscriptSegment`
   - one ordered utterance from `participant`, `agent`, or `system`, with an optional stable realtime source item ID
 - `EvidenceRef`
@@ -262,6 +269,9 @@ Last updated: April 15, 2026
 - concise disclosure before microphone access
 - optional metadata collection driven by config
 - clear session length expectation
+- Mia speaks first with a short disclosure and readiness prompt
+- timer starts only after the participant indicates they are ready or begins substantively
+- live status uses an event-driven waveform that distinguishes listening, thinking, and speaking
 - microphone permission error state
 - paused, resumed, and completed states
 
@@ -277,6 +287,8 @@ Last updated: April 15, 2026
   - `OPENAI_API_KEY`
   - `OPENAI_REALTIME_MODEL`
   - `OPENAI_VOICE_NAME`
+  - `OPENAI_SESSION_ANALYSIS_MODEL`
+  - `OPENAI_PROJECT_SYNTHESIS_MODEL`
   - `BRAINTRUST_API_KEY`
   - `BRAINTRUST_PROJECT`
   - `RECOVERY_TOKEN_SECRET`

@@ -1,19 +1,56 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 
-import { appendTranscriptSegments } from "@/lib/data/repository"
+import { appendSessionEvents } from "@/lib/data/repository"
 
 const eventSchema = z.object({
-  segments: z.array(
-    z.object({
-      sourceItemId: z.string().min(1).optional(),
-      speaker: z.enum(["participant", "agent", "system"]),
-      text: z.string().min(1),
-      startOffsetMs: z.number().optional(),
-      endOffsetMs: z.number().optional(),
+  segments: z
+    .array(
+      z.object({
+        sourceItemId: z.string().min(1).optional(),
+        speaker: z.enum(["participant", "agent", "system"]),
+        text: z.string().min(1),
+        startOffsetMs: z.number().optional(),
+        endOffsetMs: z.number().optional(),
+      })
+    )
+    .optional(),
+  runtime: z
+    .object({
+      state: z
+        .enum([
+          "pre_start",
+          "consent",
+          "metadata_collection",
+          "intro",
+          "question_active",
+          "follow_up",
+          "question_summary_confirm",
+          "question_advance",
+          "wrap_up",
+          "paused",
+          "complete",
+          "abandoned",
+        ])
+        .optional(),
+      activeQuestionId: z.string().min(1).nullable().optional(),
+      elapsedSeconds: z.number().min(0).optional(),
+      questionElapsedSeconds: z.number().min(0).optional(),
+      introDeliveredAt: z.string().min(1).optional(),
+      readinessDetectedAt: z.string().min(1).optional(),
+      interviewStartedAt: z.string().min(1).optional(),
+      pausedAt: z.string().min(1).nullable().optional(),
     })
-  ),
+    .optional(),
 })
+
+const validatedEventSchema = eventSchema.refine(
+  (payload) =>
+    (payload.segments?.length ?? 0) > 0 || payload.runtime !== undefined,
+  {
+    message: "At least one transcript segment or runtime event is required.",
+  }
+)
 
 interface RouteContext {
   params: Promise<{
@@ -23,7 +60,9 @@ interface RouteContext {
 
 export async function POST(request: Request, { params }: RouteContext) {
   const { sessionId } = await params
-  const payload = eventSchema.safeParse(await request.json().catch(() => ({})))
+  const payload = validatedEventSchema.safeParse(
+    await request.json().catch(() => ({}))
+  )
 
   if (!payload.success) {
     return NextResponse.json(
@@ -32,10 +71,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     )
   }
 
-  const appended = await appendTranscriptSegments(
-    sessionId,
-    payload.data.segments
-  )
+  const appended = await appendSessionEvents(sessionId, payload.data)
 
   if (!appended) {
     return NextResponse.json({ error: "Session not found." }, { status: 404 })
