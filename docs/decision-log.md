@@ -76,8 +76,8 @@ Last updated: April 16, 2026
 
 ### D-015 Structured analysis model split
 - Status: accepted
-- Decision: session extraction and quality scoring use `gpt-5.4-mini`, while project synthesis uses `gpt-5.4`, all through structured Responses API calls with validated evidence refs.
-- Consequence: the runtime environment contract includes dedicated analysis model variables, and generated outputs must not fall back to placeholder rows when structured extraction is unavailable.
+- Decision: session grounding and narrative extraction use `gpt-5.4-mini` by default, quality grading uses `gpt-5.4-nano`, and project synthesis plus hard-session escalation use `gpt-5.4`, all through structured Responses API calls with validated evidence refs.
+- Consequence: the runtime environment contract includes dedicated grounding, enrichment, grader, escalation, and project synthesis model variables, and generated outputs must not fall back to placeholder rows when structured extraction is unavailable.
 
 ## Reference Notes
 - OpenAI Realtime docs describe WebRTC as ideal for browser and client-side interactions and document server-side controls for realtime sessions.

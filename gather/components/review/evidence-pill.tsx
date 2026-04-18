@@ -33,7 +33,7 @@ export function EvidencePill({ evidence, className }: EvidencePillProps) {
     )
   }
 
-  const label = count === 1 ? "1 quote" : `${count} quotes`
+  const label = count === 1 ? "1 excerpt" : `${count} excerpts`
   const rationale = evidence.find((ref) => ref.rationale)?.rationale
 
   return (

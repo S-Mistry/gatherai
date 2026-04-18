@@ -12,6 +12,10 @@ const envSchema = z.object({
   OPENAI_REALTIME_MODEL: z.string().min(1).default("gpt-realtime"),
   OPENAI_VOICE_NAME: z.string().min(1).default("alloy"),
   OPENAI_SESSION_ANALYSIS_MODEL: z.string().min(1).default("gpt-5.4-mini"),
+  OPENAI_SESSION_GROUNDING_MODEL: z.string().min(1).optional(),
+  OPENAI_SESSION_ENRICHMENT_MODEL: z.string().min(1).optional(),
+  OPENAI_SESSION_GRADER_MODEL: z.string().min(1).optional(),
+  OPENAI_SESSION_ESCALATION_MODEL: z.string().min(1).optional(),
   OPENAI_PROJECT_SYNTHESIS_MODEL: z.string().min(1).default("gpt-5.4"),
   BRAINTRUST_API_KEY: z.string().min(1).optional(),
   BRAINTRUST_PROJECT: z.string().min(1).default("gatherai-mvp"),
@@ -34,3 +38,14 @@ export const isRealtimeConfigured = Boolean(env.OPENAI_API_KEY)
 export const isBraintrustConfigured = Boolean(env.BRAINTRUST_API_KEY)
 
 export const hasCronSecret = Boolean(env.CRON_SECRET)
+
+export const openAiModels = {
+  sessionGrounding:
+    env.OPENAI_SESSION_GROUNDING_MODEL ?? env.OPENAI_SESSION_ANALYSIS_MODEL,
+  sessionEnrichment:
+    env.OPENAI_SESSION_ENRICHMENT_MODEL ?? env.OPENAI_SESSION_ANALYSIS_MODEL,
+  sessionGrader: env.OPENAI_SESSION_GRADER_MODEL ?? "gpt-5.4-nano",
+  sessionEscalation:
+    env.OPENAI_SESSION_ESCALATION_MODEL ?? env.OPENAI_PROJECT_SYNTHESIS_MODEL,
+  projectSynthesis: env.OPENAI_PROJECT_SYNTHESIS_MODEL,
+} as const

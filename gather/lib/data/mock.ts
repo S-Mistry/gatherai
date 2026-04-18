@@ -130,6 +130,33 @@ function seedGeneratedOutput(sessionId: string): SessionOutputGenerated {
         ],
       },
     ],
+    questionReviews: [
+      {
+        questionId: "q-outcomes",
+        prompt:
+          "What outcomes would make this workshop feel worthwhile for you?",
+        status: "answered",
+        answer:
+          "A clear decision model and explicit ownership for exceptions would make the workshop worthwhile.",
+        confidence: 0.88,
+        keyPoints: [
+          "Clarify decision rights",
+          "Name owners for exception handling",
+        ],
+        evidence: [
+          {
+            sessionId,
+            segmentIds: ["seg-amelia-1", "seg-amelia-2"],
+            rationale:
+              "Participant named decision rights and exception ownership as desired outcomes.",
+          },
+        ],
+        evidenceQuotes: [
+          "We need clearer owners when an exception lands between regional and central teams.",
+        ],
+        followUpQuestions: [],
+      },
+    ],
     themes: [
       {
         id: "theme-decisions",
@@ -144,6 +171,120 @@ function seedGeneratedOutput(sessionId: string): SessionOutputGenerated {
             rationale:
               "Participant described stalled approvals and unclear ownership.",
           },
+        ],
+      },
+    ],
+    quoteLibrary: [
+      {
+        id: "quote-library-1",
+        label: "Approval frustration",
+        excerpt:
+          "We do not need another framework; we need a way to stop waiting on three approvals.",
+        context:
+          "The respondent used this line while describing duplicated review loops across central and regional operations.",
+        questionIds: ["q-friction"],
+        themeHints: ["Decision bottlenecks"],
+        evidence: [
+          {
+            sessionId,
+            segmentIds: ["seg-amelia-3"],
+            rationale: "Direct quote from the participant.",
+          },
+        ],
+      },
+    ],
+    insightCards: [
+      {
+        id: "insight-theme-1",
+        kind: "theme",
+        title: "Decision bottlenecks",
+        summary:
+          "Approvals stall because ownership is diffused across regional and central teams.",
+        priority: "high",
+        evidence: [
+          {
+            sessionId,
+            segmentIds: ["seg-amelia-3"],
+            rationale:
+              "Participant described stalled approvals and unclear ownership.",
+          },
+        ],
+        evidenceQuotes: [
+          "We do not need another framework; we need a way to stop waiting on three approvals.",
+        ],
+      },
+      {
+        id: "insight-pain-1",
+        kind: "pain_point",
+        title: "Duplicated approvals",
+        summary:
+          "Regional and central teams repeat the same approval checks, slowing exception handling.",
+        priority: "high",
+        evidence: [
+          {
+            sessionId,
+            segmentIds: ["seg-amelia-3"],
+            rationale: "Participant called out duplicate review loops.",
+          },
+        ],
+        evidenceQuotes: [
+          "We do not need another framework; we need a way to stop waiting on three approvals.",
+        ],
+      },
+      {
+        id: "insight-opp-1",
+        kind: "opportunity",
+        title: "Shared escalation model",
+        summary:
+          "The workshop should define when local teams escalate to central operations.",
+        priority: "medium",
+        evidence: [
+          {
+            sessionId,
+            segmentIds: ["seg-amelia-4"],
+            rationale: "Participant asked for a shared escalation model.",
+          },
+        ],
+        evidenceQuotes: [
+          "If the rule is unclear, everyone escalates it and nothing moves.",
+        ],
+      },
+      {
+        id: "insight-risk-1",
+        kind: "risk",
+        title: "Change fatigue",
+        summary:
+          "Teams may resist another process redesign without quick wins.",
+        priority: "medium",
+        evidence: [
+          {
+            sessionId,
+            segmentIds: ["seg-amelia-5"],
+            rationale:
+              "Participant flagged skepticism after previous redesign efforts.",
+          },
+        ],
+        evidenceQuotes: [
+          "People will tune out if this feels like another redesign with no decisions.",
+        ],
+      },
+      {
+        id: "insight-tension-1",
+        kind: "tension",
+        title: "Control vs speed",
+        summary:
+          "Stakeholders want tighter governance without adding more approval latency.",
+        priority: "medium",
+        evidence: [
+          {
+            sessionId,
+            segmentIds: ["seg-amelia-3", "seg-amelia-4"],
+            rationale:
+              "The participant wants clearer escalation rules but less waiting.",
+          },
+        ],
+        evidenceQuotes: [
+          "We need stronger control, but not by adding another approval layer.",
         ],
       },
     ],
@@ -207,10 +348,35 @@ function seedGeneratedOutput(sessionId: string): SessionOutputGenerated {
         ],
       },
     ],
+    tensions: [
+      {
+        id: "tension-1",
+        label: "Control vs speed",
+        summary:
+          "Stakeholders want tighter governance without adding more approval latency.",
+        evidence: [
+          {
+            sessionId,
+            segmentIds: ["seg-amelia-3", "seg-amelia-4"],
+            rationale:
+              "The participant wants clearer escalation rules but less waiting.",
+          },
+        ],
+      },
+    ],
     unresolvedQuestions: [
       "Which approval decisions can be delegated safely?",
       "How should exception handling differ by region?",
     ],
+    workshopImplications: [
+      "Use the workshop to map where authority changes hands and why approvals restart.",
+      "Push for concrete escalation examples rather than abstract governance principles.",
+    ],
+    recommendedActions: [
+      "Bring current exception cases into the workshop for live decision-rights mapping.",
+      "End the workshop with one delegated-approval pilot to test.",
+    ],
+    analysisWarnings: [],
     confidenceScore: 0.84,
     stakeholderProfile: {
       department: "Operations",
@@ -450,6 +616,8 @@ function seedStore(): MockStore {
       id: "syn-riverstone",
       projectId: project.id,
       includedSessionIds: ["sess-amelia", "sess-liam"],
+      executiveSummary:
+        "Across the current interviews, the strongest signal is not lack of frameworks but lack of decisive ownership. Stakeholders want the workshop to resolve who decides, when to escalate, and how to avoid duplicate approvals.",
       crossInterviewThemes: [
         {
           id: "syn-theme-1",
@@ -488,6 +656,13 @@ function seedStore(): MockStore {
             },
           ],
         },
+      ],
+      alignmentSignals: [
+        "Stakeholders want faster exception handling with clearer ownership.",
+        "Workshop value is tied to decision-rights clarity rather than broad ideation.",
+      ],
+      misalignmentSignals: [
+        "Teams disagree on how much authority should stay regional versus central.",
       ],
       topProblems: [
         "Duplicate approvals across central and regional teams",
@@ -1022,8 +1197,11 @@ export function createProjectFromForm(input: {
     id: `syn-${projectId}`,
     projectId,
     includedSessionIds: [],
+    executiveSummary: "",
     crossInterviewThemes: [],
     contradictionMap: [],
+    alignmentSignals: [],
+    misalignmentSignals: [],
     topProblems: [],
     suggestedWorkshopAgenda: [],
     notableQuotesByTheme: [],

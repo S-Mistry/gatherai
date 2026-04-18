@@ -27,16 +27,21 @@ import type {
   AnalysisJobStatus,
   AnalysisJobType,
   AnonymityMode,
+  InsightCard,
   MetadataPrompt,
   ParticipantSession,
   ProjectConfigVersion,
   ProjectRecord,
   ProjectSynthesisGenerated,
+  ProjectSynthesisOverride,
   QualityDimension,
   QualityScore,
   QuestionDefinition,
+  QuestionReview,
+  QuoteLibraryItem,
   SessionOutputGenerated,
   SessionOutputOverride,
+  SessionQualityOverride,
   SessionRuntimeState,
   SessionStatus,
   TranscriptSegment,
@@ -44,7 +49,7 @@ import type {
   WorkspaceSummary,
 } from "@/lib/domain/types"
 import { SESSION_ANALYSIS_JOB_TYPES } from "@/lib/jobs/analysis"
-import { env } from "@/lib/env"
+import { env, openAiModels } from "@/lib/env"
 import {
   createSecretSupabaseClient,
   createServerSupabaseClient,
@@ -117,6 +122,9 @@ interface ParticipantSessionRow {
   status: SessionStatus
   metadata: unknown
   quality_flag: boolean
+  manual_quality_flag: boolean | null
+  quality_override_note: string
+  quality_override_updated_at: string | null
   excluded_from_synthesis: boolean
   runtime_state: unknown
   started_at: string
@@ -164,6 +172,14 @@ interface ProjectSynthesisGeneratedRow {
   prompt_version_id: string | null
   model_version_id: string | null
   created_at: string
+}
+
+interface ProjectSynthesisOverrideRow {
+  id: string
+  project_id: string
+  edited_narrative: string
+  consultant_notes: string
+  updated_at: string
 }
 
 interface QualityScoreRow {
@@ -351,6 +367,100 @@ function safeQualityDimensions(value: unknown): QualityDimension[] {
     : []
 }
 
+function safeQuestionReviews(value: unknown): QuestionReview[] {
+  return Array.isArray(value)
+    ? value.flatMap((entry) => {
+        const item = safeObject(entry)
+        if (
+          typeof item.questionId !== "string" ||
+          typeof item.prompt !== "string" ||
+          typeof item.status !== "string" ||
+          typeof item.answer !== "string" ||
+          typeof item.confidence !== "number"
+        ) {
+          return []
+        }
+
+        return [
+          {
+            questionId: item.questionId,
+            prompt: item.prompt,
+            status: item.status as QuestionReview["status"],
+            answer: item.answer,
+            confidence: item.confidence,
+            keyPoints: safeStringArray(item.keyPoints),
+            evidence: Array.isArray(item.evidence)
+              ? (item.evidence as QuestionReview["evidence"])
+              : [],
+            evidenceQuotes: safeStringArray(item.evidenceQuotes),
+            followUpQuestions: safeStringArray(item.followUpQuestions),
+          },
+        ]
+      })
+    : []
+}
+
+function safeQuoteLibrary(value: unknown): QuoteLibraryItem[] {
+  return Array.isArray(value)
+    ? value.flatMap((entry) => {
+        const item = safeObject(entry)
+        if (
+          typeof item.id !== "string" ||
+          typeof item.label !== "string" ||
+          typeof item.excerpt !== "string" ||
+          typeof item.context !== "string"
+        ) {
+          return []
+        }
+
+        return [
+          {
+            id: item.id,
+            label: item.label,
+            excerpt: item.excerpt,
+            context: item.context,
+            questionIds: safeStringArray(item.questionIds),
+            themeHints: safeStringArray(item.themeHints),
+            evidence: Array.isArray(item.evidence)
+              ? (item.evidence as QuoteLibraryItem["evidence"])
+              : [],
+          },
+        ]
+      })
+    : []
+}
+
+function safeInsightCards(value: unknown): InsightCard[] {
+  return Array.isArray(value)
+    ? value.flatMap((entry) => {
+        const item = safeObject(entry)
+        if (
+          typeof item.id !== "string" ||
+          typeof item.kind !== "string" ||
+          typeof item.title !== "string" ||
+          typeof item.summary !== "string" ||
+          typeof item.priority !== "string"
+        ) {
+          return []
+        }
+
+        return [
+          {
+            id: item.id,
+            kind: item.kind as InsightCard["kind"],
+            title: item.title,
+            summary: item.summary,
+            priority: item.priority as InsightCard["priority"],
+            evidence: Array.isArray(item.evidence)
+              ? (item.evidence as InsightCard["evidence"])
+              : [],
+            evidenceQuotes: safeStringArray(item.evidenceQuotes),
+          },
+        ]
+      })
+    : []
+}
+
 function pickConsultantName(profile: ProfileRow | null, user: User) {
   if (profile?.full_name) {
     return profile.full_name
@@ -427,6 +537,16 @@ function mapSession(
   publicLinkToken: string
 ): ParticipantSession {
   const runtimeState = safeObject(row.runtime_state)
+  const qualityOverride: SessionQualityOverride | undefined =
+    typeof row.manual_quality_flag === "boolean" &&
+    typeof row.quality_override_updated_at === "string"
+      ? {
+          lowQuality: row.manual_quality_flag,
+          note: row.quality_override_note,
+          updatedAt: row.quality_override_updated_at,
+        }
+      : undefined
+
   return {
     id: row.id,
     projectId: row.project_id,
@@ -440,6 +560,7 @@ function mapSession(
     resumeExpiresAt: row.resume_expires_at,
     metadata: safeStringRecord(row.metadata),
     qualityFlag: row.quality_flag,
+    qualityOverride,
     excludedFromSynthesis: row.excluded_from_synthesis,
     runtimeState: {
       state:
@@ -530,6 +651,7 @@ function mapGeneratedOutput(
     questionAnswers: Array.isArray(payload.questionAnswers)
       ? (payload.questionAnswers as SessionOutputGenerated["questionAnswers"])
       : [],
+    questionReviews: safeQuestionReviews(payload.questionReviews),
     themes: Array.isArray(payload.themes)
       ? (payload.themes as SessionOutputGenerated["themes"])
       : [],
@@ -545,7 +667,15 @@ function mapGeneratedOutput(
     keyQuotes: Array.isArray(payload.keyQuotes)
       ? (payload.keyQuotes as SessionOutputGenerated["keyQuotes"])
       : [],
+    quoteLibrary: safeQuoteLibrary(payload.quoteLibrary),
+    insightCards: safeInsightCards(payload.insightCards),
+    tensions: Array.isArray(payload.tensions)
+      ? (payload.tensions as SessionOutputGenerated["tensions"])
+      : [],
     unresolvedQuestions: safeStringArray(payload.unresolvedQuestions),
+    workshopImplications: safeStringArray(payload.workshopImplications),
+    recommendedActions: safeStringArray(payload.recommendedActions),
+    analysisWarnings: safeStringArray(payload.analysisWarnings),
     confidenceScore:
       typeof payload.confidenceScore === "number" ? payload.confidenceScore : 0,
     stakeholderProfile: safeStringRecord(payload.stakeholderProfile),
@@ -597,6 +727,15 @@ function mergeSessionOutputWithOverride(
     keyQuotes: generatedOutput.keyQuotes.filter(
       (claim) => !suppressedClaimIds.has(claim.id)
     ),
+    quoteLibrary: generatedOutput.quoteLibrary.filter(
+      (quote) => !suppressedClaimIds.has(quote.id)
+    ),
+    insightCards: generatedOutput.insightCards.filter(
+      (card) => !suppressedClaimIds.has(card.id)
+    ),
+    tensions: generatedOutput.tensions.filter(
+      (claim) => !suppressedClaimIds.has(claim.id)
+    ),
   }
 }
 
@@ -610,12 +749,18 @@ function mapSynthesis(
     includedSessionIds: Array.isArray(row.included_session_ids)
       ? row.included_session_ids
       : [],
+    executiveSummary:
+      typeof payload.executiveSummary === "string"
+        ? payload.executiveSummary
+        : "",
     crossInterviewThemes: Array.isArray(payload.crossInterviewThemes)
       ? (payload.crossInterviewThemes as ProjectSynthesisGenerated["crossInterviewThemes"])
       : [],
     contradictionMap: Array.isArray(payload.contradictionMap)
       ? (payload.contradictionMap as ProjectSynthesisGenerated["contradictionMap"])
       : [],
+    alignmentSignals: safeStringArray(payload.alignmentSignals),
+    misalignmentSignals: safeStringArray(payload.misalignmentSignals),
     topProblems: safeStringArray(payload.topProblems),
     suggestedWorkshopAgenda: safeStringArray(payload.suggestedWorkshopAgenda),
     notableQuotesByTheme: Array.isArray(payload.notableQuotesByTheme)
@@ -625,6 +770,32 @@ function mapSynthesis(
     promptVersionId: row.prompt_version_id ?? "pending",
     modelVersionId: row.model_version_id ?? "pending",
     createdAt: row.created_at,
+  }
+}
+
+function mapSynthesisOverride(
+  row: ProjectSynthesisOverrideRow
+): ProjectSynthesisOverride {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    editedNarrative: row.edited_narrative,
+    consultantNotes: row.consultant_notes,
+    updatedAt: row.updated_at,
+  }
+}
+
+function mergeSynthesisWithOverride(
+  generated: ProjectSynthesisGenerated,
+  override?: ProjectSynthesisOverride
+): ProjectSynthesisGenerated {
+  if (!override?.editedNarrative.trim()) {
+    return generated
+  }
+
+  return {
+    ...generated,
+    executiveSummary: override.editedNarrative.trim(),
   }
 }
 
@@ -669,6 +840,23 @@ function keyByProjectId<T extends { project_id: string }>(rows: T[]) {
     }
   })
   return map
+}
+
+function keyBySessionId<T extends { session_id: string }>(rows: T[]) {
+  const map = new Map<string, T>()
+  rows.forEach((row) => {
+    if (!map.has(row.session_id)) {
+      map.set(row.session_id, row)
+    }
+  })
+  return map
+}
+
+function parseLineList(value: string) {
+  return value
+    .split("\n")
+    .map((entry) => entry.trim())
+    .filter(Boolean)
 }
 
 function normalizeProjectCreateInput(
@@ -1445,16 +1633,16 @@ async function persistSessionOutput(
   const promptVersionId = await ensurePromptVersion(
     client,
     project.workspace_id,
-    "session-output/v2",
+    "session-output/v3",
     "1",
     SESSION_OUTPUT_PROMPT_VERSION_TEXT
   )
   const modelVersionId = await ensureModelVersion(
     client,
     project.workspace_id,
-    "session-output/v2",
+    "session-output/v3",
     "openai",
-    env.OPENAI_SESSION_ANALYSIS_MODEL
+    openAiModels.sessionEnrichment
   )
   const output = await generateSessionOutputAnalysis({
     session,
@@ -1464,27 +1652,31 @@ async function persistSessionOutput(
 
   const result = await client
     .from("session_outputs_generated")
-    .upsert(
-      {
-        session_id: session.id,
-        cleaned_transcript: output.cleanedTranscript,
-        payload: {
-          summary: output.summary,
-          questionAnswers: output.questionAnswers,
-          themes: output.themes,
-          painPoints: output.painPoints,
-          opportunities: output.opportunities,
-          risks: output.risks,
-          keyQuotes: output.keyQuotes,
-          unresolvedQuestions: output.unresolvedQuestions,
-          confidenceScore: output.confidenceScore,
-          stakeholderProfile: output.stakeholderProfile,
-        },
-        prompt_version_id: promptVersionId,
-        model_version_id: modelVersionId,
+    .insert({
+      session_id: session.id,
+      cleaned_transcript: output.cleanedTranscript,
+      payload: {
+        summary: output.summary,
+        questionAnswers: output.questionAnswers,
+        questionReviews: output.questionReviews,
+        themes: output.themes,
+        painPoints: output.painPoints,
+        opportunities: output.opportunities,
+        risks: output.risks,
+        keyQuotes: output.keyQuotes,
+        quoteLibrary: output.quoteLibrary,
+        insightCards: output.insightCards,
+        tensions: output.tensions,
+        unresolvedQuestions: output.unresolvedQuestions,
+        workshopImplications: output.workshopImplications,
+        recommendedActions: output.recommendedActions,
+        analysisWarnings: output.analysisWarnings,
+        confidenceScore: output.confidenceScore,
+        stakeholderProfile: output.stakeholderProfile,
       },
-      { onConflict: "session_id" }
-    )
+      prompt_version_id: promptVersionId,
+      model_version_id: modelVersionId,
+    })
     .select("*")
     .single<SessionOutputGeneratedRow>()
 
@@ -1509,31 +1701,36 @@ async function persistQualityScore(
       .from("session_outputs_generated")
       .select("*")
       .eq("session_id", session.id)
-      .single<SessionOutputGeneratedRow>(),
+      .order("created_at", { ascending: false })
+      .limit(1),
   ])
   const project = expectData(
     projectResult,
     "Unable to load project for quality score persistence"
   )
-  const generatedOutput = mapGeneratedOutput(
-    expectData(
-      generatedResult,
-      "Quality scoring requires a generated session output."
-    )
-  )
+  const generatedOutputRow = expectRows(
+    generatedResult,
+    "Quality scoring requires a generated session output."
+  )[0] as SessionOutputGeneratedRow | undefined
+
+  if (!generatedOutputRow) {
+    fail("Quality scoring requires a generated session output.")
+  }
+
+  const generatedOutput = mapGeneratedOutput(generatedOutputRow)
   const promptVersionId = await ensurePromptVersion(
     client,
     project.workspace_id,
-    "quality-score/v2",
+    "quality-score/v3",
     "1",
     QUALITY_SCORE_PROMPT_VERSION_TEXT
   )
   const modelVersionId = await ensureModelVersion(
     client,
     project.workspace_id,
-    "quality-score/v2",
+    "quality-score/v3",
     "openai",
-    env.OPENAI_SESSION_ANALYSIS_MODEL
+    openAiModels.sessionGrader
   )
   const quality = await evaluateSessionQualityAnalysis({
     session,
@@ -1541,6 +1738,10 @@ async function persistQualityScore(
     transcript,
     output: generatedOutput,
   })
+  const effectiveLowQuality =
+    typeof session.qualityOverride?.lowQuality === "boolean"
+      ? session.qualityOverride.lowQuality
+      : quality.lowQuality
 
   const [qualityResult, sessionResult] = await Promise.all([
     client
@@ -1560,7 +1761,7 @@ async function persistQualityScore(
     client
       .from("participant_sessions")
       .update({
-        quality_flag: quality.lowQuality,
+        quality_flag: effectiveLowQuality,
         last_activity_at: new Date().toISOString(),
       })
       .eq("id", session.id),
@@ -1623,7 +1824,9 @@ async function persistProjectSynthesis(projectId: string) {
         : client
             .from("session_outputs_generated")
             .select("*")
-            .in("session_id", sessionIds),
+            .in("session_id", sessionIds)
+            .order("session_id", { ascending: true })
+            .order("created_at", { ascending: false }),
       sessionIds.length === 0
         ? Promise.resolve({
             data: [] as SessionOutputOverrideRow[],
@@ -1648,28 +1851,28 @@ async function persistProjectSynthesis(projectId: string) {
       .map((row) => mapOutputOverride(row as SessionOutputOverrideRow))
       .map((override) => [override.sessionId, override] as const)
   )
-  const outputs = expectRows(
-    outputRows,
-    "Unable to load generated outputs"
-  ).map((row) =>
+  const latestOutputRowsBySessionId = keyBySessionId(
+    expectRows(outputRows, "Unable to load generated outputs") as SessionOutputGeneratedRow[]
+  )
+  const outputs = Array.from(latestOutputRowsBySessionId.values()).map((row) =>
     mergeSessionOutputWithOverride(
-      mapGeneratedOutput(row as SessionOutputGeneratedRow),
-      overridesBySessionId.get((row as SessionOutputGeneratedRow).session_id)
+      mapGeneratedOutput(row),
+      overridesBySessionId.get(row.session_id)
     )
   )
   const promptVersionId = await ensurePromptVersion(
     client,
     workspaceId,
-    "project-synthesis/v2",
+    "project-synthesis/v3",
     "1",
     PROJECT_SYNTHESIS_PROMPT_VERSION_TEXT
   )
   const modelVersionId = await ensureModelVersion(
     client,
     workspaceId,
-    "project-synthesis/v2",
+    "project-synthesis/v3",
     "openai",
-    env.OPENAI_PROJECT_SYNTHESIS_MODEL
+    openAiModels.projectSynthesis
   )
   const project = mapProject(
     projectRow,
@@ -1688,8 +1891,11 @@ async function persistProjectSynthesis(projectId: string) {
       project_id: projectId,
       included_session_ids: synthesis.includedSessionIds,
       payload: {
+        executiveSummary: synthesis.executiveSummary,
         crossInterviewThemes: synthesis.crossInterviewThemes,
         contradictionMap: synthesis.contradictionMap,
+        alignmentSignals: synthesis.alignmentSignals,
+        misalignmentSignals: synthesis.misalignmentSignals,
         topProblems: synthesis.topProblems,
         suggestedWorkshopAgenda: synthesis.suggestedWorkshopAgenda,
         notableQuotesByTheme: synthesis.notableQuotesByTheme,
@@ -1947,6 +2153,7 @@ export async function getProjectDetail(projectId: string) {
     sessionsResult,
     synthesesResult,
     qualityResult,
+    synthesisOverrideResult,
   ] = await Promise.all([
     client
       .from("project_config_versions")
@@ -1973,12 +2180,18 @@ export async function getProjectDetail(projectId: string) {
     sessionIds.length === 0
       ? Promise.resolve({ data: [] as QualityScoreRow[], error: null })
       : client.from("quality_scores").select("*").in("session_id", sessionIds),
+    client
+      .from("project_synthesis_overrides")
+      .select("*")
+      .eq("project_id", projectId)
+      .maybeSingle<ProjectSynthesisOverrideRow>(),
   ])
 
-  const configRow = expectRows(
+  const configRows = expectRows(
     configResult,
     "Unable to load config versions"
-  )[0] as ProjectConfigVersionRow | undefined
+  ) as ProjectConfigVersionRow[]
+  const configRow = configRows[0]
   const linkRow = expectRows(linkResult, "Unable to load public links")[0] as
     | ProjectPublicLinkRow
     | undefined
@@ -1995,6 +2208,7 @@ export async function getProjectDetail(projectId: string) {
     linkRow.link_token
   )
   const configVersion = mapConfigVersion(configRow)
+  const configHistory = configRows.map((row) => mapConfigVersion(row))
   const sessions = expectRows(
     sessionsResult,
     "Unable to load project sessions"
@@ -2009,14 +2223,21 @@ export async function getProjectDetail(projectId: string) {
       .map((row) => mapQualityScore(row as QualityScoreRow))
       .map((score) => [score.sessionId, score])
   )
+  const synthesisOverride = synthesisOverrideResult.data
+    ? mapSynthesisOverride(synthesisOverrideResult.data)
+    : undefined
+  const generatedSynthesis = synthesis
+    ? mapSynthesis(synthesis)
+    : buildEmptyProjectSynthesis(project.id, "pending", "pending")
 
   return {
     project,
     configVersion,
+    configHistory,
     sessions,
-    synthesis: synthesis
-      ? mapSynthesis(synthesis)
-      : buildEmptyProjectSynthesis(project.id, "pending", "pending"),
+    synthesis: mergeSynthesisWithOverride(generatedSynthesis, synthesisOverride),
+    generatedSynthesis,
+    synthesisOverride,
     qualityScores,
   }
 }
@@ -2056,7 +2277,8 @@ export async function getSessionReview(projectId: string, sessionId: string) {
       .from("session_outputs_generated")
       .select("*")
       .eq("session_id", sessionId)
-      .maybeSingle<SessionOutputGeneratedRow>(),
+      .order("created_at", { ascending: false })
+      .limit(1),
     client
       .from("session_output_overrides")
       .select("*")
@@ -2090,11 +2312,15 @@ export async function getSessionReview(projectId: string, sessionId: string) {
     jobsResult,
     "Unable to load session analysis jobs"
   ).map((row) => mapAnalysisJob(row as AnalysisJobRow))
+  const latestGeneratedRow = expectRows(
+    generatedResult,
+    "Unable to load generated output rows"
+  )[0] as SessionOutputGeneratedRow | undefined
   const override = overrideResult.data
     ? mapOutputOverride(overrideResult.data)
     : undefined
-  const generatedOutput = generatedResult.data
-    ? mapGeneratedOutput(generatedResult.data)
+  const generatedOutput = latestGeneratedRow
+    ? mapGeneratedOutput(latestGeneratedRow)
     : buildGeneratedOutputPlaceholder(session, detail.configVersion)
   const effectiveOutput = mergeSessionOutputWithOverride(
     generatedOutput,
@@ -2115,7 +2341,7 @@ export async function getSessionReview(projectId: string, sessionId: string) {
       (job.status === "queued" || job.status === "processing")
   )
   const generatedStatus: "ready" | "failed" | "pending" | "idle" =
-    generatedResult.data
+    latestGeneratedRow
       ? "ready"
       : sessionJobFailures.some(
             (job) =>
@@ -2154,6 +2380,7 @@ export async function getSessionReview(projectId: string, sessionId: string) {
     project: detail.project,
     configVersion: detail.configVersion,
     session,
+    qualityOverride: session.qualityOverride,
     transcript,
     transcriptStatus,
     generatedStatus,
@@ -2458,7 +2685,8 @@ export async function getSessionAnalysisTracePayload(sessionId: string) {
       .from("session_outputs_generated")
       .select("*")
       .eq("session_id", sessionId)
-      .maybeSingle<SessionOutputGeneratedRow>(),
+      .order("created_at", { ascending: false })
+      .limit(1),
     client
       .from("quality_scores")
       .select("*")
@@ -2477,9 +2705,17 @@ export async function getSessionAnalysisTracePayload(sessionId: string) {
   return {
     session: bundle.session,
     transcript: bundle.transcript,
-    outputs: generatedResult.data
-      ? mapGeneratedOutput(generatedResult.data)
-      : undefined,
+    outputs: ((expectRows(
+      generatedResult,
+      "Unable to inspect generated session outputs"
+    )[0] as SessionOutputGeneratedRow | undefined)
+      ? mapGeneratedOutput(
+          expectRows(
+            generatedResult,
+            "Unable to inspect generated session outputs"
+          )[0] as SessionOutputGeneratedRow
+        )
+      : undefined),
     score: qualityResult.data ? mapQualityScore(qualityResult.data) : undefined,
   }
 }
@@ -2630,6 +2866,277 @@ export async function saveSessionOverride(
   return mapOutputOverride(
     expectData(result, "Unable to save session override")
   )
+}
+
+export async function saveSessionClaimSuppression(
+  sessionId: string,
+  claimId: string,
+  suppressed: boolean
+) {
+  const client = await createServerSupabaseClient()
+
+  if (!client) {
+    fail("Supabase publishable-key environment is not configured.")
+  }
+
+  const existingResult = await client
+    .from("session_output_overrides")
+    .select("*")
+    .eq("session_id", sessionId)
+    .maybeSingle<SessionOutputOverrideRow>()
+
+  if (existingResult.error) {
+    fail(
+      `Unable to inspect existing session override: ${existingResult.error.message}`
+    )
+  }
+
+  const existingSuppressedIds = safeStringArray(
+    existingResult.data?.suppressed_claim_ids
+  )
+  const nextSuppressedIds = suppressed
+    ? Array.from(new Set([...existingSuppressedIds, claimId]))
+    : existingSuppressedIds.filter((id) => id !== claimId)
+
+  const result = await client
+    .from("session_output_overrides")
+    .upsert(
+      {
+        session_id: sessionId,
+        edited_summary: existingResult.data?.edited_summary ?? "",
+        consultant_notes: existingResult.data?.consultant_notes ?? "",
+        suppressed_claim_ids: nextSuppressedIds,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "session_id" }
+    )
+    .select("*")
+    .single<SessionOutputOverrideRow>()
+
+  return mapOutputOverride(
+    expectData(result, "Unable to update suppressed session claims")
+  )
+}
+
+export async function saveSessionQualityOverride(input: {
+  sessionId: string
+  mode: "generated" | "manual"
+  lowQuality?: boolean
+  note: string
+}) {
+  const client = await createServerSupabaseClient()
+
+  if (!client) {
+    fail("Supabase publishable-key environment is not configured.")
+  }
+
+  const [latestQualityResult, sessionLinkResult] = await Promise.all([
+    client
+      .from("quality_scores")
+      .select("low_quality")
+      .eq("session_id", input.sessionId)
+      .maybeSingle<{ low_quality: boolean }>(),
+    client
+      .from("participant_sessions")
+      .select("public_link_id")
+      .eq("id", input.sessionId)
+      .single<{ public_link_id: string }>(),
+  ])
+
+  if (latestQualityResult.error) {
+    fail(
+      `Unable to inspect generated quality score: ${latestQualityResult.error.message}`
+    )
+  }
+
+  const now = new Date().toISOString()
+  const updatePayload =
+    input.mode === "manual"
+      ? {
+          manual_quality_flag: Boolean(input.lowQuality),
+          quality_override_note: input.note.trim(),
+          quality_override_updated_at: now,
+          quality_flag: Boolean(input.lowQuality),
+          last_activity_at: now,
+        }
+      : {
+          manual_quality_flag: null,
+          quality_override_note: "",
+          quality_override_updated_at: null,
+          quality_flag: latestQualityResult.data?.low_quality ?? false,
+          last_activity_at: now,
+        }
+
+  const sessionResult = await client
+    .from("participant_sessions")
+    .update(updatePayload)
+    .eq("id", input.sessionId)
+    .select("*")
+    .single<ParticipantSessionRow>()
+
+  const publicLinkId = expectData(
+    sessionLinkResult,
+    "Unable to inspect participant session link"
+  ).public_link_id
+  const publicLinkResult = await client
+    .from("project_public_links")
+    .select("link_token")
+    .eq("id", publicLinkId)
+    .single<{ link_token: string }>()
+
+  return mapSession(
+    expectData(sessionResult, "Unable to update session quality override"),
+    expectData(publicLinkResult, "Unable to load public link token").link_token
+  )
+}
+
+export async function saveProjectSynthesisOverride(
+  projectId: string,
+  editedNarrative: string,
+  consultantNotes: string
+) {
+  const client = await createServerSupabaseClient()
+
+  if (!client) {
+    fail("Supabase publishable-key environment is not configured.")
+  }
+
+  const result = await client
+    .from("project_synthesis_overrides")
+    .upsert(
+      {
+        project_id: projectId,
+        edited_narrative: editedNarrative,
+        consultant_notes: consultantNotes,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "project_id" }
+    )
+    .select("*")
+    .single<ProjectSynthesisOverrideRow>()
+
+  return mapSynthesisOverride(
+    expectData(result, "Unable to save project synthesis override")
+  )
+}
+
+export async function createProjectConfigVersion(input: {
+  projectId: string
+  projectName: string
+  clientName: string
+  objective: string
+  areasOfInterest: string
+  requiredQuestions: string
+  durationCapMinutes: number
+  anonymityMode: string
+  backgroundContext: string
+}) {
+  const client = await createServerSupabaseClient()
+
+  if (!client) {
+    fail("Supabase publishable-key environment is not configured.")
+  }
+
+  const [projectResult, configResult] = await Promise.all([
+    client
+      .from("projects")
+      .select("*")
+      .eq("id", input.projectId)
+      .single<ProjectRow>(),
+    client
+      .from("project_config_versions")
+      .select("*")
+      .eq("project_id", input.projectId)
+      .order("version_number", { ascending: false })
+      .limit(1),
+  ])
+
+  const project = expectData(projectResult, "Unable to load project for editing")
+  const currentConfigRow = expectRows(
+    configResult,
+    "Unable to load current project configuration"
+  )[0] as ProjectConfigVersionRow | undefined
+
+  if (!currentConfigRow) {
+    fail("Project is missing a current configuration version.")
+  }
+
+  const currentConfig = mapConfigVersion(currentConfigRow)
+  const areasOfInterest = parseLineList(input.areasOfInterest)
+  const requiredQuestionPrompts = parseLineList(input.requiredQuestions)
+  const nextRequiredQuestions =
+    requiredQuestionPrompts.length > 0
+      ? requiredQuestionPrompts.map((prompt, index) => ({
+          id: `q-v${currentConfig.versionNumber + 1}-${index + 1}`,
+          prompt,
+          goal: "Consultant supplied question.",
+        }))
+      : currentConfig.requiredQuestions
+
+  const insertResult = await client
+    .from("project_config_versions")
+    .insert({
+      project_id: input.projectId,
+      version_number: currentConfig.versionNumber + 1,
+      objective: input.objective.trim() || currentConfig.objective,
+      areas_of_interest:
+        areasOfInterest.length > 0 ? areasOfInterest : currentConfig.areasOfInterest,
+      required_questions: nextRequiredQuestions,
+      background_context: input.backgroundContext.trim() || null,
+      duration_cap_minutes: Math.min(
+        30,
+        Math.max(
+          5,
+          Number.isFinite(input.durationCapMinutes)
+            ? Math.round(input.durationCapMinutes)
+            : currentConfig.durationCapMinutes
+        )
+      ),
+      interview_mode: currentConfig.interviewMode,
+      anonymity_mode: ["named", "pseudonymous", "anonymous"].includes(
+        input.anonymityMode
+      )
+        ? input.anonymityMode
+        : currentConfig.anonymityMode,
+      tone_style: currentConfig.toneStyle,
+      metadata_prompts: currentConfig.metadataPrompts,
+      prohibited_topics: currentConfig.prohibitedTopics,
+      follow_up_limit: currentConfig.followUpLimit,
+    })
+    .select("*")
+    .single<ProjectConfigVersionRow>()
+
+  const nextConfig = expectData(
+    insertResult,
+    "Unable to create project configuration version"
+  )
+
+  const [projectUpdateResult, linkUpdateResult] = await Promise.all([
+    client
+      .from("projects")
+      .update({
+        name: input.projectName.trim() || project.name,
+        client_name: input.clientName.trim() || project.client_name,
+      })
+      .eq("id", input.projectId),
+    client
+      .from("project_public_links")
+      .update({
+        project_config_version_id: nextConfig.id,
+      })
+      .eq("project_id", input.projectId)
+      .is("revoked_at", null),
+  ])
+
+  if (projectUpdateResult.error) {
+    fail(`Unable to update project metadata: ${projectUpdateResult.error.message}`)
+  }
+
+  if (linkUpdateResult.error) {
+    fail(`Unable to repoint project public links: ${linkUpdateResult.error.message}`)
+  }
+
+  return mapConfigVersion(nextConfig)
 }
 
 export async function processQueuedJobs(

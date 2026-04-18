@@ -1,46 +1,53 @@
 "use client"
 
-import { CaretRight } from "@phosphor-icons/react"
+import { CaretRight, FileText } from "@phosphor-icons/react"
 import { Popover as RadixPopover } from "radix-ui"
 
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type {
-  InsightClaim,
+  InsightCard,
   QualityScore,
-  QuestionAnswer,
+  QuestionReview,
+  QuoteLibraryItem,
   SessionOutputGenerated,
-  ThemeSummary,
+  SessionOutputOverride,
+  SessionQualityOverride,
 } from "@/lib/domain/types"
 import { cn } from "@/lib/utils"
 
 import { EvidencePill } from "./evidence-pill"
+import { ReviewClaimToggle } from "./review-claim-toggle"
 import { ReviewOverrideForm } from "./review-override-form"
+import { ReviewQualityOverrideForm } from "./review-quality-override-form"
+import { useOptionalReviewSelection } from "./review-selection-context"
 
 interface ReviewSynthesisTabsProps {
   projectId: string
   sessionId: string
   generatedStatus: "ready" | "pending" | "failed" | "idle"
   generatedOutput: SessionOutputGenerated
-  effectiveSummary: string
-  override?: { editedSummary: string; consultantNotes: string }
+  effectiveOutput: SessionOutputGenerated
+  override?: SessionOutputOverride
   qualityScore?: QualityScore
   qualityStatus: "ready" | "pending" | "failed" | "idle"
+  qualityOverride?: SessionQualityOverride
   analysisFailure?: string
 }
 
-export function ReviewSynthesisTabs(props: ReviewSynthesisTabsProps) {
-  const {
-    projectId,
-    sessionId,
-    generatedStatus,
-    generatedOutput,
-    effectiveSummary,
-    override,
-    qualityScore,
-    qualityStatus,
-    analysisFailure,
-  } = props
-
+export function ReviewSynthesisTabs({
+  projectId,
+  sessionId,
+  generatedStatus,
+  generatedOutput,
+  effectiveOutput,
+  override,
+  qualityScore,
+  qualityStatus,
+  qualityOverride,
+  analysisFailure,
+}: ReviewSynthesisTabsProps) {
   if (generatedStatus !== "ready") {
     return (
       <Notice
@@ -56,168 +63,265 @@ export function ReviewSynthesisTabs(props: ReviewSynthesisTabsProps) {
     )
   }
 
-  const overrideActive = Boolean(override?.editedSummary?.trim())
-
-  const counts = {
-    answers: generatedOutput.questionAnswers.length,
-    themes: generatedOutput.themes.length,
-    pain: generatedOutput.painPoints.length,
-    opp: generatedOutput.opportunities.length,
-    risks: generatedOutput.risks.length,
-    quotes: generatedOutput.keyQuotes.length,
-    unresolved: generatedOutput.unresolvedQuestions.length,
-  }
+  const overrideActive = Boolean(override?.editedSummary.trim())
+  const suppressedIds = new Set(override?.suppressedClaimIds ?? [])
+  const themeCards = generatedOutput.insightCards.filter((card) => card.kind === "theme")
+  const signalCards = generatedOutput.insightCards.filter((card) => card.kind !== "theme")
 
   return (
-    <div className="stack gap-6">
-      <SummarySection
-        effectiveSummary={effectiveSummary}
-        overrideActive={overrideActive}
-        qualityScore={qualityScore}
-        qualityStatus={qualityStatus}
-        analysisFailure={analysisFailure}
-      />
+    <Tabs defaultValue="overview" className="gap-5">
+      <TabsList>
+        <TabsTrigger value="overview">
+          Overview
+          <CountChip count={countFilledSections(effectiveOutput)} />
+        </TabsTrigger>
+        <TabsTrigger value="questions">
+          Questions
+          <CountChip count={generatedOutput.questionReviews.length} />
+        </TabsTrigger>
+        <TabsTrigger value="themes">
+          Themes
+          <CountChip count={themeCards.length} />
+        </TabsTrigger>
+        <TabsTrigger value="quotes">
+          Quote library
+          <CountChip count={generatedOutput.quoteLibrary.length} />
+        </TabsTrigger>
+        <TabsTrigger value="signals">
+          Signals
+          <CountChip count={signalCards.length} />
+        </TabsTrigger>
+        <TabsTrigger value="transcript">Transcript</TabsTrigger>
+      </TabsList>
 
-      <div className="divider" />
+      <TabsContent value="overview" className="stack gap-6">
+        <SummarySection
+          effectiveSummary={effectiveOutput.summary}
+          overrideActive={overrideActive}
+          generatedOutput={generatedOutput}
+          qualityScore={qualityScore}
+          qualityStatus={qualityStatus}
+          qualityOverride={qualityOverride}
+          analysisFailure={analysisFailure}
+        />
 
-      <OverrideDisclosure
-        defaultOpen={overrideActive}
-        projectId={projectId}
-        sessionId={sessionId}
-        defaultSummary={override?.editedSummary ?? ""}
-        defaultNotes={override?.consultantNotes ?? ""}
-        generatedSummary={generatedOutput.summary}
-        overrideActive={overrideActive}
-      />
-
-      <div className="divider" />
-
-      <Section title="Answers" count={counts.answers}>
-        {counts.answers === 0 ? (
-          <EmptyHint message="No structured answers were captured for this respondent." />
-        ) : (
-          <div className="stack gap-0">
-            {generatedOutput.questionAnswers.map((answer, idx) => (
-              <AnswerArticle
-                key={answer.questionId}
-                answer={answer}
-                hasDivider={idx > 0}
-              />
-            ))}
-          </div>
-        )}
-      </Section>
-
-      <div className="divider" />
-
-      <Section title="Themes" count={counts.themes}>
-        {counts.themes === 0 ? (
-          <EmptyHint message="No themes were generated for this respondent." />
-        ) : (
-          <div className="stack gap-0">
-            {generatedOutput.themes.map((theme, idx) => (
-              <ThemeArticle
-                key={theme.id}
-                theme={theme}
-                hasDivider={idx > 0}
-              />
-            ))}
-          </div>
-        )}
-      </Section>
-
-      <div className="divider" />
-
-      <Section title="Insights">
-        <div className="stack gap-2">
-          <ClaimGroup
-            label="Pain points"
-            count={counts.pain}
-            claims={generatedOutput.painPoints}
-            defaultOpen
-            emptyMessage="No pain points were generated."
+        <div className="grid gap-4 lg:grid-cols-2">
+          <ListPanel
+            title="Workshop implications"
+            items={effectiveOutput.workshopImplications}
+            emptyMessage="No workshop implications were grounded from this transcript yet."
           />
-          <ClaimGroup
-            label="Opportunities"
-            count={counts.opp}
-            claims={generatedOutput.opportunities}
-            emptyMessage="No opportunities were generated."
+          <ListPanel
+            title="Recommended actions"
+            items={effectiveOutput.recommendedActions}
+            emptyMessage="No follow-on actions were suggested yet."
           />
-          <ClaimGroup
-            label="Risks"
-            count={counts.risks}
-            claims={generatedOutput.risks}
-            emptyMessage="No risks were generated."
-          />
-          <ClaimGroup
-            label="Key quotes"
-            count={counts.quotes}
-            claims={generatedOutput.keyQuotes}
-            emptyMessage="No key quotes were extracted."
-          />
-          <ClaimGroup
-            label="Unresolved questions"
-            count={counts.unresolved}
+          <ListPanel
+            title="Unresolved questions"
+            items={effectiveOutput.unresolvedQuestions}
             emptyMessage="No unresolved questions were flagged."
-          >
-            {counts.unresolved > 0 ? (
-              <ul className="stack gap-2 pt-1">
-                {generatedOutput.unresolvedQuestions.map((question) => (
-                  <li
-                    key={question}
-                    className="text-sm leading-6 text-foreground"
-                  >
-                    {question}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </ClaimGroup>
+          />
+          <ListPanel
+            title="Analysis warnings"
+            items={effectiveOutput.analysisWarnings}
+            emptyMessage="No analysis warnings were raised."
+            tone="warning"
+          />
         </div>
-      </Section>
 
-      <div className="divider" />
+        <StakeholderProfilePanel profile={effectiveOutput.stakeholderProfile} />
 
-      <QualityDetails
-        qualityScore={qualityScore}
-        qualityStatus={qualityStatus}
-        analysisFailure={analysisFailure}
-      />
-    </div>
+        <Disclosure
+          title="Edit summary used in synthesis"
+          active={overrideActive}
+          defaultOpen={overrideActive}
+        >
+          <ReviewOverrideForm
+            projectId={projectId}
+            sessionId={sessionId}
+            defaultSummary={override?.editedSummary ?? ""}
+            defaultNotes={override?.consultantNotes ?? ""}
+            generatedSummary={generatedOutput.summary}
+            overrideActive={overrideActive}
+          />
+        </Disclosure>
+
+        <Disclosure
+          title="Manual quality review"
+          active={Boolean(qualityOverride)}
+          defaultOpen={Boolean(qualityOverride)}
+        >
+          <ReviewQualityOverrideForm
+            projectId={projectId}
+            sessionId={sessionId}
+            qualityOverride={qualityOverride}
+          />
+        </Disclosure>
+      </TabsContent>
+
+      <TabsContent value="questions" className="stack gap-3">
+        {generatedOutput.questionReviews.length === 0 ? (
+          <EmptyHint message="No question-level review was generated for this session." />
+        ) : (
+          generatedOutput.questionReviews.map((review) => (
+            <QuestionReviewCard key={review.questionId} review={review} />
+          ))
+        )}
+      </TabsContent>
+
+      <TabsContent value="themes" className="stack gap-3">
+        {themeCards.length === 0 ? (
+          <EmptyHint message="No grounded themes were extracted for this respondent." />
+        ) : (
+          themeCards.map((card) => (
+            <InsightCardPanel
+              key={card.id}
+              card={card}
+              projectId={projectId}
+              sessionId={sessionId}
+              suppressed={suppressedIds.has(card.id)}
+            />
+          ))
+        )}
+      </TabsContent>
+
+      <TabsContent value="quotes" className="stack gap-3">
+        {generatedOutput.quoteLibrary.length === 0 ? (
+          <EmptyHint message="No verbatim quote library was extracted for this respondent." />
+        ) : (
+          generatedOutput.quoteLibrary.map((quote) => (
+            <QuoteLibraryCard
+              key={quote.id}
+              quote={quote}
+              projectId={projectId}
+              sessionId={sessionId}
+              suppressed={suppressedIds.has(quote.id)}
+            />
+          ))
+        )}
+      </TabsContent>
+
+      <TabsContent value="signals" className="stack gap-4">
+        <SignalGroup
+          title="Pain points"
+          cards={signalCards.filter((card) => card.kind === "pain_point")}
+          projectId={projectId}
+          sessionId={sessionId}
+          suppressedIds={suppressedIds}
+          emptyMessage="No grounded pain points were extracted."
+        />
+        <SignalGroup
+          title="Opportunities"
+          cards={signalCards.filter((card) => card.kind === "opportunity")}
+          projectId={projectId}
+          sessionId={sessionId}
+          suppressedIds={suppressedIds}
+          emptyMessage="No grounded opportunities were extracted."
+        />
+        <SignalGroup
+          title="Risks"
+          cards={signalCards.filter((card) => card.kind === "risk")}
+          projectId={projectId}
+          sessionId={sessionId}
+          suppressedIds={suppressedIds}
+          emptyMessage="No grounded risks were extracted."
+        />
+        <SignalGroup
+          title="Tensions"
+          cards={signalCards.filter((card) => card.kind === "tension")}
+          projectId={projectId}
+          sessionId={sessionId}
+          suppressedIds={suppressedIds}
+          emptyMessage="No grounded tensions were extracted."
+        />
+      </TabsContent>
+
+      <TabsContent value="transcript">
+        <TranscriptTabPanel segmentCount={generatedOutput.cleanedTranscript.length} />
+      </TabsContent>
+    </Tabs>
   )
+}
+
+function CountChip({ count }: { count: number }) {
+  return (
+    <span className="rounded-full border border-border/70 bg-background/70 px-2 py-0.5 text-[10px] font-semibold tracking-[0.18em] text-muted-foreground">
+      {count}
+    </span>
+  )
+}
+
+function countFilledSections(output: SessionOutputGenerated) {
+  return [
+    output.workshopImplications.length > 0,
+    output.recommendedActions.length > 0,
+    output.unresolvedQuestions.length > 0,
+    output.analysisWarnings.length > 0,
+  ].filter(Boolean).length
 }
 
 function SummarySection({
   effectiveSummary,
   overrideActive,
+  generatedOutput,
   qualityScore,
   qualityStatus,
+  qualityOverride,
   analysisFailure,
 }: {
   effectiveSummary: string
   overrideActive: boolean
+  generatedOutput: SessionOutputGenerated
   qualityScore?: QualityScore
   qualityStatus: "ready" | "pending" | "failed" | "idle"
+  qualityOverride?: SessionQualityOverride
   analysisFailure?: string
 }) {
   return (
-    <section className="stack gap-3">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-base font-semibold tracking-tight text-foreground">
-          Summary
-        </h2>
+    <section className="rounded-3xl border border-border/70 bg-background/65 p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-base font-semibold tracking-tight text-foreground">
+              Executive summary
+            </h2>
+            {overrideActive ? <Badge variant="accent">Override active</Badge> : null}
+            {qualityOverride ? (
+              <Badge variant={qualityOverride.lowQuality ? "warning" : "success"}>
+                Manual quality
+              </Badge>
+            ) : null}
+          </div>
+          <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+            {effectiveSummary}
+          </p>
+        </div>
         <QualityChip
           qualityScore={qualityScore}
           qualityStatus={qualityStatus}
+          qualityOverride={qualityOverride}
           analysisFailure={analysisFailure}
         />
       </div>
-      <p className="prose-reader">{effectiveSummary}</p>
-      <p className="text-xs leading-5 text-muted-foreground">
-        {overrideActive
-          ? "This summary uses the consultant override and is what synthesis will consume."
-          : "Generated respondent summary — feeds synthesis unless overridden."}
-      </p>
+
+      <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+        <span className="rounded-full border border-border/70 bg-background/80 px-3 py-1">
+          Confidence {Math.round(generatedOutput.confidenceScore * 100)}%
+        </span>
+        <span className="rounded-full border border-border/70 bg-background/80 px-3 py-1">
+          Model {generatedOutput.modelVersionId}
+        </span>
+        <span className="rounded-full border border-border/70 bg-background/80 px-3 py-1">
+          Generated {new Date(generatedOutput.createdAt).toLocaleString()}
+        </span>
+      </div>
+
+      {qualityOverride?.note.trim() ? (
+        <p className="mt-4 rounded-2xl border border-primary/20 bg-primary/8 px-4 py-3 text-sm leading-6 text-foreground">
+          <span className="font-semibold">Manual quality note:</span>{" "}
+          {qualityOverride.note}
+        </p>
+      ) : null}
     </section>
   )
 }
@@ -225,25 +329,32 @@ function SummarySection({
 function QualityChip({
   qualityScore,
   qualityStatus,
+  qualityOverride,
   analysisFailure,
 }: {
   qualityScore?: QualityScore
   qualityStatus: "ready" | "pending" | "failed" | "idle"
+  qualityOverride?: SessionQualityOverride
   analysisFailure?: string
 }) {
   const ready = Boolean(qualityScore)
   const overall = ready ? Math.round((qualityScore?.overall ?? 0) * 100) : null
-  const lowQuality = qualityScore?.lowQuality ?? false
+  const effectiveLowQuality =
+    typeof qualityOverride?.lowQuality === "boolean"
+      ? qualityOverride.lowQuality
+      : (qualityScore?.lowQuality ?? false)
   const dotColor = !ready
     ? "bg-muted-foreground"
-    : lowQuality
+    : effectiveLowQuality
       ? "bg-amber-500"
       : "bg-emerald-500"
-  const label = ready
-    ? `Quality ${overall}%`
-    : qualityStatus === "failed"
-      ? "Quality failed"
-      : "Quality pending"
+  const label = qualityOverride
+    ? `Manual ${qualityOverride.lowQuality ? "flag" : "pass"}`
+    : ready
+      ? `Quality ${overall}%`
+      : qualityStatus === "failed"
+        ? "Quality failed"
+        : "Quality pending"
 
   return (
     <RadixPopover.Root>
@@ -262,7 +373,7 @@ function QualityChip({
           sideOffset={8}
           align="end"
           className={cn(
-            "z-50 w-[300px] rounded-2xl border border-border/70 bg-popover/95 p-4 shadow-[0_18px_50px_-28px_rgba(23,30,55,0.4)] backdrop-blur",
+            "z-50 w-[320px] rounded-2xl border border-border/70 bg-popover/95 p-4 shadow-[0_18px_50px_-28px_rgba(23,30,55,0.4)] backdrop-blur",
             "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
           )}
         >
@@ -273,10 +384,16 @@ function QualityChip({
                   {overall}
                   <span className="text-base text-muted-foreground">%</span>
                 </p>
-                <Badge variant={lowQuality ? "warning" : "success"}>
-                  {lowQuality ? "Low quality" : "Healthy"}
+                <Badge variant={effectiveLowQuality ? "warning" : "success"}>
+                  {effectiveLowQuality ? "Low quality" : "Healthy"}
                 </Badge>
               </div>
+              {qualityOverride ? (
+                <p className="rounded-2xl border border-primary/20 bg-primary/8 px-3 py-2 text-xs leading-5 text-foreground">
+                  Manual review is overriding the generated score for triage and
+                  synthesis decisions.
+                </p>
+              ) : null}
               <dl className="divide-y divide-border/60">
                 {qualityScore.dimensions.map((dimension) => (
                   <div
@@ -311,272 +428,391 @@ function QualityChip({
   )
 }
 
-function Section({
+function ListPanel({
   title,
-  count,
-  children,
+  items,
+  emptyMessage,
+  tone = "neutral",
 }: {
   title: string
-  count?: number
-  children: React.ReactNode
+  items: string[]
+  emptyMessage: string
+  tone?: "neutral" | "warning"
 }) {
   return (
-    <section className="stack gap-3">
-      <div className="flex items-baseline gap-2">
-        <h2 className="text-base font-semibold tracking-tight text-foreground">
-          {title}
-        </h2>
-        {typeof count === "number" ? (
-          <span className="text-xs font-medium tabular-nums text-muted-foreground">
-            · {count}
-          </span>
+    <section className="rounded-3xl border border-border/70 bg-background/60 p-5">
+      <div className="flex items-center gap-2">
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+        {tone === "warning" && items.length > 0 ? (
+          <Badge variant="warning">Attention</Badge>
         ) : null}
       </div>
-      {children}
+      {items.length === 0 ? (
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">{emptyMessage}</p>
+      ) : (
+        <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-foreground marker:text-muted-foreground">
+          {items.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      )}
     </section>
   )
 }
 
-function AnswerArticle({
-  answer,
-  hasDivider,
+function StakeholderProfilePanel({
+  profile,
 }: {
-  answer: QuestionAnswer
-  hasDivider: boolean
+  profile: Record<string, string>
+}) {
+  const entries = Object.entries(profile).filter(([, value]) => value.trim().length > 0)
+
+  if (entries.length === 0) {
+    return null
+  }
+
+  return (
+    <section className="rounded-3xl border border-border/70 bg-background/60 p-5">
+      <h3 className="text-sm font-semibold text-foreground">Stakeholder profile</h3>
+      <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+        {entries.map(([key, value]) => (
+          <div
+            key={key}
+            className="rounded-2xl border border-border/60 bg-background/70 p-4"
+          >
+            <dt className="text-[10px] font-semibold tracking-[0.2em] text-muted-foreground uppercase">
+              {key.replaceAll("_", " ")}
+            </dt>
+            <dd className="mt-2 text-sm leading-6 text-foreground">{value}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  )
+}
+
+function QuestionReviewCard({ review }: { review: QuestionReview }) {
+  return (
+    <article className="rounded-3xl border border-border/70 bg-background/60 p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge
+              variant={
+                review.status === "answered"
+                  ? "success"
+                  : review.status === "partial"
+                    ? "warning"
+                    : "danger"
+              }
+            >
+              {review.status}
+            </Badge>
+            <span className="text-sm font-semibold text-foreground">
+              {review.prompt}
+            </span>
+          </div>
+          <p className="text-sm leading-6 text-muted-foreground">{review.answer}</p>
+        </div>
+        <span className="text-xs font-semibold tabular-nums text-muted-foreground">
+          {Math.round(review.confidence * 100)}%
+        </span>
+      </div>
+
+      {review.keyPoints.length > 0 ? (
+        <div className="mt-4">
+          <p className="text-[10px] font-semibold tracking-[0.2em] text-muted-foreground uppercase">
+            Key points
+          </p>
+          <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm leading-6 text-foreground marker:text-muted-foreground">
+            {review.keyPoints.map((point) => (
+              <li key={point}>{point}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <QuoteExcerptList quotes={review.evidenceQuotes} className="mt-4" />
+
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <EvidencePill evidence={review.evidence} />
+        {review.followUpQuestions.length > 0 ? (
+          <span className="rounded-full border border-border/70 bg-background/80 px-3 py-1 text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+            {review.followUpQuestions.length} follow-up
+            {review.followUpQuestions.length === 1 ? "" : "s"}
+          </span>
+        ) : null}
+      </div>
+
+      {review.followUpQuestions.length > 0 ? (
+        <div className="mt-4 rounded-2xl border border-border/60 bg-background/70 p-4">
+          <p className="text-[10px] font-semibold tracking-[0.2em] text-muted-foreground uppercase">
+            Missing follow-up
+          </p>
+          <ul className="mt-2 space-y-1.5 text-sm leading-6 text-foreground">
+            {review.followUpQuestions.map((question) => (
+              <li key={question}>{question}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </article>
+  )
+}
+
+function QuoteLibraryCard({
+  quote,
+  projectId,
+  sessionId,
+  suppressed,
+}: {
+  quote: QuoteLibraryItem
+  projectId: string
+  sessionId: string
+  suppressed: boolean
 }) {
   return (
-    <article className={cn("py-3", hasDivider && "border-t border-border/60")}>
-      <div className="flex items-start justify-between gap-3">
-        <h3 className="text-sm font-medium text-foreground">
-          {answer.prompt}
-        </h3>
-        <Badge variant="neutral">
-          {Math.round(answer.confidence * 100)}%
-        </Badge>
+    <article
+      className={cn(
+        "rounded-3xl border border-border/70 bg-background/60 p-5",
+        suppressed && "border-dashed bg-muted/35"
+      )}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="accent">{quote.label}</Badge>
+            {suppressed ? <Badge variant="warning">Suppressed</Badge> : null}
+          </div>
+          <blockquote className="rounded-2xl border border-primary/15 bg-primary/8 px-4 py-3 text-sm leading-6 text-foreground">
+            “{quote.excerpt}”
+          </blockquote>
+          <p className="text-sm leading-6 text-muted-foreground">{quote.context}</p>
+        </div>
+        <ReviewClaimToggle
+          projectId={projectId}
+          sessionId={sessionId}
+          claimId={quote.id}
+          suppressed={suppressed}
+        />
       </div>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">
-        {answer.answer}
-      </p>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <EvidencePill evidence={answer.evidence} />
+
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <EvidencePill evidence={quote.evidence} />
+        {quote.questionIds.map((questionId) => (
+          <span
+            key={questionId}
+            className="rounded-full border border-border/70 bg-background/80 px-3 py-1 text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase"
+          >
+            {questionId}
+          </span>
+        ))}
+        {quote.themeHints.map((hint) => (
+          <span
+            key={hint}
+            className="rounded-full border border-border/70 bg-background/80 px-3 py-1 text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase"
+          >
+            {hint}
+          </span>
+        ))}
       </div>
     </article>
   )
 }
 
-function ThemeArticle({
-  theme,
-  hasDivider,
-}: {
-  theme: ThemeSummary
-  hasDivider: boolean
-}) {
-  return (
-    <article className={cn("py-3", hasDivider && "border-t border-border/60")}>
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="text-sm font-medium text-foreground">{theme.title}</h3>
-        <Badge variant="neutral">{theme.frequency} hit(s)</Badge>
-      </div>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">
-        {theme.summary}
-      </p>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <EvidencePill evidence={theme.evidence} />
-      </div>
-    </article>
-  )
-}
-
-function ClaimGroup({
-  label,
-  count,
-  claims,
-  children,
-  defaultOpen = false,
+function SignalGroup({
+  title,
+  cards,
+  projectId,
+  sessionId,
+  suppressedIds,
   emptyMessage,
 }: {
-  label: string
-  count: number
-  claims?: InsightClaim[]
-  children?: React.ReactNode
-  defaultOpen?: boolean
+  title: string
+  cards: InsightCard[]
+  projectId: string
+  sessionId: string
+  suppressedIds: ReadonlySet<string>
   emptyMessage: string
 }) {
   return (
-    <details
-      className="group border-b border-border/60 py-3 last:border-b-0 [&_summary::-webkit-details-marker]:hidden"
-      open={defaultOpen && count > 0}
-    >
-      <summary className="focus-ring flex cursor-pointer list-none items-center justify-between gap-3 rounded-md py-1 text-sm font-semibold text-foreground outline-none">
-        <span className="flex items-center gap-2">
-          <CaretRight
-            className="size-3.5 text-muted-foreground transition-transform group-open:rotate-90"
-            weight="bold"
-          />
-          {label}
-        </span>
+    <section className="rounded-3xl border border-border/70 bg-background/60 p-5">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
         <span className="text-[11px] font-semibold tabular-nums text-muted-foreground">
-          {count}
+          {cards.length}
         </span>
-      </summary>
-      <div className="stack gap-3 pt-3 pl-5">
-        {count === 0 ? (
-          <EmptyHint message={emptyMessage} />
-        ) : children ? (
-          children
-        ) : (
-          (claims ?? []).map((claim, idx) => (
-            <div
-              key={claim.id}
-              className={cn(
-                "stack gap-2",
-                idx > 0 && "border-t border-border/50 pt-3"
-              )}
-            >
-              <h4 className="text-sm font-semibold text-foreground">
-                {claim.label}
-              </h4>
-              <p className="text-sm leading-6 text-muted-foreground">
-                {claim.summary}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <EvidencePill evidence={claim.evidence} />
-              </div>
-            </div>
-          ))
-        )}
       </div>
-    </details>
+      {cards.length === 0 ? (
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">{emptyMessage}</p>
+      ) : (
+        <div className="mt-4 stack gap-3">
+          {cards.map((card) => (
+            <InsightCardPanel
+              key={card.id}
+              card={card}
+              projectId={projectId}
+              sessionId={sessionId}
+              suppressed={suppressedIds.has(card.id)}
+            />
+          ))}
+        </div>
+      )}
+    </section>
   )
 }
 
-function OverrideDisclosure({
-  defaultOpen,
+function InsightCardPanel({
+  card,
   projectId,
   sessionId,
-  defaultSummary,
-  defaultNotes,
-  generatedSummary,
-  overrideActive,
+  suppressed,
 }: {
-  defaultOpen: boolean
+  card: InsightCard
   projectId: string
   sessionId: string
-  defaultSummary: string
-  defaultNotes: string
-  generatedSummary: string
-  overrideActive: boolean
+  suppressed: boolean
 }) {
   return (
-    <details
-      className="group [&_summary::-webkit-details-marker]:hidden"
-      open={defaultOpen}
+    <article
+      className={cn(
+        "rounded-2xl border border-border/60 bg-background/70 p-4",
+        suppressed && "border-dashed bg-muted/35"
+      )}
     >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge
+              variant={
+                card.priority === "high"
+                  ? "warning"
+                  : card.priority === "medium"
+                    ? "accent"
+                    : "neutral"
+              }
+            >
+              {card.priority}
+            </Badge>
+            {suppressed ? <Badge variant="warning">Suppressed</Badge> : null}
+            <h4 className="text-sm font-semibold text-foreground">{card.title}</h4>
+          </div>
+          <p className="text-sm leading-6 text-muted-foreground">{card.summary}</p>
+        </div>
+        <ReviewClaimToggle
+          projectId={projectId}
+          sessionId={sessionId}
+          claimId={card.id}
+          suppressed={suppressed}
+        />
+      </div>
+
+      <QuoteExcerptList quotes={card.evidenceQuotes} className="mt-4" />
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <EvidencePill evidence={card.evidence} />
+      </div>
+    </article>
+  )
+}
+
+function QuoteExcerptList({
+  quotes,
+  className,
+}: {
+  quotes: string[]
+  className?: string
+}) {
+  if (quotes.length === 0) {
+    return null
+  }
+
+  return (
+    <div className={cn("space-y-2", className)}>
+      <p className="text-[10px] font-semibold tracking-[0.2em] text-muted-foreground uppercase">
+        Grounding quotes
+      </p>
+      <ul className="space-y-2">
+        {quotes.map((quote) => (
+          <li
+            key={quote}
+            className="rounded-2xl border border-border/60 bg-background/75 px-4 py-3 text-sm leading-6 text-foreground"
+          >
+            “{quote}”
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function TranscriptTabPanel({ segmentCount }: { segmentCount: number }) {
+  const selection = useOptionalReviewSelection()
+
+  return (
+    <section className="rounded-3xl border border-border/70 bg-background/60 p-5">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant="accent">Transcript rail</Badge>
+        <span className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+          Open for full context
+        </span>
+      </div>
+      <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
+        Evidence links in this review jump directly into the transcript rail on
+        desktop and open the transcript drawer on smaller screens. Use the full
+        transcript when you want to read past the excerpted evidence.
+      </p>
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => selection?.openDrawer("transcript")}
+        >
+          <FileText className="size-3.5" />
+          Open transcript drawer
+        </Button>
+        <span className="text-xs text-muted-foreground">
+          Generated transcript text length: {segmentCount} characters
+        </span>
+      </div>
+    </section>
+  )
+}
+
+function Disclosure({
+  title,
+  active,
+  defaultOpen,
+  children,
+}: {
+  title: string
+  active: boolean
+  defaultOpen: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <details className="group [&_summary::-webkit-details-marker]:hidden" open={defaultOpen}>
       <summary className="focus-ring flex cursor-pointer list-none items-center justify-between gap-3 rounded-md py-1 text-sm font-semibold text-foreground outline-none">
         <span className="flex items-center gap-2">
           <CaretRight
             className="size-3.5 text-muted-foreground transition-transform group-open:rotate-90"
             weight="bold"
           />
-          Edit summary used in synthesis
+          {title}
         </span>
-        {overrideActive ? (
+        {active ? (
           <span className="text-[10px] font-semibold tracking-[0.18em] text-primary uppercase">
             Active
           </span>
         ) : null}
       </summary>
-      <div className="pt-4">
-        <ReviewOverrideForm
-          projectId={projectId}
-          sessionId={sessionId}
-          defaultSummary={defaultSummary}
-          defaultNotes={defaultNotes}
-          generatedSummary={generatedSummary}
-          overrideActive={overrideActive}
-        />
-      </div>
-    </details>
-  )
-}
-
-function QualityDetails({
-  qualityScore,
-  qualityStatus,
-  analysisFailure,
-}: {
-  qualityScore?: QualityScore
-  qualityStatus: "ready" | "pending" | "failed" | "idle"
-  analysisFailure?: string
-}) {
-  return (
-    <details className="group [&_summary::-webkit-details-marker]:hidden">
-      <summary className="focus-ring flex cursor-pointer list-none items-center justify-between gap-3 rounded-md py-1 text-sm font-semibold text-foreground outline-none">
-        <span className="flex items-center gap-2">
-          <CaretRight
-            className="size-3.5 text-muted-foreground transition-transform group-open:rotate-90"
-            weight="bold"
-          />
-          Quality breakdown
-        </span>
-        {qualityScore ? (
-          <span className="text-[11px] font-semibold tabular-nums text-muted-foreground">
-            {Math.round(qualityScore.overall * 100)}%
-          </span>
-        ) : null}
-      </summary>
-      <div className="pt-4">
-        {qualityScore ? (
-          <div className="stack gap-4">
-            <div className="flex items-baseline justify-between gap-4">
-              <p className="text-4xl font-semibold tabular-nums tracking-tight">
-                {Math.round(qualityScore.overall * 100)}
-                <span className="text-xl text-muted-foreground">%</span>
-              </p>
-              <Badge variant={qualityScore.lowQuality ? "warning" : "success"}>
-                {qualityScore.lowQuality ? "Low quality" : "Healthy"}
-              </Badge>
-            </div>
-            <dl className="divide-y divide-border/60">
-              {qualityScore.dimensions.map((dimension) => (
-                <div
-                  key={dimension.key}
-                  className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 py-3"
-                >
-                  <dt className="text-sm font-medium capitalize text-foreground">
-                    {dimension.key.replaceAll("_", " ")}
-                  </dt>
-                  <dd className="text-sm font-semibold tabular-nums text-foreground">
-                    {Math.round(dimension.score * 100)}%
-                  </dd>
-                  <p className="col-span-2 text-sm leading-6 text-muted-foreground">
-                    {dimension.rationale}
-                  </p>
-                </div>
-              ))}
-            </dl>
-          </div>
-        ) : (
-          <Notice
-            title={qualityStatus === "failed" ? "Quality scoring failed" : "Quality pending"}
-            message={
-              qualityStatus === "failed"
-                ? (analysisFailure ??
-                  "Quality scoring did not complete. Retry dispatch or inspect the failed job.")
-                : "Quality scoring will appear once analysis jobs finish."
-            }
-            tone={qualityStatus === "failed" ? "danger" : "warning"}
-          />
-        )}
-      </div>
+      <div className="pt-4">{children}</div>
     </details>
   )
 }
 
 function EmptyHint({ message }: { message: string }) {
-  return (
-    <p className="text-sm leading-6 text-muted-foreground">{message}</p>
-  )
+  return <p className="text-sm leading-6 text-muted-foreground">{message}</p>
 }
 
 function Notice({

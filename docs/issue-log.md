@@ -73,3 +73,10 @@ Use this file for confirmed repo-specific issues only. Keep entries short and pr
 - Cause: Session extraction and project synthesis persisted deterministic placeholder artifacts instead of real model outputs, reused the first participant turns as evidence across claims, and aggregated synthesis inputs before filtering excluded sessions.
 - Avoid: Do not persist placeholder analysis rows as generated output. Validate every claim against exact participant segment IDs, drop claims without usable evidence, and filter synthesis inputs to completed non-excluded sessions before aggregation.
 - Fix/Check: Complete an interview whose first participant turn is only a greeting, confirm the summary does not repeat the greeting, verify every evidence pill highlights the cited transcript rows only, and exclude a session to confirm it disappears from regenerated synthesis.
+
+## I-011 Project bootstrap RPC failed on internal schema permissions
+
+- Problem: Creating a new project failed with `Unable to create atomic project bootstrap: permission denied for schema app`.
+- Cause: The consultant-authenticated RPC `public.create_project_with_defaults(...)` called `app.has_workspace_access(...)`, but the migrations never granted `USAGE` on schema `app` to the `authenticated` role.
+- Avoid: Any consultant-authenticated RPC or RLS path that resolves objects from an internal schema must ship with the required schema privileges for the runtime role; function grants alone are not sufficient.
+- Fix/Check: Confirm `has_schema_privilege('authenticated', 'app', 'USAGE')` is true after `npm --prefix gather run supabase:bootstrap`, then create a project successfully from `/app/projects/new`.

@@ -326,6 +326,12 @@ async function main() {
             ]) as table_name
           )
           select
+            exists (
+              select 1
+              from pg_namespace
+              where nspname = 'app'
+            ) as has_app_schema,
+            has_schema_privilege('authenticated', 'app', 'USAGE') as authenticated_has_app_usage,
             (select count(*) from expected_tables et
               join information_schema.tables it
                 on it.table_schema = 'public'
@@ -344,6 +350,16 @@ async function main() {
     }
   )
   const [verification] = await verifyResponse.json()
+
+  if (!verification?.has_app_schema) {
+    throw new Error("Supabase bootstrap verification failed: schema app is missing.")
+  }
+
+  if (!verification?.authenticated_has_app_usage) {
+    throw new Error(
+      "Supabase bootstrap verification failed: role authenticated is missing USAGE on schema app."
+    )
+  }
 
   if (shouldWriteEnv) {
     const current = await fs.readFile(envPath, "utf8").catch(() => "")

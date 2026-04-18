@@ -44,6 +44,7 @@ export default async function SessionReviewPage({
           respondentLabel={review.session.respondentLabel}
           excludedFromSynthesis={review.session.excludedFromSynthesis}
           overrideActive={overrideActive}
+          qualityOverrideActive={Boolean(review.qualityOverride)}
           statuses={[
             { label: "Transcript", status: review.transcriptStatus },
             { label: "Analysis", status: review.generatedStatus },
@@ -68,17 +69,11 @@ export default async function SessionReviewPage({
               sessionId={sessionId}
               generatedStatus={review.generatedStatus}
               generatedOutput={review.generatedOutput}
-              effectiveSummary={review.effectiveOutput.summary}
-              override={
-                review.override
-                  ? {
-                      editedSummary: review.override.editedSummary,
-                      consultantNotes: review.override.consultantNotes,
-                    }
-                  : undefined
-              }
+              effectiveOutput={review.effectiveOutput}
+              override={review.override}
               qualityScore={review.qualityScore}
               qualityStatus={review.qualityStatus}
+              qualityOverride={review.qualityOverride}
               analysisFailure={review.analysisFailure}
             />
           </section>

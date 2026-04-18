@@ -104,6 +104,7 @@ export interface ParticipantSession {
   resumeExpiresAt: string
   metadata: Record<string, string>
   qualityFlag: boolean
+  qualityOverride?: SessionQualityOverride
   excludedFromSynthesis: boolean
   runtimeState: SessionRuntimeState
 }
@@ -145,6 +146,17 @@ export interface EvidenceRef {
   rationale: string
 }
 
+export type QuestionReviewStatus = "answered" | "partial" | "missing"
+
+export type InsightCardKind =
+  | "theme"
+  | "pain_point"
+  | "opportunity"
+  | "risk"
+  | "tension"
+
+export type InsightPriority = "high" | "medium" | "low"
+
 export interface QuestionAnswer {
   questionId: string
   prompt: string
@@ -153,11 +165,43 @@ export interface QuestionAnswer {
   evidence: EvidenceRef[]
 }
 
+export interface QuestionReview {
+  questionId: string
+  prompt: string
+  status: QuestionReviewStatus
+  answer: string
+  confidence: number
+  keyPoints: string[]
+  evidence: EvidenceRef[]
+  evidenceQuotes: string[]
+  followUpQuestions: string[]
+}
+
 export interface InsightClaim {
   id: string
   label: string
   summary: string
   evidence: EvidenceRef[]
+}
+
+export interface QuoteLibraryItem {
+  id: string
+  label: string
+  excerpt: string
+  context: string
+  questionIds: string[]
+  themeHints: string[]
+  evidence: EvidenceRef[]
+}
+
+export interface InsightCard {
+  id: string
+  kind: InsightCardKind
+  title: string
+  summary: string
+  priority: InsightPriority
+  evidence: EvidenceRef[]
+  evidenceQuotes: string[]
 }
 
 export interface ThemeSummary {
@@ -174,12 +218,19 @@ export interface SessionOutputGenerated {
   cleanedTranscript: string
   summary: string
   questionAnswers: QuestionAnswer[]
+  questionReviews: QuestionReview[]
   themes: ThemeSummary[]
   painPoints: InsightClaim[]
   opportunities: InsightClaim[]
   risks: InsightClaim[]
   keyQuotes: InsightClaim[]
+  quoteLibrary: QuoteLibraryItem[]
+  insightCards: InsightCard[]
+  tensions: InsightClaim[]
   unresolvedQuestions: string[]
+  workshopImplications: string[]
+  recommendedActions: string[]
+  analysisWarnings: string[]
   confidenceScore: number
   stakeholderProfile: Record<string, string>
   promptVersionId: string
@@ -207,8 +258,11 @@ export interface ProjectSynthesisGenerated {
   id: string
   projectId: string
   includedSessionIds: string[]
+  executiveSummary: string
   crossInterviewThemes: ThemeSummary[]
   contradictionMap: ContradictionItem[]
+  alignmentSignals: string[]
+  misalignmentSignals: string[]
   topProblems: string[]
   suggestedWorkshopAgenda: string[]
   notableQuotesByTheme: InsightClaim[]
@@ -223,6 +277,12 @@ export interface ProjectSynthesisOverride {
   projectId: string
   editedNarrative: string
   consultantNotes: string
+  updatedAt: string
+}
+
+export interface SessionQualityOverride {
+  lowQuality: boolean
+  note: string
   updatedAt: string
 }
 

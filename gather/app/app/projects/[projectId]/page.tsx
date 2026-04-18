@@ -2,6 +2,8 @@ import Link from "next/link"
 import { headers } from "next/headers"
 import { notFound } from "next/navigation"
 
+import { ProjectSynthesisOverrideForm } from "@/components/dashboard/project-synthesis-override-form"
+import { ProjectVersionForm } from "@/components/dashboard/project-version-form"
 import { RefreshSynthesisButton } from "@/components/dashboard/refresh-synthesis-button"
 import { SessionsTable } from "@/components/dashboard/sessions-table"
 import { ThemeEvidenceDrawer } from "@/components/dashboard/theme-evidence-drawer"
@@ -9,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Breadcrumb } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
 import { CopyLink } from "@/components/ui/copy-link"
+import { RelativeTime } from "@/components/ui/relative-time"
 import { getProjectDetail } from "@/lib/data/repository"
 
 interface ProjectDetailPageProps {
@@ -35,6 +38,9 @@ export default async function ProjectDetailPage({
     : `/i/${detail.project.publicLinkToken}`
 
   const stats = computeSessionStats(detail.sessions)
+  const synthesisOverrideActive = Boolean(
+    detail.synthesisOverride?.editedNarrative.trim()
+  )
 
   return (
     <div className="stack gap-5">
@@ -54,6 +60,9 @@ export default async function ProjectDetailPage({
               <span className="text-[10px] tracking-[0.22em] text-muted-foreground uppercase">
                 Version {detail.configVersion.versionNumber}
               </span>
+              {synthesisOverrideActive ? (
+                <Badge variant="warning">Narrative override</Badge>
+              ) : null}
             </div>
             <h1 className="text-xl font-semibold tracking-tight text-balance">
               {detail.project.name}
@@ -94,38 +103,150 @@ export default async function ProjectDetailPage({
 
         <section className="stack gap-5 px-6 py-5">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="eyebrow-sm">What we&apos;re hearing</h2>
+            <div className="stack gap-1">
+              <h2 className="eyebrow-sm">Synthesis readout</h2>
+              <p className="text-sm leading-6 text-muted-foreground">
+                This is the consultant-facing synthesis view, grounded in the
+                latest effective respondent outputs.
+              </p>
+            </div>
             {detail.synthesis.warning ? (
               <Badge variant="warning">{detail.synthesis.warning}</Badge>
             ) : null}
           </div>
 
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
-            <BulletBlock
-              label="Top pain points"
-              items={detail.synthesis.topProblems}
-              emptyMessage="No pain points surfaced yet."
-            />
-            <div className="stack gap-5">
+            <section className="rounded-3xl border border-border/70 bg-background/60 p-5">
+              <h3 className="text-base font-semibold tracking-tight text-foreground">
+                Executive narrative
+              </h3>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                {detail.synthesis.executiveSummary ||
+                  "Synthesis will strengthen after the first completed interviews with usable evidence arrive."}
+              </p>
+            </section>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <BulletBlock
+                label="Alignment signals"
+                items={detail.synthesis.alignmentSignals}
+                emptyMessage="No alignment signals surfaced yet."
+              />
+              <BulletBlock
+                label="Misalignment signals"
+                items={detail.synthesis.misalignmentSignals}
+                emptyMessage="No misalignment signals surfaced yet."
+              />
+              <BulletBlock
+                label="Top pain points"
+                items={detail.synthesis.topProblems}
+                emptyMessage="No pain points surfaced yet."
+              />
               <BulletBlock
                 label="Suggested agenda"
                 items={detail.synthesis.suggestedWorkshopAgenda}
                 ordered
                 emptyMessage="Agenda recommendations appear once synthesis runs."
               />
-              <div className="divider" />
-              <p className="eyebrow-sm">Interview setup</p>
-              <BulletBlock
-                label="Topics"
-                items={detail.configVersion.areasOfInterest}
-                emptyMessage="No topics configured."
-              />
-              <BulletBlock
-                label="Must-ask questions"
-                items={detail.configVersion.requiredQuestions.map((q) => q.prompt)}
-                emptyMessage="No required questions configured."
+            </div>
+          </div>
+
+          <details
+            className="group rounded-3xl border border-border/70 bg-background/60 p-5 [&_summary::-webkit-details-marker]:hidden"
+            open={synthesisOverrideActive}
+          >
+            <summary className="focus-ring flex cursor-pointer list-none items-center justify-between gap-3 rounded-md outline-none">
+              <div className="flex items-center gap-2">
+                <span className="eyebrow-sm">Consultant narrative override</span>
+                {synthesisOverrideActive ? (
+                  <Badge variant="accent">Active</Badge>
+                ) : null}
+              </div>
+              <span className="text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
+                edit readout
+              </span>
+            </summary>
+            <div className="pt-4">
+              <ProjectSynthesisOverrideForm
+                projectId={detail.project.id}
+                generatedNarrative={detail.generatedSynthesis.executiveSummary}
+                override={detail.synthesisOverride}
               />
             </div>
+          </details>
+        </section>
+
+        <div className="divider" />
+
+        <section className="stack gap-5 px-6 py-5">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <section className="stack gap-3">
+              <div className="flex items-baseline justify-between gap-3">
+                <h2 className="eyebrow-sm">Contradictions</h2>
+                <span className="text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
+                  cross-session tensions
+                </span>
+              </div>
+              {detail.synthesis.contradictionMap.length === 0 ? (
+                <EmptyPanel message="No cross-session contradictions were grounded yet." />
+              ) : (
+                <div className="stack gap-3">
+                  {detail.synthesis.contradictionMap.map((item) => (
+                    <article
+                      key={item.id}
+                      className="rounded-3xl border border-border/70 bg-background/60 p-5"
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-sm font-semibold text-foreground">
+                          {item.topic}
+                        </h3>
+                        <Badge variant="warning">
+                          {item.evidence.length} evidence set
+                          {item.evidence.length === 1 ? "" : "s"}
+                        </Badge>
+                      </div>
+                      <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-muted-foreground marker:text-muted-foreground">
+                        {item.positions.map((position) => (
+                          <li key={position}>{position}</li>
+                        ))}
+                      </ul>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section className="stack gap-3">
+              <div className="flex items-baseline justify-between gap-3">
+                <h2 className="eyebrow-sm">Notable quotes</h2>
+                <span className="text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
+                  by theme
+                </span>
+              </div>
+              {detail.synthesis.notableQuotesByTheme.length === 0 ? (
+                <EmptyPanel message="No notable cross-interview quotes were captured yet." />
+              ) : (
+                <div className="stack gap-3">
+                  {detail.synthesis.notableQuotesByTheme.map((quote) => (
+                    <article
+                      key={quote.id}
+                      className="rounded-3xl border border-border/70 bg-background/60 p-5"
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="accent">{quote.label}</Badge>
+                        <span className="text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
+                          {quote.evidence.length} evidence set
+                          {quote.evidence.length === 1 ? "" : "s"}
+                        </span>
+                      </div>
+                      <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                        {quote.summary}
+                      </p>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
           </div>
         </section>
 
@@ -139,6 +260,81 @@ export default async function ProjectDetailPage({
             </span>
           </div>
           <ThemeEvidenceDrawer themes={detail.synthesis.crossInterviewThemes} />
+        </section>
+
+        <div className="divider" />
+
+        <section className="stack gap-5 px-6 py-5">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+            <section className="stack gap-4">
+              <h2 className="eyebrow-sm">Interview setup</h2>
+              <BulletBlock
+                label="Topics"
+                items={detail.configVersion.areasOfInterest}
+                emptyMessage="No topics configured."
+              />
+              <BulletBlock
+                label="Must-ask questions"
+                items={detail.configVersion.requiredQuestions.map((q) => q.prompt)}
+                emptyMessage="No required questions configured."
+              />
+              {detail.configVersion.backgroundContext ? (
+                <section className="rounded-3xl border border-border/70 bg-background/60 p-5">
+                  <h3 className="text-sm font-semibold text-foreground">
+                    Background context
+                  </h3>
+                  <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                    {detail.configVersion.backgroundContext}
+                  </p>
+                </section>
+              ) : null}
+            </section>
+
+            <section className="stack gap-4">
+              <div className="flex items-baseline justify-between gap-3">
+                <h2 className="eyebrow-sm">Version history</h2>
+                <span className="text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
+                  future sessions only
+                </span>
+              </div>
+              <div className="stack gap-3">
+                {detail.configHistory.map((version, index) => (
+                  <article
+                    key={version.id}
+                    className="rounded-3xl border border-border/70 bg-background/60 p-5"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant={index === 0 ? "accent" : "neutral"}>
+                        Version {version.versionNumber}
+                      </Badge>
+                      {index === 0 ? <Badge variant="success">Active</Badge> : null}
+                      <span className="text-xs text-muted-foreground">
+                        Created <RelativeTime date={version.createdAt} />
+                      </span>
+                    </div>
+                    <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                      {version.objective}
+                    </p>
+                  </article>
+                ))}
+              </div>
+
+              <details className="group rounded-3xl border border-border/70 bg-background/60 p-5 [&_summary::-webkit-details-marker]:hidden">
+                <summary className="focus-ring flex cursor-pointer list-none items-center justify-between gap-3 rounded-md outline-none">
+                  <span className="eyebrow-sm">Create next version</span>
+                  <span className="text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
+                    update script
+                  </span>
+                </summary>
+                <div className="pt-4">
+                  <ProjectVersionForm
+                    project={detail.project}
+                    configVersion={detail.configVersion}
+                  />
+                </div>
+              </details>
+            </section>
+          </div>
         </section>
 
         <div className="divider" />
@@ -157,7 +353,6 @@ export default async function ProjectDetailPage({
             qualityScores={detail.qualityScores}
           />
         </section>
-
       </section>
     </div>
   )
@@ -228,21 +423,29 @@ function BulletBlock({
 }) {
   const ListTag = ordered ? "ol" : "ul"
   return (
-    <div className="stack gap-2">
+    <section className="rounded-3xl border border-border/70 bg-background/60 p-5">
       <p className="eyebrow-sm">{label}</p>
       {items.length === 0 ? (
-        <p className="text-sm leading-6 text-muted-foreground">
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">
           {emptyMessage}
         </p>
       ) : (
         <ListTag
-          className={`stack gap-1.5 text-sm leading-6 text-foreground ${ordered ? "list-decimal pl-5 marker:text-muted-foreground" : "list-disc pl-5 marker:text-muted-foreground"}`}
+          className={`mt-3 stack gap-1.5 text-sm leading-6 text-foreground ${ordered ? "list-decimal pl-5 marker:text-muted-foreground" : "list-disc pl-5 marker:text-muted-foreground"}`}
         >
           {items.map((item) => (
             <li key={item}>{item}</li>
           ))}
         </ListTag>
       )}
-    </div>
+    </section>
+  )
+}
+
+function EmptyPanel({ message }: { message: string }) {
+  return (
+    <p className="rounded-3xl border border-dashed border-border/70 bg-background/40 px-4 py-6 text-sm leading-6 text-muted-foreground">
+      {message}
+    </p>
   )
 }

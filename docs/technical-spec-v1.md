@@ -58,10 +58,14 @@ Last updated: April 16, 2026
 - Analysis path:
   - session completion enqueues transcript cleaning, extraction, and quality scoring jobs
   - transcript cleaning is deterministic: normalize whitespace, preserve speaker order, merge consecutive same-speaker fragments when safe, and mark low-signal greeting or channel-check turns for downstream analysis
-  - session extraction uses the OpenAI Responses API with strict structured outputs, full transcript context, and evidence validation against exact participant segment IDs
-  - quality scoring combines deterministic structural checks with a model-assisted faithfulness and workshop-usefulness pass
+  - session extraction is a staged pipeline:
+    - grounding pass extracts question-level coverage, verbatim quote candidates, and insight candidates with exact participant evidence refs
+    - narrative pass consumes only grounded artifacts to write summary, workshop implications, recommended actions, and unresolved questions
+    - hard sessions may escalate to a larger synthesis-grade model when the grounding pass is too thin for the available transcript
+  - session outputs are append-only generated runs; read paths resolve the latest successful run and layer consultant overrides on top
+  - quality scoring combines deterministic structural checks with a cheap model-assisted faithfulness and workshop-usefulness pass, while manual consultant quality overrides remain separate from generated scores
   - the completion route immediately claims and processes that session's queued jobs in deterministic order, then enqueues and runs project synthesis
-  - project synthesis uses only completed, non-excluded effective session outputs and rejects claims without valid cited evidence
+  - project synthesis uses only completed, non-excluded effective session outputs, consumes the latest generated run per session, and rejects claims without valid cited evidence
   - internal dispatch routes and cron sweeps remain recovery paths for queued or stuck jobs
   - Braintrust traces and online scores are stored asynchronously
 
@@ -118,8 +122,10 @@ Last updated: April 16, 2026
 - project create/update/version
 - project create bootstraps the project row, initial config version, and initial public link atomically
 - session include/exclude toggle
+- session claim suppress/restore
 - session quality override
 - session output override save
+- project synthesis override save
 - manual synthesis refresh
 
 ## 5. Shared domain model
@@ -139,9 +145,11 @@ Last updated: April 16, 2026
 - `EvidenceRef`
   - claim provenance linking `sessionId` and `segmentIds`
 - `SessionOutputGenerated`
-  - immutable generated extraction artifact containing both cleaned transcript text and a separate generated summary layer
+  - immutable generated extraction artifact containing cleaned transcript text, question reviews, quote library items, insight cards, and narrative outputs
 - `SessionOutputOverride`
   - consultant-written corrections or suppressions
+- `SessionQualityOverride`
+  - consultant-written override for the effective low-quality flag and review note
 - `ProjectSynthesisGenerated`
   - immutable synthesis artifact
 - `ProjectSynthesisOverride`
@@ -157,7 +165,9 @@ Last updated: April 16, 2026
 - Raw transcript segments are append-only.
 - Transcript persistence is idempotent by `session_id + source_item_id` when a realtime source item ID is present.
 - Generated artifacts are immutable.
+- Session extraction runs are append-only; UI and synthesis consume the latest run for each session.
 - Overrides are layered separately and merged at read time.
+- Manual quality overrides never overwrite generated quality score rows.
 - Evidence references are required for major generated claims.
 
 ## 6. Interview runtime
@@ -242,6 +252,7 @@ Last updated: April 16, 2026
 - Public participant access never uses the server secret key in the browser.
 - Server secret key access exists only in route handlers, background job execution, and setup tooling.
 - RLS helper functions run as security definers so workspace-access checks do not recurse through protected tables.
+- Consultant-authenticated RPCs and RLS checks that call `app.*` helpers require explicit schema grants; the `authenticated` role must retain `USAGE` on schema `app`.
 - Public links are opaque random tokens.
 - Session recovery tokens are signed, scoped to one session, and expire after 24 hours.
 - Invalid, revoked, or expired public links fail closed.
@@ -322,4 +333,5 @@ Last updated: April 16, 2026
 - `npm --prefix gather run typecheck`
 - `npm --prefix gather run build`
 - verify the selected consultant auth provider is enabled in the target Supabase project
+- verify bootstrap confirms schema `app` exists and role `authenticated` has `USAGE` on it
 - schema review for RLS coverage and queue idempotency

@@ -35,6 +35,7 @@ interface ReviewActionBarProps {
   respondentLabel: string
   excludedFromSynthesis: boolean
   overrideActive: boolean
+  qualityOverrideActive: boolean
   statuses: StatusPill[]
 }
 
@@ -90,6 +91,7 @@ export function ReviewActionBar({
   respondentLabel,
   excludedFromSynthesis,
   overrideActive,
+  qualityOverrideActive,
   statuses,
 }: ReviewActionBarProps) {
   const aggregate = aggregateStatus(statuses)
@@ -113,6 +115,9 @@ export function ReviewActionBar({
         </h1>
         {overrideActive ? (
           <Badge variant="accent">Override</Badge>
+        ) : null}
+        {qualityOverrideActive ? (
+          <Badge variant="warning">Manual quality</Badge>
         ) : null}
         {excludedFromSynthesis ? (
           <Badge variant="warning">Excluded</Badge>

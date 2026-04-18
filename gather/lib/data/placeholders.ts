@@ -54,14 +54,31 @@ export function buildGeneratedOutputPlaceholder(
       confidence: 0,
       evidence: [],
     })),
+    questionReviews: config.requiredQuestions.map((question) => ({
+      questionId: question.id,
+      prompt: question.prompt,
+      status: "missing" as const,
+      answer: "No generated answer is available yet.",
+      confidence: 0,
+      keyPoints: [],
+      evidence: [],
+      evidenceQuotes: [],
+      followUpQuestions: [question.prompt],
+    })),
     themes: [],
     painPoints: [],
     opportunities: [],
     risks: [],
     keyQuotes: [],
+    quoteLibrary: [],
+    insightCards: [],
+    tensions: [],
     unresolvedQuestions: config.requiredQuestions.map(
       (question) => question.prompt
     ),
+    workshopImplications: [],
+    recommendedActions: [],
+    analysisWarnings: [],
     confidenceScore: 0,
     stakeholderProfile: session.metadata,
     promptVersionId: "pending",
@@ -112,6 +129,19 @@ export function buildSessionOutput(
       answer: participantSegments[index]?.text ?? primaryAnswer,
       confidence: Number(Math.max(0.2, confidence - index * 0.05).toFixed(2)),
       evidence,
+    })),
+    questionReviews: config.requiredQuestions.map((question, index) => ({
+      questionId: question.id,
+      prompt: question.prompt,
+      status: participantSegments[index] ? ("answered" as const) : ("partial" as const),
+      answer: participantSegments[index]?.text ?? primaryAnswer,
+      confidence: Number(Math.max(0.2, confidence - index * 0.05).toFixed(2)),
+      keyPoints: [participantSegments[index]?.text ?? primaryAnswer],
+      evidence,
+      evidenceQuotes: participantSegments[index]?.text
+        ? [participantSegments[index].text]
+        : [],
+      followUpQuestions: [],
     })),
     themes: uniqueStrings([
       focusAreas[0] ? `${focusAreas[0]} alignment` : "",
@@ -167,11 +197,45 @@ export function buildSessionOutput(
         },
       ],
     })),
+    quoteLibrary: participantSegments.slice(0, 2).map((segment, index) => ({
+      id: `quote-library-${session.id}-${index + 1}`,
+      label: `Quote ${index + 1}`,
+      excerpt: segment.text,
+      context: "Participant quote captured in the transcript.",
+      questionIds: config.requiredQuestions.slice(0, 1).map((question) => question.id),
+      themeHints: focusAreas.slice(0, 2),
+      evidence: [
+        {
+          sessionId: session.id,
+          segmentIds: [segment.id],
+          rationale: "Direct participant quote captured in the transcript.",
+        },
+      ],
+    })),
+    insightCards: [
+      {
+        id: `insight-${session.id}-1`,
+        kind: "theme",
+        title: focusAreas[0] ? `${focusAreas[0]} bottleneck` : "Emerging theme",
+        summary: primaryAnswer,
+        priority: "medium",
+        evidence,
+        evidenceQuotes: participantSegments.slice(0, 1).map((segment) => segment.text),
+      },
+    ],
+    tensions: [],
     unresolvedQuestions: config.requiredQuestions
       .filter((question) =>
         session.runtimeState.remainingQuestionIds.includes(question.id)
       )
       .map((question) => question.prompt),
+    workshopImplications: [
+      "Use this interview as a starting point for workshop framing.",
+    ],
+    recommendedActions: [
+      "Confirm the highest-friction approval path with additional stakeholders.",
+    ],
+    analysisWarnings: [],
     confidenceScore: Number(confidence.toFixed(2)),
     stakeholderProfile: session.metadata,
     promptVersionId,
@@ -267,8 +331,11 @@ export function buildEmptyProjectSynthesis(
     id: `synthesis-${projectId}-empty`,
     projectId,
     includedSessionIds: [],
+    executiveSummary: "",
     crossInterviewThemes: [],
     contradictionMap: [],
+    alignmentSignals: [],
+    misalignmentSignals: [],
     topProblems: [],
     suggestedWorkshopAgenda: [],
     notableQuotesByTheme: [],
@@ -374,8 +441,13 @@ export function buildProjectSynthesis(
     id: `synthesis-${project.id}-${Date.now()}`,
     projectId: project.id,
     includedSessionIds: includedSessions.map((session) => session.id),
+    executiveSummary:
+      "Project synthesis will strengthen as more interviews complete with usable evidence.",
     crossInterviewThemes,
     contradictionMap,
+    alignmentSignals: crossInterviewThemes.map((theme) => theme.title).slice(0, 3),
+    misalignmentSignals:
+      contradictionMap.length > 0 ? contradictionMap.map((item) => item.topic) : [],
     topProblems,
     suggestedWorkshopAgenda,
     notableQuotesByTheme,

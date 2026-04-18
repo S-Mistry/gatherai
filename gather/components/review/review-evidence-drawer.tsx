@@ -25,10 +25,30 @@ export function ReviewEvidenceDrawer({
 }: ReviewEvidenceDrawerProps) {
   const selection = useReviewSelection()
   const [query, setQuery] = useState("")
+  const selectedSegments = useMemo(
+    () =>
+      segments.filter((segment) => selection.drawerSegmentIds.has(segment.id)),
+    [segments, selection.drawerSegmentIds]
+  )
 
   const filteredSegments = useMemo(() => {
     if (selection.drawerMode === "evidence" && selection.drawerSegmentIds.size > 0) {
-      return segments
+      const selectedIndexes = segments.flatMap((segment, index) =>
+        selection.drawerSegmentIds.has(segment.id) ? [index] : []
+      )
+      const contextIndexes = new Set<number>()
+
+      selectedIndexes.forEach((index) => {
+        contextIndexes.add(index)
+        if (index > 0) {
+          contextIndexes.add(index - 1)
+        }
+        if (index < segments.length - 1) {
+          contextIndexes.add(index + 1)
+        }
+      })
+
+      return segments.filter((_, index) => contextIndexes.has(index))
     }
     const trimmed = query.trim().toLowerCase()
     if (!trimmed) {
@@ -116,12 +136,39 @@ export function ReviewEvidenceDrawer({
             <div className="flex items-center justify-between gap-2 border-b border-border/60 px-5 py-2.5">
               <Badge variant="accent">Focused evidence</Badge>
               <span className="text-[10px] tracking-[0.22em] text-muted-foreground uppercase">
-                {segments.length} total segments
+                {selectedSegments.length} selected
               </span>
             </div>
           ) : null}
 
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+            {selection.drawerMode === "evidence" && selectedSegments.length > 0 ? (
+              <div className="mb-5 space-y-3">
+                <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+                  Exact excerpts
+                </p>
+                <ul className="space-y-2">
+                  {selectedSegments.map((segment) => (
+                    <li
+                      key={segment.id}
+                      className="rounded-2xl border border-primary/15 bg-primary/8 px-4 py-3"
+                    >
+                      <p className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+                        {segment.speaker}
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-foreground">
+                        “{segment.text}”
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+                <div className="border-t border-border/60 pt-4">
+                  <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+                    Transcript context
+                  </p>
+                </div>
+              </div>
+            ) : null}
             <ReviewTranscriptPane
               segments={filteredSegments}
               emptyState={
