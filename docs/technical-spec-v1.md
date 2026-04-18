@@ -54,6 +54,7 @@ Last updated: April 16, 2026
   - Supabase redirects back through `/auth/callback`, which exchanges the auth code and establishes the consultant session
   - browser loads `/app/...`
   - server components and server actions fetch consultant-scoped data from Supabase
+  - the project synthesis surface lazily resolves transcript-backed evidence in a right-side drawer through an authenticated consultant read route
   - RLS restricts reads and writes to the consultant workspace
 - Analysis path:
   - session completion enqueues transcript cleaning, extraction, and quality scoring jobs
@@ -110,14 +111,19 @@ Last updated: April 16, 2026
 - `POST /api/public/sessions/[sessionId]/complete`
   - finalize the session, persist final elapsed interview timing, enqueue downstream session analysis jobs, and trigger immediate session-scoped dispatch
 
-### 4.4 Internal APIs
+### 4.4 Consultant read APIs
+
+- `GET /api/projects/[projectId]/evidence?kind=theme|contradiction|notable_quote&claimId=...`
+  - validate consultant auth and workspace access, resolve the selected synthesis claim, and return exact cited transcript excerpts plus respondent labels and session-review links for the project evidence drawer
+
+### 4.5 Internal APIs
 
 - `POST /api/internal/jobs/dispatch`
   - claim and process a bounded set of queued jobs
 - `GET /api/internal/cron/analysis-recovery`
   - cron-triggered recovery sweep guarded by `CRON_SECRET`
 
-### 4.5 Consultant server actions
+### 4.6 Consultant server actions
 
 - project create/update/version
 - project create bootstraps the project row, initial config version, and initial public link atomically
@@ -152,6 +158,14 @@ Last updated: April 16, 2026
   - consultant-written override for the effective low-quality flag and review note
 - `ProjectSynthesisGenerated`
   - immutable synthesis artifact
+- `ProjectEvidenceClaimKind`
+  - discriminant for project-level evidence drawer claims: `theme`, `contradiction`, or `notable_quote`
+- `ProjectEvidenceDrawerPayload`
+  - authenticated project-level evidence response containing selected claim metadata, evidence counts, and resolved excerpts
+- `ProjectEvidenceExcerpt`
+  - one resolved evidence card with respondent label, rationale, cited segment IDs, and a session-review link
+- `ProjectEvidenceSegment`
+  - one exact resolved transcript segment rendered inside a project-level evidence excerpt
 - `ProjectSynthesisOverride`
   - consultant-written synthesis changes
 - `QualityScore`

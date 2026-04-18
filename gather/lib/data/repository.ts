@@ -11,6 +11,11 @@ import {
   buildGeneratedOutputPlaceholder,
 } from "@/lib/data/placeholders"
 import {
+  getProjectEvidenceClaimDescriptor,
+  MAX_PROJECT_EVIDENCE_EXCERPTS,
+  resolveProjectClaimEvidence,
+} from "@/lib/project-evidence"
+import {
   generateProjectSynthesisAnalysis,
   generateSessionOutputAnalysis,
   evaluateSessionQualityAnalysis,
@@ -31,6 +36,8 @@ import type {
   MetadataPrompt,
   ParticipantSession,
   ProjectConfigVersion,
+  ProjectEvidenceClaimKind,
+  ProjectEvidenceDrawerPayload,
   ProjectRecord,
   ProjectSynthesisGenerated,
   ProjectSynthesisOverride,
@@ -49,7 +56,7 @@ import type {
   WorkspaceSummary,
 } from "@/lib/domain/types"
 import { SESSION_ANALYSIS_JOB_TYPES } from "@/lib/jobs/analysis"
-import { env, openAiModels } from "@/lib/env"
+import { openAiModels } from "@/lib/env"
 import {
   createSecretSupabaseClient,
   createServerSupabaseClient,
@@ -2240,6 +2247,103 @@ export async function getProjectDetail(projectId: string) {
     synthesisOverride,
     qualityScores,
   }
+}
+
+export async function getProjectClaimEvidence(
+  projectId: string,
+  kind: ProjectEvidenceClaimKind,
+  claimId: string
+): Promise<ProjectEvidenceDrawerPayload | null> {
+  const context = await getRequiredConsultantContext()
+  const client = await createServerSupabaseClient()
+
+  if (!client) {
+    fail("Supabase publishable-key environment is not configured.")
+  }
+
+  const projectResult = await client
+    .from("projects")
+    .select("*")
+    .eq("id", projectId)
+    .maybeSingle<ProjectRow>()
+
+  if (projectResult.error) {
+    fail(`Unable to load project evidence: ${projectResult.error.message}`)
+  }
+
+  if (!projectResult.data) {
+    return null
+  }
+
+  const synthesesResult = await client
+    .from("project_syntheses_generated")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+
+  const synthesisRow = expectRows(
+    synthesesResult,
+    "Unable to load project synthesis for evidence"
+  )[0] as ProjectSynthesisGeneratedRow | undefined
+
+  if (!synthesisRow) {
+    return null
+  }
+
+  const synthesis = mapSynthesis(synthesisRow)
+  const claim = getProjectEvidenceClaimDescriptor(synthesis, kind, claimId)
+
+  if (!claim) {
+    return null
+  }
+
+  const displayedEvidence = claim.evidence.slice(0, MAX_PROJECT_EVIDENCE_EXCERPTS)
+  const referencedSessionIds = [...new Set(displayedEvidence.map((ref) => ref.sessionId))]
+  const referencedSegmentIds = [
+    ...new Set(displayedEvidence.flatMap((ref) => ref.segmentIds)),
+  ]
+  const [sessionsResult, transcriptResult] = await Promise.all([
+    referencedSessionIds.length === 0
+      ? Promise.resolve({
+          data: [] as Array<{ id: string; respondent_label: string }>,
+          error: null,
+        })
+      : client
+          .from("participant_sessions")
+          .select("id, respondent_label")
+          .in("id", referencedSessionIds),
+    referencedSegmentIds.length === 0 || referencedSessionIds.length === 0
+      ? Promise.resolve({ data: [] as TranscriptSegmentRow[], error: null })
+      : client
+          .from("transcript_segments")
+          .select("*")
+          .in("session_id", referencedSessionIds)
+          .in("id", referencedSegmentIds),
+  ])
+
+  const sessions = expectRows(
+    sessionsResult,
+    "Unable to load project evidence sessions"
+  ).map((row) => ({
+    id: row.id,
+    respondentLabel: row.respondent_label,
+  }))
+  const transcript = expectRows(
+    transcriptResult,
+    "Unable to load transcript evidence"
+  ).map((row) => mapTranscript(row as TranscriptSegmentRow))
+
+  return resolveProjectClaimEvidence({
+    projectId,
+    projectWorkspaceId: projectResult.data.workspace_id,
+    viewerWorkspaceId: context.workspace.id,
+    kind,
+    claimId,
+    synthesis,
+    sessions,
+    transcript,
+  })
 }
 
 export async function getSessionReview(projectId: string, sessionId: string) {

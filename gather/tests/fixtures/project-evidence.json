@@ -1,0 +1,138 @@
+{
+  "projectId": "proj-1",
+  "projectWorkspaceId": "ws-1",
+  "viewerWorkspaceId": "ws-1",
+  "synthesis": {
+    "id": "synth-1",
+    "projectId": "proj-1",
+    "includedSessionIds": ["sess-a", "sess-b", "sess-c"],
+    "executiveSummary": "Decision rights remain the strongest cross-session theme.",
+    "crossInterviewThemes": [
+      {
+        "id": "theme-1",
+        "title": "Decision bottlenecks",
+        "summary": "Approvals stall because ownership is split across multiple teams.",
+        "frequency": 2,
+        "evidence": [
+          {
+            "sessionId": "sess-a",
+            "segmentIds": ["seg-a-2"],
+            "rationale": "Amelia described repeated approval loops."
+          },
+          {
+            "sessionId": "sess-b",
+            "segmentIds": ["seg-b-3"],
+            "rationale": "Liam echoed the same delay pattern."
+          }
+        ]
+      }
+    ],
+    "contradictionMap": [
+      {
+        "id": "contra-1",
+        "topic": "Where decision authority should live",
+        "positions": [
+          "Central operations should keep final sign-off for exceptions.",
+          "Regional teams need delegated authority for routine cases."
+        ],
+        "evidence": [
+          {
+            "sessionId": "sess-a",
+            "segmentIds": ["seg-a-4", "seg-a-3"],
+            "rationale": "The respondent contrasted regional speed with central sign-off."
+          }
+        ]
+      }
+    ],
+    "alignmentSignals": [],
+    "misalignmentSignals": [],
+    "topProblems": [],
+    "suggestedWorkshopAgenda": [],
+    "notableQuotesByTheme": [
+      {
+        "id": "quote-1",
+        "label": "Approval frustration",
+        "summary": "\"We do not need another framework; we need a way to stop waiting on three approvals.\"",
+        "evidence": [
+          {
+            "sessionId": "sess-a",
+            "segmentIds": ["seg-a-2"],
+            "rationale": "Direct participant quote."
+          }
+        ]
+      },
+      {
+        "id": "quote-missing",
+        "label": "Missing evidence",
+        "summary": "This claim should not fabricate text when transcript rows are missing.",
+        "evidence": [
+          {
+            "sessionId": "sess-c",
+            "segmentIds": ["seg-c-1"],
+            "rationale": "The cited row no longer exists."
+          }
+        ]
+      }
+    ],
+    "warning": "",
+    "promptVersionId": "prompt-synthesis-v1",
+    "modelVersionId": "model-gpt-5.4",
+    "createdAt": "2026-04-18T11:00:00.000Z"
+  },
+  "sessions": [
+    {
+      "id": "sess-a",
+      "respondentLabel": "Amelia"
+    },
+    {
+      "id": "sess-b",
+      "respondentLabel": "Liam"
+    },
+    {
+      "id": "sess-c",
+      "respondentLabel": "Priya"
+    }
+  ],
+  "transcript": [
+    {
+      "id": "seg-a-1",
+      "sessionId": "sess-a",
+      "speaker": "participant",
+      "text": "We need clearer owners when an exception lands between regional and central teams.",
+      "createdAt": "2026-04-18T10:01:00.000Z",
+      "orderIndex": 1
+    },
+    {
+      "id": "seg-a-2",
+      "sessionId": "sess-a",
+      "speaker": "participant",
+      "text": "We do not need another framework; we need a way to stop waiting on three approvals.",
+      "createdAt": "2026-04-18T10:02:00.000Z",
+      "orderIndex": 2
+    },
+    {
+      "id": "seg-a-3",
+      "sessionId": "sess-a",
+      "speaker": "participant",
+      "text": "Routine exceptions should move faster in-region.",
+      "createdAt": "2026-04-18T10:03:00.000Z",
+      "orderIndex": 3
+    },
+    {
+      "id": "seg-a-4",
+      "sessionId": "sess-a",
+      "speaker": "participant",
+      "text": "Central operations still wants final sign-off when policy rules conflict.",
+      "createdAt": "2026-04-18T10:04:00.000Z",
+      "orderIndex": 4
+    },
+    {
+      "id": "seg-b-3",
+      "sessionId": "sess-b",
+      "speaker": "participant",
+      "text": "Every exception seems to wait for a second approval before anything moves.",
+      "createdAt": "2026-04-18T10:05:00.000Z",
+      "orderIndex": 3
+    }
+  ]
+}

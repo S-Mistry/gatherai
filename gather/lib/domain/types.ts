@@ -254,6 +254,15 @@ export interface ContradictionItem {
   evidence: EvidenceRef[]
 }
 
+export const PROJECT_EVIDENCE_CLAIM_KINDS = [
+  "theme",
+  "contradiction",
+  "notable_quote",
+] as const
+
+export type ProjectEvidenceClaimKind =
+  (typeof PROJECT_EVIDENCE_CLAIM_KINDS)[number]
+
 export interface ProjectSynthesisGenerated {
   id: string
   projectId: string
@@ -270,6 +279,35 @@ export interface ProjectSynthesisGenerated {
   promptVersionId: string
   modelVersionId: string
   createdAt: string
+}
+
+export interface ProjectEvidenceSegment {
+  id: string
+  speaker: TranscriptSpeaker
+  text: string
+  orderIndex: number
+}
+
+export interface ProjectEvidenceExcerpt {
+  sessionId: string
+  respondentLabel: string
+  rationale: string
+  segmentIds: string[]
+  segments: ProjectEvidenceSegment[]
+  reviewHref: string
+}
+
+export interface ProjectEvidenceDrawerPayload {
+  projectId: string
+  claimId: string
+  kind: ProjectEvidenceClaimKind
+  title: string
+  summary: string
+  contextLabel?: string
+  contextItems: string[]
+  totalEvidenceCount: number
+  displayedEvidenceCount: number
+  excerpts: ProjectEvidenceExcerpt[]
 }
 
 export interface ProjectSynthesisOverride {
