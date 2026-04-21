@@ -117,11 +117,15 @@ export function isProjectType(value: unknown): value is ProjectType {
   return value === "discovery" || value === "feedback"
 }
 
-export function getProjectTypePreset(projectType: ProjectType): ProjectTypePreset {
-  return PROJECT_TYPE_PRESETS[projectType]
+export function normalizeProjectType(value: unknown): ProjectType {
+  return isProjectType(value) ? value : "discovery"
 }
 
-export function getProjectTypeBadge(projectType: ProjectType) {
+export function getProjectTypePreset(projectType: unknown): ProjectTypePreset {
+  return PROJECT_TYPE_PRESETS[normalizeProjectType(projectType)]
+}
+
+export function getProjectTypeBadge(projectType: unknown) {
   const preset = getProjectTypePreset(projectType)
 
   return {
@@ -130,18 +134,18 @@ export function getProjectTypeBadge(projectType: ProjectType) {
   } as const
 }
 
-export function getProjectTypeAudiencePlural(projectType: ProjectType) {
+export function getProjectTypeAudiencePlural(projectType: unknown) {
   return getProjectTypePreset(projectType).audiencePlural
 }
 
-export function getAnonymousRespondentLabel(projectType: ProjectType) {
+export function getAnonymousRespondentLabel(projectType: unknown) {
   return getProjectTypePreset(projectType).anonymousRespondentLabel
 }
 
-export function buildParticipantIntro(projectType: ProjectType) {
+export function buildParticipantIntro(projectType: unknown) {
   return getProjectTypePreset(projectType).participantIntro
 }
 
-export function buildParticipantDisclosure(projectType: ProjectType) {
+export function buildParticipantDisclosure(projectType: unknown) {
   return getProjectTypePreset(projectType).disclosureLines.join("\n")
 }

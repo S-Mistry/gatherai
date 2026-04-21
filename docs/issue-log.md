@@ -1,6 +1,6 @@
 # Issue Log
 
-Last updated: April 20, 2026
+Last updated: April 21, 2026
 
 Use this file for confirmed repo-specific issues only. Keep entries short and practical.
 
@@ -94,3 +94,17 @@ Use this file for confirmed repo-specific issues only. Keep entries short and pr
 - Cause: `getParticipantSessionRuntimeBundle()` loaded the session and config version, but not the mapped project, so downstream analysis code could not safely pass project context into extraction and quality scoring.
 - Avoid: Whenever prompt builders or runtime copy branch on immutable project metadata, make that metadata part of the shared analysis/runtime bundle instead of re-querying ad hoc at individual call sites.
 - Fix/Check: Ensure `SessionAnalysisContext` includes `project`, then run `npm --prefix gather run typecheck` and complete both a discovery session and a feedback session to confirm extraction and quality scoring receive the right project type.
+
+## I-014 Project type badge crashed on invalid runtime values
+
+- Problem: Consultant dashboards crashed with `Cannot read properties of undefined (reading 'label')` while rendering project type badges.
+- Cause: The UI trusted `project_type` as a typed `ProjectType`, but runtime data could still be missing or invalid before preset lookup.
+- Avoid: Treat enum-like values from database rows and public config as untrusted until normalized at the data boundary.
+- Fix/Check: Normalize project types to `discovery` before preset or badge lookup, then run `npm --prefix gather run test:fixtures`.
+
+## I-015 Vercel Hobby deploy rejected frequent cron schedule
+
+- Problem: Production deploy failed because Vercel Hobby accounts cannot run cron jobs more than once per day.
+- Cause: `gather/vercel.json` scheduled `/api/internal/cron/analysis-recovery` every 15 minutes.
+- Avoid: Keep Vercel cron schedules Hobby-compatible unless the target project is confirmed to be on Pro.
+- Fix/Check: Use a daily recovery cron, then redeploy with `vercel --prod`.

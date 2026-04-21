@@ -124,7 +124,7 @@ Last updated: April 18, 2026
 - `POST /api/internal/jobs/dispatch`
   - claim and process a bounded set of queued jobs
 - `GET /api/internal/cron/analysis-recovery`
-  - cron-triggered recovery sweep guarded by `CRON_SECRET`
+  - daily cron-triggered recovery sweep guarded by `CRON_SECRET`
 
 ### 4.6 Consultant server actions
 

@@ -68,6 +68,7 @@ import {
   getAnonymousRespondentLabel,
   getProjectTypePreset,
   isProjectType,
+  normalizeProjectType,
 } from "@/lib/project-types"
 import { openAiModels } from "@/lib/env"
 import {
@@ -91,7 +92,7 @@ interface WorkspaceRow {
 interface ProjectRow {
   id: string
   workspace_id: string
-  project_type: ProjectType
+  project_type: unknown
   name: string
   slug: string
   client_name: string
@@ -591,7 +592,7 @@ function mapProject(
   return {
     id: row.id,
     workspaceId: row.workspace_id,
-    projectType: row.project_type,
+    projectType: normalizeProjectType(row.project_type),
     name: row.name,
     slug: row.slug,
     clientName: row.client_name,
@@ -1340,16 +1341,18 @@ function buildPublicInterviewConfig(bundle: {
   project: ProjectRow
   config: ProjectConfigVersion
 }) {
+  const projectType = normalizeProjectType(bundle.project.project_type)
+
   return {
     projectId: bundle.project.id,
-    projectType: bundle.project.project_type,
+    projectType,
     projectName: bundle.project.name,
     objective: bundle.config.objective,
     durationCapMinutes: bundle.config.durationCapMinutes,
     anonymityMode: bundle.config.anonymityMode,
     toneStyle: bundle.config.toneStyle,
-    intro: buildParticipantIntro(bundle.project.project_type),
-    disclosure: buildParticipantDisclosure(bundle.project.project_type),
+    intro: buildParticipantIntro(projectType),
+    disclosure: buildParticipantDisclosure(projectType),
     areasOfInterest: bundle.config.areasOfInterest,
     requiredQuestions: bundle.config.requiredQuestions,
     metadataPrompts: bundle.config.metadataPrompts,
