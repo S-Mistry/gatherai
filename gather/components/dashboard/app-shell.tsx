@@ -1,32 +1,19 @@
-"use client"
-
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import type { ReactNode } from "react"
 import { MicrophoneStage } from "@phosphor-icons/react/dist/ssr"
 
 import { signOutAction } from "@/app/app/actions"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-
-const navItems = [
-  { href: "/app", label: "Overview", match: (p: string) => p === "/app" },
-  {
-    href: "/app/projects",
-    label: "Projects",
-    match: (p: string) => p.startsWith("/app/projects"),
-  },
-]
+import { AppShellNav } from "./app-shell-nav"
 
 interface AppShellProps {
-  children: React.ReactNode
+  children: ReactNode
   userEmail?: string | null
   demoMode: boolean
 }
 
 export function AppShell({ children, userEmail, demoMode }: AppShellProps) {
-  const pathname = usePathname()
-
   return (
     <div className="page-gradient flex min-h-screen flex-col">
       <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur">
@@ -43,29 +30,7 @@ export function AppShell({ children, userEmail, demoMode }: AppShellProps) {
             </span>
           </Link>
 
-          <nav className="flex items-center gap-1" aria-label="Primary">
-            {navItems.map((item) => {
-              const active = item.match(pathname)
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "focus-ring relative rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors",
-                    active
-                      ? "text-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {item.label}
-                  {active ? (
-                    <span className="absolute inset-x-2.5 -bottom-[11px] h-0.5 rounded-full bg-primary" />
-                  ) : null}
-                </Link>
-              )
-            })}
-          </nav>
+          <AppShellNav />
 
           <div className="ml-auto flex items-center gap-3">
             {demoMode ? (

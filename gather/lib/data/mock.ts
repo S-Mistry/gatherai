@@ -8,6 +8,7 @@ import type {
   ParticipantSession,
   ProjectConfigVersion,
   ProjectRecord,
+  ProjectType,
   ProjectSynthesisGenerated,
   QualityScore,
   SessionOutputGenerated,
@@ -16,6 +17,7 @@ import type {
   WorkspaceSummary,
 } from "@/lib/domain/types"
 import { buildCompletionJobs } from "@/lib/jobs/analysis"
+import { getProjectTypePreset, isProjectType } from "@/lib/project-types"
 import {
   signRecoveryToken,
   verifyRecoveryToken,
@@ -368,8 +370,8 @@ function seedGeneratedOutput(sessionId: string): SessionOutputGenerated {
       "Which approval decisions can be delegated safely?",
       "How should exception handling differ by region?",
     ],
-    workshopImplications: [
-      "Use the workshop to map where authority changes hands and why approvals restart.",
+    projectImplications: [
+      "Use the project readout to map where authority changes hands and why approvals restart.",
       "Push for concrete escalation examples rather than abstract governance principles.",
     ],
     recommendedActions: [
@@ -378,7 +380,7 @@ function seedGeneratedOutput(sessionId: string): SessionOutputGenerated {
     ],
     analysisWarnings: [],
     confidenceScore: 0.84,
-    stakeholderProfile: {
+    respondentProfile: {
       department: "Operations",
       region: "EMEA",
       role: "Regional operations lead",
@@ -399,6 +401,7 @@ function seedStore(): MockStore {
   const project: ProjectRecord = {
     id: "proj-riverstone",
     workspaceId: workspace.id,
+    projectType: "discovery",
     name: "Riverstone operating model sprint",
     slug: "riverstone-operating-model-sprint",
     clientName: "Riverstone",
@@ -669,7 +672,7 @@ function seedStore(): MockStore {
         "Unclear escalation paths when operating rules conflict",
         "Change fatigue from prior redesigns without clear decisions",
       ],
-      suggestedWorkshopAgenda: [
+      recommendedFocusAreas: [
         "Map the current exception handling flow",
         "Define decision-rights boundaries",
         "Agree escalation rules and examples",
@@ -730,7 +733,7 @@ function seedStore(): MockStore {
           rationale: "Low repetition overall.",
         },
         {
-          key: "workshop_usefulness",
+          key: "decision_usefulness",
           score: 0.89,
           rationale: "Themes are actionable for agenda design.",
         },
@@ -768,7 +771,7 @@ function seedStore(): MockStore {
             "Participant repeated the same framing with little novelty.",
         },
         {
-          key: "workshop_usefulness",
+          key: "decision_usefulness",
           score: 0.35,
           rationale: "Interview provides limited input for workshop design.",
         },
@@ -1025,8 +1028,29 @@ export function appendSessionEvents(
   const segments = payload.segments ?? []
   const existing = store.transcripts[sessionId] ?? []
   const createdAt = new Date().toISOString()
+  const existingSourceIds = new Set(
+    existing.flatMap((segment) =>
+      segment.sourceItemId ? [segment.sourceItemId] : []
+    )
+  )
+  const seenPayloadSourceIds = new Set<string>()
+  const dedupedSegments = segments.filter((segment) => {
+    if (!segment.sourceItemId) {
+      return true
+    }
 
-  const appended = segments.map((segment, index) => ({
+    if (
+      existingSourceIds.has(segment.sourceItemId) ||
+      seenPayloadSourceIds.has(segment.sourceItemId)
+    ) {
+      return false
+    }
+
+    seenPayloadSourceIds.add(segment.sourceItemId)
+    return true
+  })
+
+  const appended = dedupedSegments.map((segment, index) => ({
     ...segment,
     sessionId,
     id: `seg-${crypto.randomUUID()}`,
@@ -1115,6 +1139,7 @@ export function getParticipantSession(sessionId: string) {
 }
 
 export function createProjectFromForm(input: {
+  projectType: string
   name: string
   clientName: string
   objective: string
@@ -1127,6 +1152,10 @@ export function createProjectFromForm(input: {
   const projectId = `proj-${crypto.randomUUID()}`
   const configId = `cfg-${crypto.randomUUID()}`
   const createdAt = new Date().toISOString()
+  const projectType: ProjectType = isProjectType(input.projectType)
+    ? input.projectType
+    : "discovery"
+  const preset = getProjectTypePreset(projectType)
 
   const areasOfInterest = input.areasOfInterest
     .split("\n")
@@ -1145,8 +1174,9 @@ export function createProjectFromForm(input: {
   const project: ProjectRecord = {
     id: projectId,
     workspaceId: store.workspace.id,
-    name: input.name || "Untitled discovery project",
-    slug: (input.name || "untitled-discovery-project")
+    projectType,
+    name: input.name || "Untitled project",
+    slug: (input.name || "untitled-project")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, ""),
@@ -1163,32 +1193,30 @@ export function createProjectFromForm(input: {
     projectId,
     versionNumber: 1,
     createdAt,
-    objective: input.objective || "Capture workshop discovery inputs.",
+    objective: input.objective || preset.objective,
     areasOfInterest:
-      areasOfInterest.length > 0 ? areasOfInterest : ["alignment"],
+      areasOfInterest.length > 0 ? areasOfInterest : preset.areasOfInterest,
     requiredQuestions:
       requiredQuestions.length > 0
         ? requiredQuestions
-        : [
-            {
-              id: "q-default-1",
-              prompt: "What would make this workshop useful for you?",
-              goal: "Fallback success criteria question.",
-            },
-          ],
+        : preset.requiredQuestions.map((prompt, index) => ({
+            id: `q-default-${index + 1}`,
+            prompt,
+            goal: "Mode starter question.",
+          })),
     durationCapMinutes: Number.isFinite(input.durationCapMinutes)
       ? input.durationCapMinutes
-      : 15,
+      : preset.durationCapMinutes,
     interviewMode: "strict",
     anonymityMode: (["named", "pseudonymous", "anonymous"].includes(
       input.anonymityMode
     )
       ? input.anonymityMode
-      : "pseudonymous") as AnonymityMode,
-    toneStyle: "Warm, neutral, researcher-like.",
+      : preset.anonymityMode) as AnonymityMode,
+    toneStyle: preset.toneStyle,
     metadataPrompts: [],
     prohibitedTopics: [],
-    followUpLimit: 2,
+    followUpLimit: preset.followUpLimit,
   }
 
   store.projects.unshift(project)
@@ -1203,7 +1231,7 @@ export function createProjectFromForm(input: {
     alignmentSignals: [],
     misalignmentSignals: [],
     topProblems: [],
-    suggestedWorkshopAgenda: [],
+    recommendedFocusAreas: [],
     notableQuotesByTheme: [],
     warning:
       "Synthesis will strengthen after the first completed interviews arrive.",

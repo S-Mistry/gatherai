@@ -28,21 +28,41 @@ const LOW_SIGNAL_EXACT_MATCHES = new Set([
   "hi",
   "hello",
   "hey",
+  "hello hello",
+  "good morning",
+  "good afternoon",
+  "good evening",
   "yes",
   "yeah",
   "yep",
   "yup",
   "ok",
   "okay",
+  "ok thanks",
+  "okay thanks",
   "sure",
+  "ready",
+  "ready now",
+  "lets go",
+  "let's go",
   "got it",
   "got you",
   "sounds good",
+  "sounds great",
   "no problem",
   "thank you",
   "thanks",
   "cool",
   "right",
+  "all good",
+  "loud and clear",
+  "i can hear you",
+  "i can hear you okay",
+  "i can hear you now",
+  "yes i can hear you",
+  "yes i can",
+  "testing",
+  "test",
 ])
 
 const LOW_SIGNAL_PATTERNS = [
@@ -59,6 +79,148 @@ const LOW_SIGNAL_PATTERNS = [
   /^okay got you$/,
   /^yep got you$/,
   /^yes got you$/,
+  /^i can hear you(?: (?:fine|okay|now|clearly))?$/,
+  /^yes i can hear you(?: (?:fine|okay|now|clearly))?$/,
+  /^loud and clear(?: now)?$/,
+  /^all good(?: here)?$/,
+  /^ready(?: now)?$/,
+  /^lets go$/,
+  /^let's go$/,
+  /^good (?:morning|afternoon|evening)$/,
+  /^thanks(?: a lot)?$/,
+  /^thank you(?: very much)?$/,
+]
+
+const LOW_SIGNAL_WORDS = new Set([
+  "all",
+  "can",
+  "clear",
+  "fine",
+  "go",
+  "good",
+  "got",
+  "hear",
+  "hello",
+  "hey",
+  "hi",
+  "i",
+  "is",
+  "it",
+  "lets",
+  "let's",
+  "loud",
+  "me",
+  "morning",
+  "now",
+  "okay",
+  "ok",
+  "problem",
+  "ready",
+  "right",
+  "sounds",
+  "sure",
+  "test",
+  "testing",
+  "thanks",
+  "thank",
+  "that",
+  "there",
+  "us",
+  "working",
+  "yeah",
+  "yep",
+  "yes",
+  "you",
+])
+
+const GENERIC_CLAIM_EXACT_MATCHES = new Set([
+  "emerging theme",
+  "key theme",
+  "theme",
+  "pain point",
+  "pain points",
+  "opportunity",
+  "opportunities",
+  "risk",
+  "risks",
+  "challenge",
+  "challenges",
+  "issue",
+  "issues",
+  "concern",
+  "concerns",
+  "tension",
+  "tensions",
+  "stakeholder concern",
+  "stakeholder concerns",
+  "workshop opportunity",
+  "workshop opportunities",
+  "representative quote",
+  "important quote",
+  "quote",
+])
+
+const GENERIC_CLAIM_WORDS = new Set([
+  "concern",
+  "challenge",
+  "emerging",
+  "important",
+  "issue",
+  "key",
+  "opportunity",
+  "pain",
+  "point",
+  "problem",
+  "quote",
+  "representative",
+  "risk",
+  "signal",
+  "stakeholder",
+  "theme",
+  "tension",
+  "workshop",
+])
+
+const THEME_STOP_WORDS = new Set([
+  "a",
+  "an",
+  "and",
+  "around",
+  "at",
+  "between",
+  "for",
+  "in",
+  "into",
+  "of",
+  "on",
+  "the",
+  "to",
+  "with",
+])
+
+const THEME_PHRASE_REPLACEMENTS: Array<[RegExp, string]> = [
+  [/\bdecision rights?\b/g, "decision ownership"],
+  [/\bdecision making\b/g, "decision ownership"],
+  [/\bowners?\b/g, "ownership"],
+  [/\baccountability\b/g, "ownership"],
+  [/\bauthority\b/g, "ownership"],
+  [/\bsign[\s-]?offs?\b/g, "approval"],
+  [/\bapprovals?\b/g, "approval"],
+  [/\bbottlenecks?\b/g, "bottleneck"],
+  [/\bslowdowns?\b/g, "bottleneck"],
+  [/\bdelays?\b/g, "bottleneck"],
+  [/\bstalls?\b/g, "bottleneck"],
+  [/\bwaiting\b/g, "bottleneck"],
+  [/\bexceptions?\b/g, "exception"],
+  [/\bregional\b/g, "region"],
+  [/\blocal\b/g, "region"],
+  [/\bdelegated\b/g, "delegate"],
+  [/\bdelegation\b/g, "delegate"],
+  [/\bduplicated\b/g, "duplicate"],
+  [/\bduplication\b/g, "duplicate"],
+  [/\bmisaligned\b/g, "misalignment"],
+  [/\bmisalignment\b/g, "misalignment"],
+  [/\balignment\b/g, "alignment"],
 ]
 
 export function normalizeSignalText(value: string) {
@@ -106,12 +268,94 @@ export function isLowSignalUtterance(text: string) {
   }
 
   const wordCount = normalized.split(" ").filter(Boolean).length
+  const words = normalized.split(" ").filter(Boolean)
 
   if (wordCount <= 2 && /^(yes|yeah|yep|ok|okay|sure|thanks?)$/.test(normalized)) {
     return true
   }
 
+  if (wordCount <= 4 && words.every((word) => LOW_SIGNAL_WORDS.has(word))) {
+    return true
+  }
+
   return false
+}
+
+export function isGenericClaimLabel(value: string) {
+  const normalized = normalizeSignalText(value)
+
+  if (!normalized) {
+    return true
+  }
+
+  if (GENERIC_CLAIM_EXACT_MATCHES.has(normalized)) {
+    return true
+  }
+
+  const tokens = normalized.split(" ").filter(Boolean)
+
+  return (
+    tokens.length <= 3 && tokens.every((token) => GENERIC_CLAIM_WORDS.has(token))
+  )
+}
+
+export function canonicalizeThemeLabel(value: string) {
+  let normalized = normalizeSignalText(value)
+
+  for (const [pattern, replacement] of THEME_PHRASE_REPLACEMENTS) {
+    normalized = normalized.replace(pattern, replacement)
+  }
+
+  const tokens = normalized
+    .split(" ")
+    .filter(Boolean)
+    .map((token) => {
+      if (token.endsWith("ies")) {
+        return `${token.slice(0, -3)}y`
+      }
+
+      if (token.endsWith("s") && token.length > 3) {
+        return token.slice(0, -1)
+      }
+
+      return token
+    })
+    .filter((token) => !THEME_STOP_WORDS.has(token))
+
+  return [...new Set(tokens)].sort().join(" ")
+}
+
+export function listEvidenceSegmentKeys(
+  evidence: Array<{ sessionId?: string; segmentIds: string[] }>
+) {
+  return evidence.flatMap((ref) =>
+    [...new Set(ref.segmentIds)].map((segmentId) =>
+      ref.sessionId ? `${ref.sessionId}:${segmentId}` : segmentId
+    )
+  )
+}
+
+export function countUniqueEvidenceSegments(
+  evidence: Array<{ sessionId?: string; segmentIds: string[] }>
+) {
+  return new Set(listEvidenceSegmentKeys(evidence)).size
+}
+
+export function countDistinctEvidenceSessions(
+  evidence: Array<{ sessionId?: string; segmentIds: string[] }>
+) {
+  return new Set(
+    evidence
+      .map((ref) => ref.sessionId)
+      .filter((sessionId): sessionId is string => typeof sessionId === "string")
+  ).size
+}
+
+export function getSingleSegmentEvidenceKey(
+  evidence: Array<{ sessionId?: string; segmentIds: string[] }>
+) {
+  const uniqueKeys = [...new Set(listEvidenceSegmentKeys(evidence))]
+  return uniqueKeys.length === 1 ? uniqueKeys[0] : null
 }
 
 function canMergeBlocks(
@@ -127,7 +371,13 @@ function canMergeBlocks(
     return false
   }
 
-  return `${current.text} ${segment.text}`.trim().length <= 420
+  const maxLength = lowSignal
+    ? 220
+    : segment.speaker === "participant"
+      ? 640
+      : 480
+
+  return `${current.text} ${segment.text}`.trim().length <= maxLength
 }
 
 export function buildAnalysisTranscriptBlocks(

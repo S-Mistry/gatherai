@@ -11,6 +11,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "analysis:eval": "node --import tsx ./scripts/run-analysis-evals.ts",
+    "analysis:seed": "node --import tsx ./scripts/seed-analysis-fixtures.ts",
     "test:fixtures": "node --import tsx --test tests/*.test.ts",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "typecheck": "next typegen && tsc --noEmit",
@@ -27,7 +29,6 @@
     "radix-ui": "^1.4.3",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "shadcn": "^4.2.0",
     "tailwind-merge": "^3.5.0",
     "tw-animate-css": "^1.4.0",
     "zod": "^4.3.6"
@@ -43,6 +44,7 @@
     "postcss": "^8",
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
+    "shadcn": "^4.3.0",
     "tailwindcss": "^4.2.1",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"

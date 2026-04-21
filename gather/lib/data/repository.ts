@@ -11,6 +11,11 @@ import {
   buildGeneratedOutputPlaceholder,
 } from "@/lib/data/placeholders"
 import {
+  buildRecentNeedsReviewSessions,
+  buildSessionMetrics,
+  groupByProjectId,
+} from "@/lib/data/derived"
+import {
   getProjectEvidenceClaimDescriptor,
   MAX_PROJECT_EVIDENCE_EXCERPTS,
   resolveProjectClaimEvidence,
@@ -39,6 +44,7 @@ import type {
   ProjectEvidenceClaimKind,
   ProjectEvidenceDrawerPayload,
   ProjectRecord,
+  ProjectType,
   ProjectSynthesisGenerated,
   ProjectSynthesisOverride,
   QualityDimension,
@@ -56,6 +62,13 @@ import type {
   WorkspaceSummary,
 } from "@/lib/domain/types"
 import { SESSION_ANALYSIS_JOB_TYPES } from "@/lib/jobs/analysis"
+import {
+  buildParticipantDisclosure,
+  buildParticipantIntro,
+  getAnonymousRespondentLabel,
+  getProjectTypePreset,
+  isProjectType,
+} from "@/lib/project-types"
 import { openAiModels } from "@/lib/env"
 import {
   createSecretSupabaseClient,
@@ -78,6 +91,7 @@ interface WorkspaceRow {
 interface ProjectRow {
   id: string
   workspace_id: string
+  project_type: ProjectType
   name: string
   slug: string
   client_name: string
@@ -138,6 +152,16 @@ interface ParticipantSessionRow {
   last_activity_at: string
   completed_at: string | null
   resume_expires_at: string
+}
+
+interface ParticipantSessionListRow {
+  id: string
+  project_id: string
+  respondent_label: string
+  status: SessionStatus
+  quality_flag: boolean
+  excluded_from_synthesis: boolean
+  last_activity_at: string
 }
 
 interface TranscriptSegmentRow {
@@ -215,6 +239,14 @@ interface AnalysisJobRow {
   created_at: string
 }
 
+interface TranscriptAppendSegmentRow {
+  source_item_id?: string | null
+  speaker: TranscriptSpeaker
+  content: string
+  start_offset_ms?: number | null
+  end_offset_ms?: number | null
+}
+
 interface ConsultantContext {
   user: User
   profile: ProfileRow | null
@@ -222,6 +254,7 @@ interface ConsultantContext {
 }
 
 interface NormalizedProjectCreateInput {
+  projectType: ProjectType
   name: string
   slug: string
   clientName: string
@@ -230,6 +263,8 @@ interface NormalizedProjectCreateInput {
   requiredQuestions: QuestionDefinition[]
   durationCapMinutes: number
   anonymityMode: AnonymityMode
+  toneStyle: string
+  followUpLimit: number
 }
 
 interface CreatedProjectGraph {
@@ -247,6 +282,31 @@ interface SessionRuntimePatch {
   readinessDetectedAt?: string
   interviewStartedAt?: string
   pausedAt?: string | null
+}
+
+interface ProjectBundleByLinkToken {
+  client: SecretClient
+  link: ProjectPublicLinkRow
+  project: ProjectRow
+  configRow: ProjectConfigVersionRow
+  config: ProjectConfigVersion
+}
+
+interface ParticipantSessionLookup {
+  client: SecretClient
+  row: ParticipantSessionRow
+  link: ProjectPublicLinkRow
+  session: ParticipantSession
+}
+
+interface ParticipantSessionRuntimeBundle extends ParticipantSessionLookup {
+  project: ProjectRecord
+  configRow: ProjectConfigVersionRow
+  config: ProjectConfigVersion
+}
+
+interface SessionAnalysisContext extends ParticipantSessionRuntimeBundle {
+  transcript: TranscriptSegment[]
 }
 
 type ServerClient = NonNullable<
@@ -355,8 +415,11 @@ function safeQualityDimensions(value: unknown): QualityDimension[] {
   return Array.isArray(value)
     ? value.flatMap((entry) => {
         const item = safeObject(entry)
+        const key =
+          item.key === "workshop_usefulness" ? "decision_usefulness" : item.key
+
         if (
-          typeof item.key !== "string" ||
+          typeof key !== "string" ||
           typeof item.score !== "number" ||
           typeof item.rationale !== "string"
         ) {
@@ -365,7 +428,7 @@ function safeQualityDimensions(value: unknown): QualityDimension[] {
 
         return [
           {
-            key: item.key as QualityDimension["key"],
+            key: key as QualityDimension["key"],
             score: item.score,
             rationale: item.rationale,
           },
@@ -528,6 +591,7 @@ function mapProject(
   return {
     id: row.id,
     workspaceId: row.workspace_id,
+    projectType: row.project_type,
     name: row.name,
     slug: row.slug,
     clientName: row.client_name,
@@ -647,6 +711,12 @@ function mapGeneratedOutput(
   row: SessionOutputGeneratedRow
 ): SessionOutputGenerated {
   const payload = safeObject(row.payload)
+  const projectImplications = safeStringArray(
+    payload.projectImplications ?? payload.workshopImplications
+  )
+  const respondentProfile = safeStringRecord(
+    payload.respondentProfile ?? payload.stakeholderProfile
+  )
   return {
     id: row.id,
     sessionId: row.session_id,
@@ -680,12 +750,12 @@ function mapGeneratedOutput(
       ? (payload.tensions as SessionOutputGenerated["tensions"])
       : [],
     unresolvedQuestions: safeStringArray(payload.unresolvedQuestions),
-    workshopImplications: safeStringArray(payload.workshopImplications),
+    projectImplications,
     recommendedActions: safeStringArray(payload.recommendedActions),
     analysisWarnings: safeStringArray(payload.analysisWarnings),
     confidenceScore:
       typeof payload.confidenceScore === "number" ? payload.confidenceScore : 0,
-    stakeholderProfile: safeStringRecord(payload.stakeholderProfile),
+    respondentProfile,
     promptVersionId: row.prompt_version_id ?? "pending",
     modelVersionId: row.model_version_id ?? "pending",
     createdAt: row.created_at,
@@ -769,7 +839,9 @@ function mapSynthesis(
     alignmentSignals: safeStringArray(payload.alignmentSignals),
     misalignmentSignals: safeStringArray(payload.misalignmentSignals),
     topProblems: safeStringArray(payload.topProblems),
-    suggestedWorkshopAgenda: safeStringArray(payload.suggestedWorkshopAgenda),
+    recommendedFocusAreas: safeStringArray(
+      payload.recommendedFocusAreas ?? payload.suggestedWorkshopAgenda
+    ),
     notableQuotesByTheme: Array.isArray(payload.notableQuotesByTheme)
       ? (payload.notableQuotesByTheme as ProjectSynthesisGenerated["notableQuotesByTheme"])
       : [],
@@ -849,16 +921,6 @@ function keyByProjectId<T extends { project_id: string }>(rows: T[]) {
   return map
 }
 
-function keyBySessionId<T extends { session_id: string }>(rows: T[]) {
-  const map = new Map<string, T>()
-  rows.forEach((row) => {
-    if (!map.has(row.session_id)) {
-      map.set(row.session_id, row)
-    }
-  })
-  return map
-}
-
 function parseLineList(value: string) {
   return value
     .split("\n")
@@ -868,6 +930,7 @@ function parseLineList(value: string) {
 
 function normalizeProjectCreateInput(
   input: {
+    projectType: string
     name: string
     clientName: string
     objective: string
@@ -878,6 +941,10 @@ function normalizeProjectCreateInput(
   },
   slug: string
 ): NormalizedProjectCreateInput {
+  const projectType = isProjectType(input.projectType)
+    ? input.projectType
+    : "discovery"
+  const preset = getProjectTypePreset(projectType)
   const areasOfInterest = input.areasOfInterest
     .split("\n")
     .map((item) => item.trim())
@@ -893,30 +960,32 @@ function normalizeProjectCreateInput(
     }))
 
   return {
-    name: input.name || "Untitled discovery project",
+    projectType,
+    name: input.name || "Untitled project",
     slug,
     clientName: input.clientName || "Client",
-    objective: input.objective || "Capture workshop discovery inputs.",
+    objective: input.objective || preset.objective,
     areasOfInterest:
-      areasOfInterest.length > 0 ? areasOfInterest : ["alignment"],
+      areasOfInterest.length > 0 ? areasOfInterest : preset.areasOfInterest,
     requiredQuestions:
       requiredQuestions.length > 0
         ? requiredQuestions
-        : [
-            {
-              id: "q-default-1",
-              prompt: "What would make this workshop useful for you?",
-              goal: "Fallback success criteria question.",
-            },
-          ],
-    durationCapMinutes: Number.isFinite(input.durationCapMinutes)
-      ? input.durationCapMinutes
-      : 15,
+        : preset.requiredQuestions.map((prompt, index) => ({
+            id: `q-default-${index + 1}`,
+            prompt,
+            goal: "Mode starter question.",
+          })),
+    durationCapMinutes:
+      Number.isFinite(input.durationCapMinutes) && input.durationCapMinutes >= 4
+        ? Math.min(input.durationCapMinutes, 30)
+        : preset.durationCapMinutes,
     anonymityMode: (["named", "pseudonymous", "anonymous"].includes(
       input.anonymityMode
     )
       ? input.anonymityMode
-      : "pseudonymous") as AnonymityMode,
+      : preset.anonymityMode) as AnonymityMode,
+    toneStyle: preset.toneStyle,
+    followUpLimit: preset.followUpLimit,
   }
 }
 
@@ -955,6 +1024,7 @@ async function createProjectGraphViaRpc(
   const result = await client
     .rpc("create_project_with_defaults", {
       target_workspace_id: workspaceId,
+      project_project_type: input.projectType,
       project_name: input.name,
       project_slug: input.slug,
       project_client_name: input.clientName,
@@ -963,6 +1033,8 @@ async function createProjectGraphViaRpc(
       project_required_questions: input.requiredQuestions,
       project_duration_cap_minutes: input.durationCapMinutes,
       project_anonymity_mode: input.anonymityMode,
+      project_tone_style: input.toneStyle,
+      project_follow_up_limit: input.followUpLimit,
     })
     .single<ProjectBootstrapRow>()
 
@@ -985,6 +1057,7 @@ async function createProjectGraphLegacy(
     .from("projects")
     .insert({
       workspace_id: workspaceId,
+      project_type: input.projectType,
       name: input.name,
       slug: input.slug,
       client_name: input.clientName,
@@ -1005,10 +1078,10 @@ async function createProjectGraphLegacy(
       duration_cap_minutes: input.durationCapMinutes,
       interview_mode: "strict",
       anonymity_mode: input.anonymityMode,
-      tone_style: "Warm, neutral, researcher-like.",
+      tone_style: input.toneStyle,
       metadata_prompts: [],
       prohibited_topics: [],
-      follow_up_limit: 2,
+      follow_up_limit: input.followUpLimit,
     })
     .select("*")
     .single<ProjectConfigVersionRow>()
@@ -1263,23 +1336,29 @@ async function ensureModelVersion(
   ).id
 }
 
-async function listProjectSessionIds(
-  client: RepositoryClient,
-  projectId: string
-) {
-  const result = await client
-    .from("participant_sessions")
-    .select("id")
-    .eq("project_id", projectId)
-
-  return (
-    expectRows(result, "Unable to inspect project sessions") as Array<{
-      id: string
-    }>
-  ).map((row) => row.id)
+function buildPublicInterviewConfig(bundle: {
+  project: ProjectRow
+  config: ProjectConfigVersion
+}) {
+  return {
+    projectId: bundle.project.id,
+    projectType: bundle.project.project_type,
+    projectName: bundle.project.name,
+    objective: bundle.config.objective,
+    durationCapMinutes: bundle.config.durationCapMinutes,
+    anonymityMode: bundle.config.anonymityMode,
+    toneStyle: bundle.config.toneStyle,
+    intro: buildParticipantIntro(bundle.project.project_type),
+    disclosure: buildParticipantDisclosure(bundle.project.project_type),
+    areasOfInterest: bundle.config.areasOfInterest,
+    requiredQuestions: bundle.config.requiredQuestions,
+    metadataPrompts: bundle.config.metadataPrompts,
+  }
 }
 
-async function getProjectBundleByLinkToken(linkToken: string) {
+async function getProjectBundleByLinkToken(
+  linkToken: string
+): Promise<ProjectBundleByLinkToken | null> {
   const client = requireSecretClient()
   const linkResult = await client
     .from("project_public_links")
@@ -1309,17 +1388,23 @@ async function getProjectBundleByLinkToken(linkToken: string) {
       .single<ProjectConfigVersionRow>(),
   ])
 
+  const configRow = expectData(
+    configResult,
+    "Unable to load linked project configuration"
+  )
+
   return {
     client,
     link: expectData(linkResult, "Unable to load project link"),
     project: expectData(projectResult, "Unable to load linked project"),
-    config: mapConfigVersion(
-      expectData(configResult, "Unable to load linked project configuration")
-    ),
+    configRow,
+    config: mapConfigVersion(configRow),
   }
 }
 
-async function getSessionBundle(sessionId: string) {
+async function getParticipantSessionLookup(
+  sessionId: string
+): Promise<ParticipantSessionLookup | null> {
   const client = requireSecretClient()
   const sessionResult = await client
     .from("participant_sessions")
@@ -1335,40 +1420,140 @@ async function getSessionBundle(sessionId: string) {
     return null
   }
 
-  const [linkResult, configResult, transcriptResult] = await Promise.all([
-    client
-      .from("project_public_links")
-      .select("*")
-      .eq("id", sessionResult.data.public_link_id)
-      .single<ProjectPublicLinkRow>(),
-    client
-      .from("project_config_versions")
-      .select("*")
-      .eq("id", sessionResult.data.project_config_version_id)
-      .single<ProjectConfigVersionRow>(),
-    client
-      .from("transcript_segments")
-      .select("*")
-      .eq("session_id", sessionId)
-      .order("order_index", { ascending: true }),
-  ])
+  const linkResult = await client
+    .from("project_public_links")
+    .select("*")
+    .eq("id", sessionResult.data.public_link_id)
+    .single<ProjectPublicLinkRow>()
+
+  const link = expectData(linkResult, "Unable to load session public link")
 
   return {
     client,
     row: sessionResult.data,
-    session: mapSession(
-      sessionResult.data,
-      expectData(linkResult, "Unable to load session public link").link_token
-    ),
-    config: mapConfigVersion(
-      expectData(configResult, "Unable to load session config version")
-    ),
-    transcript: expectRows(
-      transcriptResult,
-      "Unable to load session transcript"
-    ).map(mapTranscript),
-    link: expectData(linkResult, "Unable to load session public link"),
+    link,
+    session: mapSession(sessionResult.data, link.link_token),
   }
+}
+
+async function getParticipantSessionRuntimeBundle(
+  sessionId: string
+): Promise<ParticipantSessionRuntimeBundle | null> {
+  const lookup = await getParticipantSessionLookup(sessionId)
+
+  if (!lookup) {
+    return null
+  }
+
+  const [projectResult, configResult] = await Promise.all([
+    lookup.client
+      .from("projects")
+      .select("*")
+      .eq("id", lookup.row.project_id)
+      .single<ProjectRow>(),
+    lookup.client
+      .from("project_config_versions")
+      .select("*")
+      .eq("id", lookup.row.project_config_version_id)
+      .single<ProjectConfigVersionRow>(),
+  ])
+
+  const configRow = expectData(configResult, "Unable to load session config version")
+  const projectRow = expectData(projectResult, "Unable to load session project")
+
+  return {
+    ...lookup,
+    project: mapProject(projectRow, configRow.id, lookup.link.link_token),
+    configRow,
+    config: mapConfigVersion(configRow),
+  }
+}
+
+async function getSessionTranscript(
+  client: RepositoryClient,
+  sessionId: string
+) {
+  const transcriptResult = await client
+    .from("transcript_segments")
+    .select("*")
+    .eq("session_id", sessionId)
+    .order("order_index", { ascending: true })
+
+  return expectRows(
+    transcriptResult,
+    "Unable to load session transcript"
+  ).map((row) => mapTranscript(row as TranscriptSegmentRow))
+}
+
+async function getSessionAnalysisContext(
+  sessionId: string
+): Promise<SessionAnalysisContext | null> {
+  const runtimeBundle = await getParticipantSessionRuntimeBundle(sessionId)
+
+  if (!runtimeBundle) {
+    return null
+  }
+
+  return {
+    ...runtimeBundle,
+    transcript: await getSessionTranscript(runtimeBundle.client, sessionId),
+  }
+}
+
+async function getLatestSessionOutputRow(
+  client: RepositoryClient,
+  sessionId: string
+) {
+  const result = await client
+    .from("session_outputs_generated")
+    .select("*")
+    .eq("session_id", sessionId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+
+  return expectRows(result, "Unable to load latest generated session output")[0] as
+    | SessionOutputGeneratedRow
+    | undefined
+}
+
+async function getLatestProjectSessionOutputRows(
+  client: SecretClient,
+  projectId: string
+) {
+  const result = await client.rpc("get_latest_session_outputs_for_project", {
+    target_project_id: projectId,
+  })
+
+  if (result.error) {
+    fail(
+      `Unable to load latest project session outputs: ${result.error.message}`
+    )
+  }
+
+  return (result.data as SessionOutputGeneratedRow[] | null) ?? []
+}
+
+async function appendTranscriptSegments(
+  client: SecretClient,
+  sessionId: string,
+  segments: TranscriptAppendSegmentRow[],
+  runtimeState: SessionRuntimeState | null,
+  lastActivityAt: string
+) {
+  const result = await client.rpc("append_session_events", {
+    target_session_id: sessionId,
+    transcript_segments_payload: segments,
+    runtime_state_payload: runtimeState,
+    activity_at: lastActivityAt,
+  })
+
+  if (result.error) {
+    fail(`Unable to append transcript segments: ${result.error.message}`)
+  }
+
+  return ((result.data as TranscriptSegmentRow[] | null) ?? []).map((row) =>
+    mapTranscript(row)
+  )
 }
 
 function mergeRuntimeStatePatch(
@@ -1621,37 +1806,28 @@ async function failAnalysisJob(job: AnalysisJob, message: string) {
 
 async function persistSessionOutput(
   session: ParticipantSession,
+  project: ProjectRecord,
   config: ProjectConfigVersion,
   transcript: TranscriptSegment[]
 ) {
   const client = requireSecretClient()
 
-  const [projectResult] = await Promise.all([
-    client
-      .from("projects")
-      .select("workspace_id")
-      .eq("id", session.projectId)
-      .single<{ workspace_id: string }>(),
-  ])
-  const project = expectData(
-    projectResult,
-    "Unable to load project for session output persistence"
-  )
   const promptVersionId = await ensurePromptVersion(
     client,
-    project.workspace_id,
+    project.workspaceId,
     "session-output/v3",
     "1",
     SESSION_OUTPUT_PROMPT_VERSION_TEXT
   )
   const modelVersionId = await ensureModelVersion(
     client,
-    project.workspace_id,
+    project.workspaceId,
     "session-output/v3",
     "openai",
     openAiModels.sessionEnrichment
   )
   const output = await generateSessionOutputAnalysis({
+    project,
     session,
     config,
     transcript,
@@ -1675,11 +1851,11 @@ async function persistSessionOutput(
         insightCards: output.insightCards,
         tensions: output.tensions,
         unresolvedQuestions: output.unresolvedQuestions,
-        workshopImplications: output.workshopImplications,
+        projectImplications: output.projectImplications,
         recommendedActions: output.recommendedActions,
         analysisWarnings: output.analysisWarnings,
         confidenceScore: output.confidenceScore,
-        stakeholderProfile: output.stakeholderProfile,
+        respondentProfile: output.respondentProfile,
       },
       prompt_version_id: promptVersionId,
       model_version_id: modelVersionId,
@@ -1694,16 +1870,12 @@ async function persistSessionOutput(
 
 async function persistQualityScore(
   session: ParticipantSession,
+  project: ProjectRecord,
   config: ProjectConfigVersion,
   transcript: TranscriptSegment[]
 ) {
   const client = requireSecretClient()
-  const [projectResult, generatedResult] = await Promise.all([
-    client
-      .from("projects")
-      .select("workspace_id")
-      .eq("id", session.projectId)
-      .single<{ workspace_id: string }>(),
+  const [generatedResult] = await Promise.all([
     client
       .from("session_outputs_generated")
       .select("*")
@@ -1711,10 +1883,6 @@ async function persistQualityScore(
       .order("created_at", { ascending: false })
       .limit(1),
   ])
-  const project = expectData(
-    projectResult,
-    "Unable to load project for quality score persistence"
-  )
   const generatedOutputRow = expectRows(
     generatedResult,
     "Quality scoring requires a generated session output."
@@ -1727,19 +1895,20 @@ async function persistQualityScore(
   const generatedOutput = mapGeneratedOutput(generatedOutputRow)
   const promptVersionId = await ensurePromptVersion(
     client,
-    project.workspace_id,
+    project.workspaceId,
     "quality-score/v3",
     "1",
     QUALITY_SCORE_PROMPT_VERSION_TEXT
   )
   const modelVersionId = await ensureModelVersion(
     client,
-    project.workspace_id,
+    project.workspaceId,
     "quality-score/v3",
     "openai",
     openAiModels.sessionGrader
   )
   const quality = await evaluateSessionQualityAnalysis({
+    project,
     session,
     config,
     transcript,
@@ -1804,8 +1973,7 @@ async function persistProjectSynthesis(projectId: string) {
   )
   const workspaceId = projectRow.workspace_id
 
-  const sessionIds = await listProjectSessionIds(client, projectId)
-  const [configRows, linkRows, sessionRows, outputRows, overrideRows] =
+  const [configRows, linkRows, sessionRows] =
     await Promise.all([
       client
         .from("project_config_versions")
@@ -1823,26 +1991,6 @@ async function persistProjectSynthesis(projectId: string) {
         .select("*")
         .eq("project_id", projectId)
         .order("started_at", { ascending: false }),
-      sessionIds.length === 0
-        ? Promise.resolve({
-            data: [] as SessionOutputGeneratedRow[],
-            error: null,
-          })
-        : client
-            .from("session_outputs_generated")
-            .select("*")
-            .in("session_id", sessionIds)
-            .order("session_id", { ascending: true })
-            .order("created_at", { ascending: false }),
-      sessionIds.length === 0
-        ? Promise.resolve({
-            data: [] as SessionOutputOverrideRow[],
-            error: null,
-          })
-        : client
-            .from("session_output_overrides")
-            .select("*")
-            .in("session_id", sessionIds),
     ])
 
   const configRow = expectRows(configRows, "Unable to load project configs")[0]
@@ -1853,15 +2001,25 @@ async function persistProjectSynthesis(projectId: string) {
   ).map((row) =>
     mapSession(row as ParticipantSessionRow, linkRow?.link_token ?? "")
   )
+  const sessionIds = sessions.map((session) => session.id)
+  const [outputRows, overrideRows] = await Promise.all([
+    getLatestProjectSessionOutputRows(client, projectId),
+    sessionIds.length === 0
+      ? Promise.resolve({
+          data: [] as SessionOutputOverrideRow[],
+          error: null,
+        })
+      : client
+          .from("session_output_overrides")
+          .select("*")
+          .in("session_id", sessionIds),
+  ])
   const overridesBySessionId = new Map(
     expectRows(overrideRows, "Unable to load session output overrides")
       .map((row) => mapOutputOverride(row as SessionOutputOverrideRow))
       .map((override) => [override.sessionId, override] as const)
   )
-  const latestOutputRowsBySessionId = keyBySessionId(
-    expectRows(outputRows, "Unable to load generated outputs") as SessionOutputGeneratedRow[]
-  )
-  const outputs = Array.from(latestOutputRowsBySessionId.values()).map((row) =>
+  const outputs = outputRows.map((row) =>
     mergeSessionOutputWithOverride(
       mapGeneratedOutput(row),
       overridesBySessionId.get(row.session_id)
@@ -1904,7 +2062,7 @@ async function persistProjectSynthesis(projectId: string) {
         alignmentSignals: synthesis.alignmentSignals,
         misalignmentSignals: synthesis.misalignmentSignals,
         topProblems: synthesis.topProblems,
-        suggestedWorkshopAgenda: synthesis.suggestedWorkshopAgenda,
+        recommendedFocusAreas: synthesis.recommendedFocusAreas,
         notableQuotesByTheme: synthesis.notableQuotesByTheme,
         warning: synthesis.warning,
       },
@@ -1917,7 +2075,10 @@ async function persistProjectSynthesis(projectId: string) {
   return mapSynthesis(expectData(result, "Unable to persist project synthesis"))
 }
 
-async function processAnalysisJob(job: AnalysisJob) {
+async function processAnalysisJob(
+  job: AnalysisJob,
+  context?: SessionAnalysisContext
+) {
   if (!job.sessionId && !job.projectId) {
     fail(`Analysis job ${job.id} is missing both session_id and project_id.`)
   }
@@ -1928,18 +2089,31 @@ async function processAnalysisJob(job: AnalysisJob) {
     return
   }
 
-  const bundle = await getSessionBundle(job.sessionId!)
+  const bundle =
+    context?.session.id === job.sessionId
+      ? context
+      : await getSessionAnalysisContext(job.sessionId!)
 
   if (!bundle) {
     fail(`Session ${job.sessionId} was not found for analysis job ${job.id}.`)
   }
 
   if (job.type === "session_extraction") {
-    await persistSessionOutput(bundle.session, bundle.config, bundle.transcript)
+    await persistSessionOutput(
+      bundle.session,
+      bundle.project,
+      bundle.config,
+      bundle.transcript
+    )
   }
 
   if (job.type === "quality_scoring") {
-    await persistQualityScore(bundle.session, bundle.config, bundle.transcript)
+    await persistQualityScore(
+      bundle.session,
+      bundle.project,
+      bundle.config,
+      bundle.transcript
+    )
   }
 
   await completeAnalysisJob(job.id)
@@ -1969,7 +2143,8 @@ async function enqueueProjectSynthesisJob(
 export async function processCompletedSessionAnalysis(
   sessionId: string,
   projectId: string,
-  workerName = "gather-session-dispatch"
+  workerName = "gather-session-dispatch",
+  context?: SessionAnalysisContext
 ) {
   const jobs = await claimQueuedSessionAnalysisJobs(sessionId, workerName)
   const processed: AnalysisJob[] = []
@@ -1977,7 +2152,7 @@ export async function processCompletedSessionAnalysis(
 
   for (const job of jobs) {
     try {
-      await processAnalysisJob(job)
+      await processAnalysisJob(job, context)
       processed.push({ ...job, status: "completed" })
     } catch (error) {
       sessionJobFailed = true
@@ -2041,16 +2216,18 @@ export async function getWorkspaceSnapshot() {
     getLatestPublicLinks(client, projectIds),
     getLatestSyntheses(client, projectIds),
     projectIds.length === 0
-      ? Promise.resolve({ data: [] as ParticipantSessionRow[], error: null })
+      ? Promise.resolve({ data: [] as ParticipantSessionListRow[], error: null })
       : client
           .from("participant_sessions")
-          .select("*")
+          .select(
+            "id, project_id, respondent_label, status, quality_flag, excluded_from_synthesis, last_activity_at"
+          )
           .in("project_id", projectIds),
   ])
   const sessionRows = expectRows(
     sessionsResult,
     "Unable to load participant sessions"
-  ) as ParticipantSessionRow[]
+  ) as ParticipantSessionListRow[]
   const incompleteProjectIds = projectRows
     .filter((row) => !configMap.has(row.id) || !linkMap.has(row.id))
     .map((row) => row.id)
@@ -2061,59 +2238,44 @@ export async function getWorkspaceSnapshot() {
     )
   }
 
+  const sessionSummaries = sessionRows.map((row) => ({
+    id: row.id,
+    projectId: row.project_id,
+    respondentLabel: row.respondent_label,
+    status: row.status,
+    qualityFlag: row.quality_flag,
+    excludedFromSynthesis: row.excluded_from_synthesis,
+    lastActivityAt: row.last_activity_at,
+  }))
+  const sessionsByProjectId = groupByProjectId(sessionSummaries)
+
   const projects = projectRows.map((row) => {
     const config = configMap.get(row.id)!
     const link = linkMap.get(row.id)!
-    const projectSessions = sessionRows.filter(
-      (session) => session.project_id === row.id
-    )
+    const projectSessions = sessionsByProjectId.get(row.id) ?? []
     const synthesis = synthesisMap.get(row.id)
+    const metrics = buildSessionMetrics(projectSessions)
+
     return {
       ...mapProject(row, config.id, link.link_token),
       sessionCounts: {
-        inProgress: projectSessions.filter(
-          (session) => session.status === "in_progress"
-        ).length,
-        completed: projectSessions.filter(
-          (session) => session.status === "complete"
-        ).length,
-        abandoned: projectSessions.filter(
-          (session) => session.status === "abandoned"
-        ).length,
-        flagged: projectSessions.filter((session) => session.quality_flag)
-          .length,
+        inProgress: metrics.inProgress,
+        completed: metrics.completed,
+        abandoned: metrics.abandoned,
+        flagged: metrics.flagged,
       },
       activeThemes: synthesis
         ? mapSynthesis(synthesis).crossInterviewThemes
         : [],
-      includedSessions: projectSessions.filter(
-        (session) =>
-          session.status === "complete" && !session.excluded_from_synthesis
-      ).length,
+      includedSessions: metrics.includedInSynthesis,
     }
   })
 
   const projectNameById = new Map(projects.map((p) => [p.id, p.name]))
-  const recentNeedsReviewSessions = sessionRows
-    .filter(
-      (row) =>
-        row.status === "complete" &&
-        row.quality_flag &&
-        !row.excluded_from_synthesis
-    )
-    .sort(
-      (a, b) =>
-        new Date(b.last_activity_at).getTime() -
-        new Date(a.last_activity_at).getTime()
-    )
-    .slice(0, 6)
-    .map((row) => ({
-      sessionId: row.id,
-      projectId: row.project_id,
-      projectName: projectNameById.get(row.project_id) ?? "Project",
-      respondentLabel: row.respondent_label,
-      lastActivityAt: row.last_activity_at,
-    }))
+  const recentNeedsReviewSessions = buildRecentNeedsReviewSessions(
+    sessionSummaries,
+    projectNameById
+  )
 
   return {
     workspace: buildWorkspaceSummary(
@@ -2127,7 +2289,72 @@ export async function getWorkspaceSnapshot() {
 }
 
 export async function listProjects() {
-  return (await getWorkspaceSnapshot()).projects
+  const context = await getRequiredConsultantContext()
+  const client = await createServerSupabaseClient()
+
+  if (!client) {
+    fail("Supabase publishable-key environment is not configured.")
+  }
+
+  const projectsResult = await client
+    .from("projects")
+    .select("*")
+    .eq("workspace_id", context.workspace.id)
+    .order("updated_at", { ascending: false })
+
+  const projectRows = expectRows(
+    projectsResult,
+    "Unable to load projects"
+  ) as ProjectRow[]
+  const projectIds = projectRows.map((row) => row.id)
+  const [configMap, linkMap, sessionsResult] = await Promise.all([
+    getLatestConfigVersions(client, projectIds),
+    getLatestPublicLinks(client, projectIds),
+    projectIds.length === 0
+      ? Promise.resolve({ data: [] as ParticipantSessionListRow[], error: null })
+      : client
+          .from("participant_sessions")
+          .select(
+            "id, project_id, respondent_label, status, quality_flag, excluded_from_synthesis, last_activity_at"
+          )
+          .in("project_id", projectIds),
+  ])
+  const sessionSummaries = (
+    expectRows(sessionsResult, "Unable to load participant sessions") as ParticipantSessionListRow[]
+  ).map((row) => ({
+    id: row.id,
+    projectId: row.project_id,
+    respondentLabel: row.respondent_label,
+    status: row.status,
+    qualityFlag: row.quality_flag,
+    excludedFromSynthesis: row.excluded_from_synthesis,
+    lastActivityAt: row.last_activity_at,
+  }))
+  const sessionsByProjectId = groupByProjectId(sessionSummaries)
+
+  return projectRows.map((row) => {
+    const config = configMap.get(row.id)
+    const link = linkMap.get(row.id)
+
+    if (!config || !link) {
+      fail(
+        `Project list found project ${row.id} missing a current configuration or active public link.`
+      )
+    }
+
+    const metrics = buildSessionMetrics(sessionsByProjectId.get(row.id) ?? [])
+
+    return {
+      ...mapProject(row, config.id, link.link_token),
+      sessionCounts: {
+        inProgress: metrics.inProgress,
+        completed: metrics.completed,
+        abandoned: metrics.abandoned,
+        flagged: metrics.flagged,
+      },
+      includedSessions: metrics.includedInSynthesis,
+    }
+  })
 }
 
 export async function getProjectDetail(projectId: string) {
@@ -2153,13 +2380,11 @@ export async function getProjectDetail(projectId: string) {
     return null
   }
 
-  const sessionIds = await listProjectSessionIds(client, projectId)
   const [
     configResult,
     linkResult,
     sessionsResult,
     synthesesResult,
-    qualityResult,
     synthesisOverrideResult,
   ] = await Promise.all([
     client
@@ -2184,9 +2409,6 @@ export async function getProjectDetail(projectId: string) {
       .eq("project_id", projectId)
       .order("created_at", { ascending: false })
       .limit(1),
-    sessionIds.length === 0
-      ? Promise.resolve({ data: [] as QualityScoreRow[], error: null })
-      : client.from("quality_scores").select("*").in("session_id", sessionIds),
     client
       .from("project_synthesis_overrides")
       .select("*")
@@ -2220,6 +2442,14 @@ export async function getProjectDetail(projectId: string) {
     sessionsResult,
     "Unable to load project sessions"
   ).map((row) => mapSession(row as ParticipantSessionRow, linkRow.link_token))
+  const sessionIds = sessions.map((session) => session.id)
+  const qualityResult =
+    sessionIds.length === 0
+      ? { data: [] as QualityScoreRow[], error: null }
+      : await client
+          .from("quality_scores")
+          .select("*")
+          .in("session_id", sessionIds)
   const synthesisRow = expectRows(
     synthesesResult,
     "Unable to load project synthesis"
@@ -2265,6 +2495,7 @@ export async function getProjectClaimEvidence(
     .from("projects")
     .select("*")
     .eq("id", projectId)
+    .eq("workspace_id", context.workspace.id)
     .maybeSingle<ProjectRow>()
 
   if (projectResult.error) {
@@ -2347,31 +2578,55 @@ export async function getProjectClaimEvidence(
 }
 
 export async function getSessionReview(projectId: string, sessionId: string) {
-  const detail = await getProjectDetail(projectId)
-
-  if (!detail) {
-    return null
-  }
-
-  const session = detail.sessions.find((item) => item.id === sessionId)
-
-  if (!session) {
-    return null
-  }
-
+  const context = await getRequiredConsultantContext()
   const client = await createServerSupabaseClient()
 
   if (!client) {
     fail("Supabase publishable-key environment is not configured.")
   }
 
+  const projectResult = await client
+    .from("projects")
+    .select("*")
+    .eq("id", projectId)
+    .eq("workspace_id", context.workspace.id)
+    .maybeSingle<ProjectRow>()
+
+  if (projectResult.error) {
+    fail(`Unable to load session review project: ${projectResult.error.message}`)
+  }
+
+  if (!projectResult.data) {
+    return null
+  }
+
   const [
+    configResult,
+    linkResult,
+    siblingSessionsResult,
     transcriptResult,
     generatedResult,
     overrideResult,
-    qualityResult,
     jobsResult,
   ] = await Promise.all([
+    client
+      .from("project_config_versions")
+      .select("*")
+      .eq("project_id", projectId)
+      .order("version_number", { ascending: false })
+      .limit(1),
+    client
+      .from("project_public_links")
+      .select("*")
+      .eq("project_id", projectId)
+      .is("revoked_at", null)
+      .order("created_at", { ascending: false })
+      .limit(1),
+    client
+      .from("participant_sessions")
+      .select("*")
+      .eq("project_id", projectId)
+      .order("last_activity_at", { ascending: false }),
     client
       .from("transcript_segments")
       .select("*")
@@ -2389,11 +2644,6 @@ export async function getSessionReview(projectId: string, sessionId: string) {
       .eq("session_id", sessionId)
       .maybeSingle<SessionOutputOverrideRow>(),
     client
-      .from("quality_scores")
-      .select("*")
-      .eq("session_id", sessionId)
-      .maybeSingle<QualityScoreRow>(),
-    client
       .from("analysis_jobs")
       .select("*")
       .eq("session_id", sessionId)
@@ -2408,9 +2658,45 @@ export async function getSessionReview(projectId: string, sessionId: string) {
     fail(`Unable to load session override: ${overrideResult.error.message}`)
   }
 
-  if (qualityResult.error) {
-    fail(`Unable to load session quality score: ${qualityResult.error.message}`)
+  const configRow = expectRows(
+    configResult,
+    "Unable to load current project configuration"
+  )[0] as ProjectConfigVersionRow | undefined
+  const linkRow = expectRows(
+    linkResult,
+    "Unable to load active project link"
+  )[0] as ProjectPublicLinkRow | undefined
+
+  if (!configRow || !linkRow) {
+    fail("Session review is missing the current project configuration or active link.")
   }
+
+  const configVersion = mapConfigVersion(configRow)
+  const project = mapProject(projectResult.data, configRow.id, linkRow.link_token)
+  const siblingSessions = expectRows(
+    siblingSessionsResult,
+    "Unable to load project sessions"
+  ).map((row) => mapSession(row as ParticipantSessionRow, linkRow.link_token))
+  const session = siblingSessions.find((item) => item.id === sessionId)
+
+  if (!session) {
+    return null
+  }
+
+  const siblingSessionIds = siblingSessions.map((item) => item.id)
+  const qualityResult =
+    siblingSessionIds.length === 0
+      ? { data: [] as QualityScoreRow[], error: null }
+      : await client
+          .from("quality_scores")
+          .select("*")
+          .in("session_id", siblingSessionIds)
+
+  const qualityScoresBySessionId = Object.fromEntries(
+    expectRows(qualityResult, "Unable to load session quality scores")
+      .map((row) => mapQualityScore(row as QualityScoreRow))
+      .map((score) => [score.sessionId, score] as const)
+  )
 
   const analysisJobs = expectRows(
     jobsResult,
@@ -2425,7 +2711,7 @@ export async function getSessionReview(projectId: string, sessionId: string) {
     : undefined
   const generatedOutput = latestGeneratedRow
     ? mapGeneratedOutput(latestGeneratedRow)
-    : buildGeneratedOutputPlaceholder(session, detail.configVersion)
+    : buildGeneratedOutputPlaceholder(session, configVersion)
   const effectiveOutput = mergeSessionOutputWithOverride(
     generatedOutput,
     override
@@ -2481,8 +2767,8 @@ export async function getSessionReview(projectId: string, sessionId: string) {
   const analysisFailure = sessionJobFailures[0]?.lastError
 
   return {
-    project: detail.project,
-    configVersion: detail.configVersion,
+    project,
+    configVersion,
     session,
     qualityOverride: session.qualityOverride,
     transcript,
@@ -2494,11 +2780,9 @@ export async function getSessionReview(projectId: string, sessionId: string) {
     generatedOutput,
     effectiveOutput,
     override,
-    qualityScore: qualityResult.data
-      ? mapQualityScore(qualityResult.data)
-      : undefined,
-    siblingSessions: detail.sessions,
-    siblingQualityScores: detail.qualityScores,
+    qualityScore: qualityScoresBySessionId[sessionId],
+    siblingSessions,
+    siblingQualityScores: qualityScoresBySessionId,
   }
 }
 
@@ -2509,24 +2793,26 @@ export async function getPublicInterviewConfig(linkToken: string) {
     return null
   }
 
-  return {
-    projectId: bundle.project.id,
-    projectName: bundle.project.name,
-    objective: bundle.config.objective,
-    durationCapMinutes: bundle.config.durationCapMinutes,
-    anonymityMode: bundle.config.anonymityMode,
-    toneStyle: bundle.config.toneStyle,
-    intro:
-      "Thanks for taking part. This short interview helps shape a workshop agenda that reflects what stakeholders actually need.",
-    disclosure:
-      "You are speaking with an AI interviewer. Your conversation is transcribed for workshop discovery. Audio is not stored in this MVP.",
-    areasOfInterest: bundle.config.areasOfInterest,
-    requiredQuestions: bundle.config.requiredQuestions,
-    metadataPrompts: bundle.config.metadataPrompts,
-  }
+  return buildPublicInterviewConfig(bundle)
 }
 
 export async function createParticipantSession(
+  linkToken: string,
+  metadata: Record<string, string> = {}
+) {
+  const started = await startParticipantSession(linkToken, metadata)
+
+  if (!started) {
+    return null
+  }
+
+  return {
+    session: started.session,
+    recoveryToken: started.recoveryToken,
+  }
+}
+
+export async function startParticipantSession(
   linkToken: string,
   metadata: Record<string, string> = {}
 ) {
@@ -2549,7 +2835,9 @@ export async function createParticipantSession(
       project_config_version_id: bundle.config.id,
       public_link_id: bundle.link.id,
       respondent_label:
-        bundle.config.anonymityMode === "named" ? "Respondent" : "Stakeholder",
+        bundle.config.anonymityMode === "named"
+          ? "Respondent"
+          : getAnonymousRespondentLabel(bundle.project.project_type),
       status: "in_progress",
       metadata,
       quality_flag: false,
@@ -2570,6 +2858,7 @@ export async function createParticipantSession(
   return {
     session,
     recoveryToken: signRecoveryToken(session.id, resumeExpiresAt),
+    publicConfig: buildPublicInterviewConfig(bundle),
   }
 }
 
@@ -2577,9 +2866,9 @@ export async function resumeParticipantSession(
   sessionId: string,
   token: string
 ) {
-  const bundle = await getSessionBundle(sessionId)
+  const lookup = await getParticipantSessionLookup(sessionId)
 
-  if (!bundle) {
+  if (!lookup) {
     return null
   }
 
@@ -2587,11 +2876,11 @@ export async function resumeParticipantSession(
     return null
   }
 
-  if (new Date(bundle.session.resumeExpiresAt).getTime() < Date.now()) {
+  if (new Date(lookup.session.resumeExpiresAt).getTime() < Date.now()) {
     return null
   }
 
-  return bundle.session
+  return lookup.session
 }
 
 export async function appendSessionEvents(
@@ -2604,106 +2893,30 @@ export async function appendSessionEvents(
     runtime?: SessionRuntimePatch
   }
 ) {
-  const bundle = await getSessionBundle(sessionId)
+  const bundle = await getParticipantSessionRuntimeBundle(sessionId)
 
   if (!bundle) {
     return null
   }
 
   const segments = payload.segments ?? []
-  const sourceItemIds = [
-    ...new Set(
-      segments
-        .map((segment) => segment.sourceItemId)
-        .filter(
-          (value): value is string =>
-            typeof value === "string" && value.length > 0
-        )
-    ),
-  ]
-
-  const existingSourceIds =
-    sourceItemIds.length === 0
-      ? new Set<string>()
-      : new Set(
-          expectRows(
-            await bundle.client
-              .from("transcript_segments")
-              .select("source_item_id")
-              .eq("session_id", sessionId)
-              .in("source_item_id", sourceItemIds),
-            "Unable to inspect transcript source item IDs"
-          )
-            .map(
-              (row) => (row as { source_item_id: string | null }).source_item_id
-            )
-            .filter((value): value is string => typeof value === "string")
-        )
-
-  const dedupedSegments = segments.filter((segment) =>
-    segment.sourceItemId ? !existingSourceIds.has(segment.sourceItemId) : true
-  )
   const createdAt = new Date().toISOString()
-  let latestSegmentOrder = 0
-
-  if (dedupedSegments.length > 0) {
-    const latestSegmentResult = await bundle.client
-      .from("transcript_segments")
-      .select("order_index")
-      .eq("session_id", sessionId)
-      .order("order_index", { ascending: false })
-      .limit(1)
-
-    const latestSegment = expectRows(
-      latestSegmentResult,
-      "Unable to inspect transcript ordering"
-    )[0] as { order_index: number } | undefined
-
-    latestSegmentOrder = latestSegment?.order_index ?? 0
-  }
-
-  const insertRows = dedupedSegments.map((segment, index) => ({
-    session_id: sessionId,
-    source_item_id: segment.sourceItemId ?? null,
-    speaker: segment.speaker,
-    content: segment.text,
-    order_index: latestSegmentOrder + index + 1,
-    start_offset_ms: segment.startOffsetMs ?? null,
-    end_offset_ms: segment.endOffsetMs ?? null,
-    created_at: createdAt,
-  }))
   const updatedRuntimeState = payload.runtime
     ? mergeRuntimeStatePatch(bundle.session, bundle.config, payload.runtime)
-    : bundle.session.runtimeState
-  const updatePayload: {
-    last_activity_at: string
-    runtime_state?: SessionRuntimeState
-  } = {
-    last_activity_at: createdAt,
-  }
+    : null
 
-  if (payload.runtime) {
-    updatePayload.runtime_state = updatedRuntimeState
-  }
-
-  const [insertResult, updateResult] = await Promise.all([
-    insertRows.length > 0
-      ? bundle.client.from("transcript_segments").insert(insertRows).select("*")
-      : Promise.resolve({ data: [] as TranscriptSegmentRow[], error: null }),
-    bundle.client
-      .from("participant_sessions")
-      .update(updatePayload)
-      .eq("id", sessionId),
-  ])
-
-  if (updateResult.error) {
-    fail(
-      `Unable to update participant session activity: ${updateResult.error.message}`
-    )
-  }
-
-  return expectRows(insertResult, "Unable to append transcript segments").map(
-    (row) => mapTranscript(row as TranscriptSegmentRow)
+  return appendTranscriptSegments(
+    bundle.client,
+    sessionId,
+    segments.map((segment) => ({
+      source_item_id: segment.sourceItemId ?? null,
+      speaker: segment.speaker,
+      content: segment.text,
+      start_offset_ms: segment.startOffsetMs ?? null,
+      end_offset_ms: segment.endOffsetMs ?? null,
+    })),
+    updatedRuntimeState,
+    createdAt
   )
 }
 
@@ -2711,7 +2924,7 @@ export async function completeParticipantSession(
   sessionId: string,
   runtimePatch?: Pick<SessionRuntimePatch, "elapsedSeconds" | "questionElapsedSeconds">
 ) {
-  const bundle = await getSessionBundle(sessionId)
+  const bundle = await getParticipantSessionRuntimeBundle(sessionId)
 
   if (!bundle) {
     return null
@@ -2721,6 +2934,10 @@ export async function completeParticipantSession(
     return {
       session: bundle.session,
       jobs: [],
+      analysisContext: {
+        ...bundle,
+        transcript: await getSessionTranscript(bundle.client, sessionId),
+      } satisfies SessionAnalysisContext,
     }
   }
 
@@ -2768,29 +2985,50 @@ export async function completeParticipantSession(
     jobs: expectRows(jobsResult, "Unable to enqueue analysis jobs").map((row) =>
       mapAnalysisJob(row as AnalysisJobRow)
     ),
+    analysisContext: {
+      ...bundle,
+      transcript: await getSessionTranscript(bundle.client, sessionId),
+    } satisfies SessionAnalysisContext,
   }
 }
 
 export async function getParticipantSession(sessionId: string) {
-  const bundle = await getSessionBundle(sessionId)
-  return bundle?.session ?? null
+  const lookup = await getParticipantSessionLookup(sessionId)
+  return lookup?.session ?? null
 }
 
-export async function getSessionAnalysisTracePayload(sessionId: string) {
-  const bundle = await getSessionBundle(sessionId)
+export async function getParticipantRealtimeConfig(sessionId: string) {
+  const bundle = await getParticipantSessionRuntimeBundle(sessionId)
 
   if (!bundle) {
-    return null
+    return { status: "missing_session" as const }
   }
 
-  const client = requireSecretClient()
-  const [generatedResult, qualityResult] = await Promise.all([
-    client
-      .from("session_outputs_generated")
-      .select("*")
-      .eq("session_id", sessionId)
-      .order("created_at", { ascending: false })
-      .limit(1),
+  if (!bundle.link || bundle.link.revoked_at) {
+    return { status: "missing_link" as const }
+  }
+
+  const projectResult = await bundle.client
+    .from("projects")
+    .select("*")
+    .eq("id", bundle.session.projectId)
+    .single<ProjectRow>()
+
+  return {
+    status: "ready" as const,
+    publicConfig: buildPublicInterviewConfig({
+      project: expectData(projectResult, "Unable to load session project"),
+      config: bundle.config,
+    }),
+  }
+}
+
+async function loadSessionAnalysisArtifacts(
+  client: SecretClient,
+  sessionId: string
+) {
+  const [generatedRow, qualityResult] = await Promise.all([
+    getLatestSessionOutputRow(client, sessionId),
     client
       .from("quality_scores")
       .select("*")
@@ -2798,33 +3036,40 @@ export async function getSessionAnalysisTracePayload(sessionId: string) {
       .maybeSingle<QualityScoreRow>(),
   ])
 
-  if (generatedResult.error) {
-    fail(`Unable to load generated session output: ${generatedResult.error.message}`)
-  }
-
   if (qualityResult.error) {
     fail(`Unable to load quality score: ${qualityResult.error.message}`)
   }
 
   return {
-    session: bundle.session,
-    transcript: bundle.transcript,
-    outputs: ((expectRows(
-      generatedResult,
-      "Unable to inspect generated session outputs"
-    )[0] as SessionOutputGeneratedRow | undefined)
-      ? mapGeneratedOutput(
-          expectRows(
-            generatedResult,
-            "Unable to inspect generated session outputs"
-          )[0] as SessionOutputGeneratedRow
-        )
-      : undefined),
+    outputs: generatedRow ? mapGeneratedOutput(generatedRow) : undefined,
     score: qualityResult.data ? mapQualityScore(qualityResult.data) : undefined,
   }
 }
 
+export async function getSessionAnalysisTracePayloadFromContext(
+  context: SessionAnalysisContext
+) {
+  const artifacts = await loadSessionAnalysisArtifacts(context.client, context.session.id)
+
+  return {
+    session: context.session,
+    transcript: context.transcript,
+    ...artifacts,
+  }
+}
+
+export async function getSessionAnalysisTracePayload(sessionId: string) {
+  const bundle = await getSessionAnalysisContext(sessionId)
+
+  if (!bundle) {
+    return null
+  }
+
+  return getSessionAnalysisTracePayloadFromContext(bundle)
+}
+
 export async function createProjectFromForm(input: {
+  projectType: string
   name: string
   clientName: string
   objective: string

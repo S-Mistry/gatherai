@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 
-import {
-  createParticipantSession,
-  getPublicInterviewConfig,
-} from "@/lib/data/repository"
+import { startParticipantSession } from "@/lib/data/repository"
 
 const sessionRequestSchema = z.object({
   metadata: z.record(z.string(), z.string()).optional(),
@@ -27,21 +24,15 @@ export async function POST(request: Request, { params }: RouteContext) {
     )
   }
 
-  const publicConfig = await getPublicInterviewConfig(linkToken)
-
-  if (!publicConfig) {
-    return NextResponse.json({ error: "Invalid or expired project link." }, { status: 404 })
-  }
-
-  const created = await createParticipantSession(linkToken, payload.data.metadata)
+  const created = await startParticipantSession(linkToken, payload.data.metadata)
 
   if (!created) {
-    return NextResponse.json({ error: "Unable to create participant session." }, { status: 500 })
+    return NextResponse.json({ error: "Invalid or expired project link." }, { status: 404 })
   }
 
   return NextResponse.json({
     session: created.session,
     recoveryToken: created.recoveryToken,
-    publicConfig,
+    publicConfig: created.publicConfig,
   })
 }

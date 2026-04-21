@@ -1,6 +1,6 @@
 # PRD v1
 
-Product name: AI Workshop Discovery Interviewer
+Product name: AI Discovery and Feedback Interviewer
 
 Status: Draft for implementation
 
@@ -8,28 +8,28 @@ Version: v1.0
 
 Primary audience: product, engineering, design
 
-MVP objective: create and deploy an AI voice interviewer that conducts pre-workshop discovery interviews with stakeholders, then returns transcript-backed structured insights and cross-interview synthesis to help a consultant design a workshop faster and better.
+MVP objective: create and deploy an AI voice interviewer that supports both pre-session discovery and post-program feedback collection, then returns transcript-backed structured insights and cross-session synthesis to help a consultant improve planning and delivery faster.
 
 ## Executive summary
-- A consultant creates a discovery project, configures what the interviewer needs to discover, and shares a public link with stakeholders.
-- Stakeholders complete a short voice conversation with the AI in the browser.
-- The system stores transcript-level data, generates structured outputs for each interview, and synthesizes results across interviews to help the consultant design a workshop.
+- A consultant creates either a `discovery` or `feedback` project, configures what the interviewer needs to learn, and shares a public link with stakeholders or participants.
+- Participants complete a short voice conversation with the AI in the browser.
+- The system stores transcript-level data, generates structured outputs for each session, and synthesizes results across sessions to help the consultant plan the next intervention or improve the last one.
 - The MVP stays narrow:
-  - pre-workshop discovery only
+  - two first-class project modes only: discovery and feedback
   - single consultant user per workspace
   - no participant login
   - transcript-only storage
   - voice-first browser experience
-  - workshop design support, not artifact generation
+  - evidence-backed planning and improvement support, not artifact generation
 
 ## Problem statement
-Consultants often need to interview many stakeholders before designing a workshop. Manual interviews are slow, inconsistent, hard to scale, and harder to synthesize than a conversational system that is consistent and evidence-backed.
+Consultants often need to collect evidence both before and after a workshop, course, or program. Manual interviews are slow, inconsistent, hard to scale, and harder to synthesize than a conversational system that is consistent and evidence-backed.
 
 ## Vision
-Enable any consultant to run structured, scalable, conversational discovery before a workshop, with setup simple enough for solo use and outputs useful enough to shape workshop design.
+Enable any consultant to run structured, scalable voice collection before or after a program, with setup simple enough for solo use and outputs useful enough to shape planning and iteration.
 
 ## Goals
-- Let a consultant create a discovery project.
+- Let a consultant create either a discovery or feedback project.
 - Let the consultant configure interview goals, required questions, and constraints.
 - Generate a public project interview link.
 - Let participants complete a voice interview in the browser without authentication.
@@ -50,7 +50,7 @@ Enable any consultant to run structured, scalable, conversational discovery befo
 - native mobile app
 - outbound email or reminders
 - collaborator accounts
-- post-workshop feedback workflows
+- arbitrary survey-builder workflows
 - audio storage
 - text-only fallback interviewing
 
@@ -75,7 +75,7 @@ Needs:
 - confidence that the conversation has a clear purpose and ending
 
 ## Core use case
-A consultant prepares a workshop for a client, configures the AI interviewer, shares one public link with stakeholders, collects 10 to 15 minute voice interviews, monitors incoming interviews, reviews structured outputs, and uses synthesis to shape the workshop.
+A consultant prepares a workshop or reviews a completed program, configures the AI interviewer, shares one public link with stakeholders or participants, collects a short voice session, monitors incoming sessions, reviews structured outputs, and uses synthesis to shape the next decision.
 
 ## Success metrics
 
@@ -143,6 +143,7 @@ A consultant prepares a workshop for a client, configures the AI interviewer, sh
 
 ### Project creation
 Each project contains:
+- immutable project type: `discovery` or `feedback`
 - project name
 - objective
 - areas of interest
@@ -156,6 +157,7 @@ Each project contains:
 - tone/style config
 
 Project configuration changes must be versioned.
+Project type does not change after creation.
 
 ### Interview configuration
 Required fields:
@@ -185,11 +187,12 @@ The public landing page shows:
 - anonymity statement
 - optional metadata fields
 - start interview action
+- mode-aware completion copy
 
 ### Voice interview
 - Browser-based, speech-to-speech.
 - One primary question at a time.
-- Up to two follow-ups per core question by default.
+- Up to two follow-ups per core question by default for discovery, and one by default for feedback.
 - More follow-ups only if novelty remains high and time allows.
 - Summarize what was heard and allow clarification.
 - Challenge vague answers when appropriate.
@@ -222,7 +225,7 @@ Required outputs:
 - key quotes
 - confidence score
 - unresolved questions
-- stakeholder profile metadata
+- respondent profile metadata
 
 Outputs are system-generated, editable by the consultant, and evidence-backed.
 
@@ -233,7 +236,7 @@ Required outputs:
 - contradiction map
 - alignment and misalignment analysis
 - top problems to address
-- suggested workshop agenda
+- recommended focus areas
 - notable quotes by theme
 
 Synthesis updates as completed interviews accumulate and can also be manually refreshed.
@@ -253,7 +256,7 @@ Scoring dimensions include:
 - answer specificity
 - repetition
 - faithfulness of outputs
-- workshop usefulness
+- decision usefulness
 
 ### Consultant controls
 - edit structured outputs
@@ -272,7 +275,7 @@ Scoring dimensions include:
 Before interview start, show:
 - AI interviewer disclosure
 - transcript notice
-- workshop discovery purpose
+- mode-specific project purpose
 - anonymity mode
 - who can access results
 
@@ -381,7 +384,7 @@ MVP policy:
 - Missed required questions: explicit queue in app state, strict mode first, coverage scoring.
 - Untrustworthy synthesis: evidence-backed outputs, faithfulness scoring, editable outputs.
 - Distrust around anonymity: clear disclosure, configurable identity mode, low-friction entry.
-- Too much complexity too early: defer exports, collaborators, reminders, multiple templates, and post-workshop workflows.
+- Too much complexity too early: defer exports, collaborators, reminders, arbitrary templates, and custom survey-builder workflows.
 
 ## Prioritization
 
@@ -409,7 +412,7 @@ MVP policy:
 - multiple templates per project
 - collaborator roles
 - audio storage
-- post-workshop feedback mode
+- arbitrary branching survey logic
 - white-labeling
 - multilingual support
 - native mobile app
@@ -417,6 +420,7 @@ MVP policy:
 ## Locked MVP defaults
 - single-user consultant workspace
 - one public project interview link
+- immutable project type with shared collection engine
 - transcript-only storage
 - strict mode first
 - evidence-backed structured outputs

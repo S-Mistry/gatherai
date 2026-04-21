@@ -26,6 +26,8 @@
 - Install repo hook: `npm run hooks:install`
 - App install: `npm --prefix gather install`
 - App Supabase bootstrap: `npm --prefix gather run supabase:bootstrap`
+- App analysis evals: `npm --prefix gather run analysis:eval`
+- App analysis fixture seed: `npm --prefix gather run analysis:seed`
 - App dev server: `npm --prefix gather run dev`
 - App typecheck: `npm --prefix gather run typecheck`
 - App lint: `npm --prefix gather run lint`

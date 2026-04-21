@@ -3,8 +3,8 @@ import { z } from "zod"
 
 import { logBraintrustTrace } from "@/lib/braintrust/client"
 import {
-  getSessionAnalysisTracePayload,
   completeParticipantSession,
+  getSessionAnalysisTracePayloadFromContext,
   processCompletedSessionAnalysis,
 } from "@/lib/data/repository"
 
@@ -43,10 +43,14 @@ export async function POST(request: Request, { params }: RouteContext) {
   try {
     const processedJobs = await processCompletedSessionAnalysis(
       result.session.id,
-      result.session.projectId
+      result.session.projectId,
+      "gather-session-dispatch",
+      result.analysisContext
     )
     dispatchedJobs = processedJobs.length
-    const tracePayload = await getSessionAnalysisTracePayload(result.session.id)
+    const tracePayload = await getSessionAnalysisTracePayloadFromContext(
+      result.analysisContext
+    )
 
     if (tracePayload) {
       void logBraintrustTrace(tracePayload)

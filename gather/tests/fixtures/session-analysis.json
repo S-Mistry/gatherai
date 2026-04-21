@@ -148,7 +148,7 @@
     ],
     "unresolvedQuestions": ["What should be delegated?"],
     "confidenceScore": 0.78,
-    "stakeholderProfile": {},
+    "respondentProfile": {},
     "promptVersionId": "prompt-1",
     "modelVersionId": "model-1",
     "createdAt": "2026-04-16T10:05:00.000Z"

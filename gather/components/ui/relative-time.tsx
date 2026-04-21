@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useSyncExternalStore } from "react"
 
 interface RelativeTimeProps {
   date: string | Date
@@ -12,8 +12,49 @@ const HOUR = MINUTE * 60
 const DAY = HOUR * 24
 const WEEK = DAY * 7
 
-function format(target: Date): string {
-  const diff = Math.round((Date.now() - target.getTime()) / 1000)
+let currentNow = Date.now()
+const subscribers = new Set<() => void>()
+let ticker: number | null = null
+
+function notify() {
+  subscribers.forEach((listener) => listener())
+}
+
+function startTicker() {
+  if (ticker !== null) {
+    return
+  }
+
+  currentNow = Date.now()
+  ticker = window.setInterval(() => {
+    currentNow = Date.now()
+    notify()
+  }, 30_000)
+}
+
+function stopTicker() {
+  if (ticker === null) {
+    return
+  }
+
+  window.clearInterval(ticker)
+  ticker = null
+}
+
+function subscribe(listener: () => void) {
+  subscribers.add(listener)
+  startTicker()
+
+  return () => {
+    subscribers.delete(listener)
+    if (subscribers.size === 0) {
+      stopTicker()
+    }
+  }
+}
+
+function format(target: Date, now: number): string {
+  const diff = Math.round((now - target.getTime()) / 1000)
   const abs = Math.abs(diff)
   const future = diff < 0
 
@@ -34,19 +75,16 @@ function format(target: Date): string {
 }
 
 export function RelativeTime({ date, className }: RelativeTimeProps) {
-  const target = useMemo(
-    () => (typeof date === "string" ? new Date(date) : date),
-    [date]
-  )
-  const [label, setLabel] = useState(() => format(target))
-
-  useEffect(() => {
-    const id = window.setInterval(() => setLabel(format(target)), 30_000)
-    return () => window.clearInterval(id)
-  }, [target])
+  const target = typeof date === "string" ? new Date(date) : date
+  const now = useSyncExternalStore(subscribe, () => currentNow, () => currentNow)
+  const label = format(target, now)
 
   return (
-    <time dateTime={target.toISOString()} title={target.toLocaleString()} className={className}>
+    <time
+      dateTime={target.toISOString()}
+      title={target.toLocaleString()}
+      className={className}
+    >
       {label}
     </time>
   )

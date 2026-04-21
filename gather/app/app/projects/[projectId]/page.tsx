@@ -3,6 +3,7 @@ import { headers } from "next/headers"
 import { notFound } from "next/navigation"
 
 import { ProjectSynthesisOverrideForm } from "@/components/dashboard/project-synthesis-override-form"
+import { ProjectTypeBadge } from "@/components/dashboard/project-type-badge"
 import { ProjectEvidenceSurface } from "@/components/dashboard/project-evidence-surface"
 import { ProjectVersionForm } from "@/components/dashboard/project-version-form"
 import { RefreshSynthesisButton } from "@/components/dashboard/refresh-synthesis-button"
@@ -13,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { CopyLink } from "@/components/ui/copy-link"
 import { RelativeTime } from "@/components/ui/relative-time"
 import { getProjectDetail } from "@/lib/data/repository"
+import { getProjectTypePreset } from "@/lib/project-types"
 
 interface ProjectDetailPageProps {
   params: Promise<{
@@ -41,6 +43,11 @@ export default async function ProjectDetailPage({
   const synthesisOverrideActive = Boolean(
     detail.synthesisOverride?.editedNarrative.trim()
   )
+  const projectTypePreset = getProjectTypePreset(detail.project.projectType)
+  const respondentContext =
+    detail.project.projectType === "feedback"
+      ? "participant feedback"
+      : "stakeholder inputs"
 
   return (
     <div className="stack gap-5">
@@ -57,6 +64,7 @@ export default async function ProjectDetailPage({
           <div className="stack max-w-3xl gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="accent">{detail.project.clientName}</Badge>
+              <ProjectTypeBadge projectType={detail.project.projectType} />
               <span className="text-[10px] tracking-[0.22em] text-muted-foreground uppercase">
                 Version {detail.configVersion.versionNumber}
               </span>
@@ -77,6 +85,11 @@ export default async function ProjectDetailPage({
               label="Copy link"
               className="w-full lg:w-[340px]"
             />
+            {projectTypePreset.shareHint ? (
+              <p className="max-w-[340px] text-xs leading-5 text-muted-foreground lg:text-right">
+                {projectTypePreset.shareHint}
+              </p>
+            ) : null}
             <div className="flex flex-wrap gap-2">
               <Button asChild variant="outline" size="sm">
                 <Link href={`/i/${detail.project.publicLinkToken}`}>Preview</Link>
@@ -107,7 +120,7 @@ export default async function ProjectDetailPage({
               <h2 className="eyebrow-sm">Synthesis readout</h2>
               <p className="text-sm leading-6 text-muted-foreground">
                 This is the consultant-facing synthesis view, grounded in the
-                latest effective respondent outputs.
+                latest effective {respondentContext}.
               </p>
             </div>
             {detail.synthesis.warning ? (
@@ -122,7 +135,7 @@ export default async function ProjectDetailPage({
               </h3>
               <p className="mt-3 text-sm leading-6 text-muted-foreground">
                 {detail.synthesis.executiveSummary ||
-                  "Synthesis will strengthen after the first completed interviews with usable evidence arrive."}
+                  "Synthesis will strengthen after the first completed sessions with usable evidence arrive."}
               </p>
             </section>
 
@@ -143,10 +156,10 @@ export default async function ProjectDetailPage({
                 emptyMessage="No pain points surfaced yet."
               />
               <BulletBlock
-                label="Suggested agenda"
-                items={detail.synthesis.suggestedWorkshopAgenda}
+                label={projectTypePreset.focusAreasLabel}
+                items={detail.synthesis.recommendedFocusAreas}
                 ordered
-                emptyMessage="Agenda recommendations appear once synthesis runs."
+                emptyMessage="Recommended focus areas appear once synthesis runs."
               />
             </div>
           </div>
@@ -190,7 +203,7 @@ export default async function ProjectDetailPage({
         <section className="stack gap-5 px-6 py-5">
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
             <section className="stack gap-4">
-              <h2 className="eyebrow-sm">Interview setup</h2>
+              <h2 className="eyebrow-sm">Collection setup</h2>
               <BulletBlock
                 label="Topics"
                 items={detail.configVersion.areasOfInterest}
@@ -267,7 +280,7 @@ export default async function ProjectDetailPage({
             <h2 className="eyebrow-sm">Sessions</h2>
             <span className="text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
               {detail.sessions.length}{" "}
-              {detail.sessions.length === 1 ? "interview" : "interviews"}
+              {detail.sessions.length === 1 ? "session" : "sessions"}
             </span>
           </div>
           <SessionsTable

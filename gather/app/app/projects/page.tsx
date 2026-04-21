@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { ArrowRight, FolderOpen } from "@phosphor-icons/react/dist/ssr"
 
+import { ProjectTypeBadge } from "@/components/dashboard/project-type-badge"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -28,27 +29,27 @@ const filterConfig: Record<
 > = {
   live: {
     label: "Live now",
-    description: "Showing projects with interviews currently in progress.",
-    emptyTitle: "No live interviews right now.",
+    description: "Showing projects with sessions currently in progress.",
+    emptyTitle: "No live sessions right now.",
     emptyDescription:
-      "Projects will appear here when stakeholders are in an active session.",
+      "Projects will appear here when people are in an active session.",
     predicate: (project) => project.sessionCounts.inProgress > 0,
   },
   completed: {
     label: "Completed",
-    description: "Showing projects with completed interviews ready for review.",
-    emptyTitle: "No completed interviews yet.",
+    description: "Showing projects with completed sessions ready for review.",
+    emptyTitle: "No completed sessions yet.",
     emptyDescription:
-      "Projects will appear here after at least one stakeholder finishes an interview.",
+      "Projects will appear here after at least one session finishes.",
     predicate: (project) => project.sessionCounts.completed > 0,
   },
   "needs-review": {
     label: "Needs review",
     description:
-      "Showing projects with flagged interviews that need consultant review.",
+      "Showing projects with flagged sessions that need consultant review.",
     emptyTitle: "Nothing needs review right now.",
     emptyDescription:
-      "Projects with flagged interviews will appear here when quality checks find issues.",
+      "Projects with flagged sessions will appear here when quality checks find issues.",
     predicate: (project) => project.sessionCounts.flagged > 0,
   },
 }
@@ -103,7 +104,7 @@ export default async function ProjectsPage({
         <EmptyState
           icon={FolderOpen}
           title="No projects yet."
-          description="Create one to share a link with stakeholders."
+          description="Create one to share a link with stakeholders or participants."
           action={
             <Button asChild>
               <Link href="/app/projects/new">New project</Link>
@@ -137,12 +138,15 @@ export default async function ProjectsPage({
                 )}
               >
                 <div className="min-w-0 space-y-0.5">
-                  <Link
-                    href={`/app/projects/${project.id}`}
-                    className="block truncate text-sm font-semibold text-foreground hover:text-primary"
-                  >
-                    {project.name}
-                  </Link>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link
+                      href={`/app/projects/${project.id}`}
+                      className="block truncate text-sm font-semibold text-foreground hover:text-primary"
+                    >
+                      {project.name}
+                    </Link>
+                    <ProjectTypeBadge projectType={project.projectType} />
+                  </div>
                   <p className="truncate text-xs text-muted-foreground">
                     {project.clientName}
                   </p>

@@ -12,12 +12,13 @@ import {
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { VoiceStatus, type VoiceState } from "@/components/ui/voice-status"
-import type { PublicInterviewConfig } from "@/lib/domain/types"
+import type { ProjectType, PublicInterviewConfig } from "@/lib/domain/types"
 import {
   PARTICIPANT_INTERVIEWER_NAME,
   buildRealtimeInstructions,
 } from "@/lib/openai/realtime-config"
 import { detectInterviewStartSignal } from "@/lib/participant/runtime"
+import { getProjectTypePreset } from "@/lib/project-types"
 
 type RealtimeHistoryItem = import("@openai/agents/realtime").RealtimeItem
 type RealtimeHistoryContentPart =
@@ -140,6 +141,7 @@ function extractTranscriptSegments(
 }
 
 export function InterviewShell({ linkToken, config }: InterviewShellProps) {
+  const preset = getProjectTypePreset(config.projectType)
   const [status, setStatus] = useState<ShellStatus>("ready")
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
@@ -521,7 +523,7 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
   }
 
   if (status === "complete") {
-    return <CompletionSurface />
+    return <CompletionSurface projectType={config.projectType} />
   }
 
   const isLive = status === "live" || status === "paused"
@@ -592,7 +594,7 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
                 {config.anonymityMode === "anonymous"
                   ? "Fully anonymous — no name or role is attached to what you say."
                   : config.anonymityMode === "pseudonymous"
-                    ? "By role only — you'll appear as a labeled stakeholder, not by name."
+                    ? `By label only — you'll appear as a labeled ${preset.anonymousRespondentLabel.toLowerCase()}, not by name.`
                     : "By name — the consultant will see who said what."}
               </p>
             </div>
@@ -730,7 +732,9 @@ function LiveSurface({
   )
 }
 
-function CompletionSurface() {
+function CompletionSurface({ projectType }: { projectType: ProjectType }) {
+  const preset = getProjectTypePreset(projectType)
+
   return (
     <Card className="text-center">
       <CardContent className="flex flex-col items-center gap-4 py-12">
@@ -739,11 +743,10 @@ function CompletionSurface() {
         </div>
         <div className="space-y-2">
           <h2 className="text-2xl font-semibold text-foreground">
-            Thanks — that was genuinely useful.
+            {preset.completionTitle}
           </h2>
           <p className="max-w-md text-sm leading-7 text-muted-foreground">
-            Your voice isn&apos;t saved. Only the transcript helps shape the
-            workshop. You can close this tab.
+            {preset.completionDescription} You can close this tab.
           </p>
         </div>
       </CardContent>

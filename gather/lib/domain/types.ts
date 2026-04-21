@@ -2,6 +2,8 @@ export type InterviewMode = "strict" | "adaptive"
 
 export type AnonymityMode = "named" | "pseudonymous" | "anonymous"
 
+export type ProjectType = "discovery" | "feedback"
+
 export type InterviewState =
   | "pre_start"
   | "consent"
@@ -67,6 +69,7 @@ export interface ProjectConfigVersion {
 export interface ProjectRecord {
   id: string
   workspaceId: string
+  projectType: ProjectType
   name: string
   slug: string
   clientName: string
@@ -79,6 +82,7 @@ export interface ProjectRecord {
 
 export interface PublicInterviewConfig {
   projectId: string
+  projectType: ProjectType
   projectName: string
   objective: string
   durationCapMinutes: number
@@ -228,11 +232,11 @@ export interface SessionOutputGenerated {
   insightCards: InsightCard[]
   tensions: InsightClaim[]
   unresolvedQuestions: string[]
-  workshopImplications: string[]
+  projectImplications: string[]
   recommendedActions: string[]
   analysisWarnings: string[]
   confidenceScore: number
-  stakeholderProfile: Record<string, string>
+  respondentProfile: Record<string, string>
   promptVersionId: string
   modelVersionId: string
   createdAt: string
@@ -273,7 +277,7 @@ export interface ProjectSynthesisGenerated {
   alignmentSignals: string[]
   misalignmentSignals: string[]
   topProblems: string[]
-  suggestedWorkshopAgenda: string[]
+  recommendedFocusAreas: string[]
   notableQuotesByTheme: InsightClaim[]
   warning?: string
   promptVersionId: string
@@ -330,7 +334,7 @@ export interface QualityDimension {
     | "answer_specificity"
     | "repetition"
     | "faithfulness"
-    | "workshop_usefulness"
+    | "decision_usefulness"
   score: number
   rationale: string
 }

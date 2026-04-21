@@ -4,6 +4,7 @@ import { InterviewShell } from "@/components/participant/interview-shell"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getPublicInterviewConfig } from "@/lib/data/repository"
+import { getProjectTypePreset } from "@/lib/project-types"
 
 interface ParticipantPageProps {
   params: Promise<{
@@ -19,20 +20,23 @@ export default async function ParticipantPage({ params }: ParticipantPageProps) 
     notFound()
   }
 
+  const preset = getProjectTypePreset(config.projectType)
+  const disclosureLines = config.disclosure
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+
   return (
     <main className="page-gradient min-h-screen">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
         <section className="panel grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
           <div className="space-y-4">
-            <Badge variant="accent">For you</Badge>
+            <Badge variant={preset.badgeVariant}>{preset.label}</Badge>
             <h1 className="text-4xl font-semibold text-balance">
-              Before the workshop — a 15-minute chat.
+              {preset.participantTitle}
             </h1>
             <p className="max-w-3xl text-base leading-7 text-muted-foreground">
-              The consultant running your workshop would love to hear what&apos;s working, what
-              isn&apos;t, and what you&apos;d change. I&apos;m an AI that&apos;ll ask a few
-              questions and listen — for about
-              15 minutes.
+              {config.intro} This takes about {config.durationCapMinutes} minutes.
             </p>
           </div>
 
@@ -43,9 +47,9 @@ export default async function ParticipantPage({ params }: ParticipantPageProps) 
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm leading-6 text-primary-foreground/85">
-              <p>I&apos;ll listen and write down what you say.</p>
-              <p>Your voice recording is not saved.</p>
-              <p>Only the consultant sees the transcript.</p>
+              {disclosureLines.map((line) => (
+                <p key={line}>{line}</p>
+              ))}
             </CardContent>
           </Card>
         </section>

@@ -1,7 +1,13 @@
 "use client"
 
 import { Quotes } from "@phosphor-icons/react"
-import { useEffect, useState, type ReactNode } from "react"
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react"
 
 import { ProjectEvidenceDrawer } from "@/components/dashboard/project-evidence-drawer"
 import { Badge } from "@/components/ui/badge"
@@ -30,29 +36,50 @@ export function ProjectEvidenceSurface({
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [selectedClaim, setSelectedClaim] =
     useState<ProjectEvidenceClaimPreview | null>(null)
-  const [requestVersion, setRequestVersion] = useState(0)
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">(
     "idle"
   )
   const [payload, setPayload] = useState<ProjectEvidenceDrawerPayload | null>(null)
   const [errorMessage, setErrorMessage] = useState<string>()
+  const cacheRef = useRef(new Map<string, ProjectEvidenceDrawerPayload>())
+  const controllerRef = useRef<AbortController | null>(null)
 
-  useEffect(() => {
-    if (!selectedClaim) {
-      return
-    }
+  const openClaim = useCallback(
+    async (claim: ProjectEvidenceClaimPreview) => {
+      const cacheKey = `${projectId}:${claim.kind}:${claim.claimId}`
+      const cached = cacheRef.current.get(cacheKey)
 
-    const controller = new AbortController()
-    const params = new URLSearchParams({
-      kind: selectedClaim.kind,
-      claimId: selectedClaim.claimId,
-    })
+      controllerRef.current?.abort()
+      setSelectedClaim(claim)
+      setDrawerOpen(true)
 
-    void fetch(`/api/projects/${projectId}/evidence?${params.toString()}`, {
-      cache: "no-store",
-      signal: controller.signal,
-    })
-      .then(async (response) => {
+      if (cached) {
+        controllerRef.current = null
+        setStatus("ready")
+        setPayload(cached)
+        setErrorMessage(undefined)
+        return
+      }
+
+      const controller = new AbortController()
+      controllerRef.current = controller
+      const params = new URLSearchParams({
+        kind: claim.kind,
+        claimId: claim.claimId,
+      })
+
+      setStatus("loading")
+      setPayload(null)
+      setErrorMessage(undefined)
+
+      try {
+        const response = await fetch(
+          `/api/projects/${projectId}/evidence?${params.toString()}`,
+          {
+            cache: "no-store",
+            signal: controller.signal,
+          }
+        )
         const body = (await response.json().catch(() => ({}))) as
           | ProjectEvidenceDrawerPayload
           | { error?: string }
@@ -65,17 +92,15 @@ export function ProjectEvidenceSurface({
           )
         }
 
-        return body as ProjectEvidenceDrawerPayload
-      })
-      .then((nextPayload) => {
         if (controller.signal.aborted) {
           return
         }
 
+        const nextPayload = body as ProjectEvidenceDrawerPayload
+        cacheRef.current.set(cacheKey, nextPayload)
         setPayload(nextPayload)
         setStatus("ready")
-      })
-      .catch((error: unknown) => {
+      } catch (error: unknown) {
         if (controller.signal.aborted) {
           return
         }
@@ -87,19 +112,20 @@ export function ProjectEvidenceSurface({
             ? error.message
             : "Unable to load project evidence."
         )
-      })
+      } finally {
+        if (controllerRef.current === controller) {
+          controllerRef.current = null
+        }
+      }
+    },
+    [projectId]
+  )
 
-    return () => controller.abort()
-  }, [projectId, requestVersion, selectedClaim])
-
-  function openClaim(claim: ProjectEvidenceClaimPreview) {
-    setSelectedClaim(claim)
-    setDrawerOpen(true)
-    setStatus("loading")
-    setPayload(null)
-    setErrorMessage(undefined)
-    setRequestVersion((value) => value + 1)
-  }
+  useEffect(() => {
+    return () => {
+      controllerRef.current?.abort()
+    }
+  }, [])
 
   return (
     <>

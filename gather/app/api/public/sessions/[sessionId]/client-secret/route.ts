@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server"
 
-import {
-  getParticipantSession,
-  getPublicInterviewConfig,
-} from "@/lib/data/repository"
+import { getParticipantRealtimeConfig } from "@/lib/data/repository"
 import { isRealtimeConfigured } from "@/lib/env"
 import { mintRealtimeClientSecret } from "@/lib/openai/realtime"
 
@@ -15,15 +12,13 @@ interface RouteContext {
 
 export async function POST(_request: Request, { params }: RouteContext) {
   const { sessionId } = await params
-  const session = await getParticipantSession(sessionId)
+  const configResult = await getParticipantRealtimeConfig(sessionId)
 
-  if (!session) {
+  if (configResult.status === "missing_session") {
     return NextResponse.json({ error: "Session not found." }, { status: 404 })
   }
 
-  const publicConfig = await getPublicInterviewConfig(session.publicLinkToken)
-
-  if (!publicConfig) {
+  if (configResult.status === "missing_link") {
     return NextResponse.json({ error: "Project link is no longer valid." }, { status: 404 })
   }
 
@@ -38,7 +33,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
   }
 
   try {
-    const clientSecret = await mintRealtimeClientSecret(publicConfig)
+    const clientSecret = await mintRealtimeClientSecret(configResult.publicConfig)
     return NextResponse.json(clientSecret)
   } catch (error) {
     return NextResponse.json(

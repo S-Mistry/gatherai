@@ -1,13 +1,13 @@
 "use client"
 
-import { CaretRight, FileText } from "@phosphor-icons/react"
+import { CaretRight } from "@phosphor-icons/react"
 import { Popover as RadixPopover } from "radix-ui"
 
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type {
   InsightCard,
+  ProjectType,
   QualityScore,
   QuestionReview,
   QuoteLibraryItem,
@@ -15,17 +15,19 @@ import type {
   SessionOutputOverride,
   SessionQualityOverride,
 } from "@/lib/domain/types"
+import { getProjectTypePreset } from "@/lib/project-types"
 import { cn } from "@/lib/utils"
 
 import { EvidencePill } from "./evidence-pill"
 import { ReviewClaimToggle } from "./review-claim-toggle"
 import { ReviewOverrideForm } from "./review-override-form"
 import { ReviewQualityOverrideForm } from "./review-quality-override-form"
-import { useOptionalReviewSelection } from "./review-selection-context"
+import { ReviewTranscriptDrawerButton } from "./review-transcript-drawer-button"
 
 interface ReviewSynthesisTabsProps {
   projectId: string
   sessionId: string
+  projectType: ProjectType
   generatedStatus: "ready" | "pending" | "failed" | "idle"
   generatedOutput: SessionOutputGenerated
   effectiveOutput: SessionOutputGenerated
@@ -39,6 +41,7 @@ interface ReviewSynthesisTabsProps {
 export function ReviewSynthesisTabs({
   projectId,
   sessionId,
+  projectType,
   generatedStatus,
   generatedOutput,
   effectiveOutput,
@@ -67,6 +70,7 @@ export function ReviewSynthesisTabs({
   const suppressedIds = new Set(override?.suppressedClaimIds ?? [])
   const themeCards = generatedOutput.insightCards.filter((card) => card.kind === "theme")
   const signalCards = generatedOutput.insightCards.filter((card) => card.kind !== "theme")
+  const preset = getProjectTypePreset(projectType)
 
   return (
     <Tabs defaultValue="overview" className="gap-5">
@@ -107,9 +111,9 @@ export function ReviewSynthesisTabs({
 
         <div className="grid gap-4 lg:grid-cols-2">
           <ListPanel
-            title="Workshop implications"
-            items={effectiveOutput.workshopImplications}
-            emptyMessage="No workshop implications were grounded from this transcript yet."
+            title={preset.implicationsLabel}
+            items={effectiveOutput.projectImplications}
+            emptyMessage={preset.implicationsEmptyMessage}
           />
           <ListPanel
             title="Recommended actions"
@@ -129,7 +133,7 @@ export function ReviewSynthesisTabs({
           />
         </div>
 
-        <StakeholderProfilePanel profile={effectiveOutput.stakeholderProfile} />
+        <RespondentProfilePanel profile={effectiveOutput.respondentProfile} />
 
         <Disclosure
           title="Edit summary used in synthesis"
@@ -171,7 +175,7 @@ export function ReviewSynthesisTabs({
 
       <TabsContent value="themes" className="stack gap-3">
         {themeCards.length === 0 ? (
-          <EmptyHint message="No grounded themes were extracted for this respondent." />
+          <EmptyHint message="No grounded themes were extracted for this respondent yet." />
         ) : (
           themeCards.map((card) => (
             <InsightCardPanel
@@ -253,11 +257,57 @@ function CountChip({ count }: { count: number }) {
 
 function countFilledSections(output: SessionOutputGenerated) {
   return [
-    output.workshopImplications.length > 0,
+    output.projectImplications.length > 0,
     output.recommendedActions.length > 0,
     output.unresolvedQuestions.length > 0,
     output.analysisWarnings.length > 0,
   ].filter(Boolean).length
+}
+
+function summarizeQuestionCoverage(questionReviews: QuestionReview[]) {
+  return questionReviews.reduce(
+    (summary, review) => {
+      if (review.status === "answered") {
+        summary.answered += 1
+      } else if (review.status === "partial") {
+        summary.partial += 1
+      } else {
+        summary.missing += 1
+      }
+
+      return summary
+    },
+    { answered: 0, partial: 0, missing: 0 }
+  )
+}
+
+function deriveEvidenceHealthMessage({
+  output,
+  qualityScore,
+}: {
+  output: SessionOutputGenerated
+  qualityScore?: QualityScore
+}) {
+  const specificity = qualityScore?.dimensions.find(
+    (dimension) => dimension.key === "answer_specificity"
+  )
+  const coverage = qualityScore?.dimensions.find(
+    (dimension) => dimension.key === "question_coverage"
+  )
+
+  if (output.analysisWarnings.length > 0 && specificity && specificity.score < 0.45) {
+    return "Low confidence here comes from limited concrete transcript detail, not from an analysis pipeline failure."
+  }
+
+  if (coverage && coverage.score < 0.5) {
+    return "Several required questions are still thin or unanswered, so this summary should be treated as directional."
+  }
+
+  if (output.analysisWarnings.length > 0) {
+    return "The analysis surfaced evidence-quality warnings that are worth checking before using this session in synthesis."
+  }
+
+  return null
 }
 
 function SummarySection({
@@ -277,6 +327,12 @@ function SummarySection({
   qualityOverride?: SessionQualityOverride
   analysisFailure?: string
 }) {
+  const coverage = summarizeQuestionCoverage(generatedOutput.questionReviews)
+  const evidenceHealthMessage = deriveEvidenceHealthMessage({
+    output: generatedOutput,
+    qualityScore,
+  })
+
   return (
     <section className="rounded-3xl border border-border/70 bg-background/65 p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -308,6 +364,15 @@ function SummarySection({
         <span className="rounded-full border border-border/70 bg-background/80 px-3 py-1">
           Confidence {Math.round(generatedOutput.confidenceScore * 100)}%
         </span>
+        <span className="rounded-full border border-emerald-500/20 bg-emerald-500/8 px-3 py-1 text-emerald-700 dark:text-emerald-300">
+          Answered {coverage.answered}
+        </span>
+        <span className="rounded-full border border-amber-500/20 bg-amber-500/8 px-3 py-1 text-amber-700 dark:text-amber-300">
+          Partial {coverage.partial}
+        </span>
+        <span className="rounded-full border border-rose-500/20 bg-rose-500/8 px-3 py-1 text-rose-700 dark:text-rose-300">
+          Missing {coverage.missing}
+        </span>
         <span className="rounded-full border border-border/70 bg-background/80 px-3 py-1">
           Model {generatedOutput.modelVersionId}
         </span>
@@ -315,6 +380,12 @@ function SummarySection({
           Generated {new Date(generatedOutput.createdAt).toLocaleString()}
         </span>
       </div>
+
+      {evidenceHealthMessage ? (
+        <p className="mt-4 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-foreground">
+          <span className="font-semibold">Evidence health:</span> {evidenceHealthMessage}
+        </p>
+      ) : null}
 
       {qualityOverride?.note.trim() ? (
         <p className="mt-4 rounded-2xl border border-primary/20 bg-primary/8 px-4 py-3 text-sm leading-6 text-foreground">
@@ -460,7 +531,7 @@ function ListPanel({
   )
 }
 
-function StakeholderProfilePanel({
+function RespondentProfilePanel({
   profile,
 }: {
   profile: Record<string, string>
@@ -473,7 +544,7 @@ function StakeholderProfilePanel({
 
   return (
     <section className="rounded-3xl border border-border/70 bg-background/60 p-5">
-      <h3 className="text-sm font-semibold text-foreground">Stakeholder profile</h3>
+      <h3 className="text-sm font-semibold text-foreground">Respondent profile</h3>
       <dl className="mt-4 grid gap-3 sm:grid-cols-2">
         {entries.map(([key, value]) => (
           <div
@@ -747,8 +818,6 @@ function QuoteExcerptList({
 }
 
 function TranscriptTabPanel({ segmentCount }: { segmentCount: number }) {
-  const selection = useOptionalReviewSelection()
-
   return (
     <section className="rounded-3xl border border-border/70 bg-background/60 p-5">
       <div className="flex flex-wrap items-center gap-2">
@@ -763,14 +832,7 @@ function TranscriptTabPanel({ segmentCount }: { segmentCount: number }) {
         transcript when you want to read past the excerpted evidence.
       </p>
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => selection?.openDrawer("transcript")}
-        >
-          <FileText className="size-3.5" />
-          Open transcript drawer
-        </Button>
+        <ReviewTranscriptDrawerButton />
         <span className="text-xs text-muted-foreground">
           Generated transcript text length: {segmentCount} characters
         </span>

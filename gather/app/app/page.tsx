@@ -3,6 +3,7 @@ import { ArrowRight, FlagPennant, FolderOpen } from "@phosphor-icons/react/dist/
 
 import { ContinueReviewingRail } from "@/components/dashboard/continue-reviewing-rail"
 import { MetricCard } from "@/components/dashboard/metric-card"
+import { ProjectTypeBadge } from "@/components/dashboard/project-type-badge"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
 import { getWorkspaceSnapshot } from "@/lib/data/repository"
@@ -43,23 +44,23 @@ export default async function ConsultantHomePage() {
           <MetricCard
             label="Projects"
             value={String(snapshot.projects.length)}
-            hint="Active workshop prep."
+            hint="Active discovery and feedback collection."
             href="/app/projects"
             ariaLabel={`Projects: ${snapshot.projects.length}. Open the projects list.`}
           />
           <MetricCard
             label="Live now"
             value={String(aggregate.inProgress)}
-            hint={`${aggregate.inProgress} interviews in progress.`}
+            hint={`${aggregate.inProgress} sessions in progress.`}
             href="/app/projects?filter=live"
-            ariaLabel={`Live now: ${aggregate.inProgress}. Open projects with interviews in progress.`}
+            ariaLabel={`Live now: ${aggregate.inProgress}. Open projects with sessions in progress.`}
           />
           <MetricCard
             label="Completed"
             value={String(aggregate.completed)}
             hint="Ready for review."
             href="/app/projects?filter=completed"
-            ariaLabel={`Completed: ${aggregate.completed}. Open projects with completed interviews.`}
+            ariaLabel={`Completed: ${aggregate.completed}. Open projects with completed sessions.`}
           />
           <MetricCard
             label="Needs review"
@@ -67,7 +68,7 @@ export default async function ConsultantHomePage() {
             hint="Short answers or unclear responses."
             accent="Review before trusting synthesis."
             href="/app/projects?filter=needs-review"
-            ariaLabel={`Needs review: ${aggregate.flagged}. Open projects with flagged interviews.`}
+            ariaLabel={`Needs review: ${aggregate.flagged}. Open projects with flagged sessions.`}
           />
         </section>
 
@@ -78,9 +79,12 @@ export default async function ConsultantHomePage() {
             <div className="flex items-center justify-between gap-3">
               <div className="stack gap-1">
                 <p className="eyebrow-sm">Active project</p>
-                <h2 className="text-lg font-semibold tracking-tight text-foreground">
-                  {firstProject.name}
-                </h2>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-lg font-semibold tracking-tight text-foreground">
+                    {firstProject.name}
+                  </h2>
+                  <ProjectTypeBadge projectType={firstProject.projectType} />
+                </div>
               </div>
               <Button asChild variant="ghost" size="sm">
                 <Link
@@ -130,7 +134,7 @@ export default async function ConsultantHomePage() {
             <EmptyState
               icon={FolderOpen}
               title="No projects yet."
-              description="Create one to share a link with stakeholders."
+              description="Create one to share a link with stakeholders or participants."
               action={
                 <Button asChild>
                   <Link href="/app/projects/new">New project</Link>

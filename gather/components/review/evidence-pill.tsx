@@ -5,7 +5,7 @@ import { Quotes } from "@phosphor-icons/react"
 import type { EvidenceRef } from "@/lib/domain/types"
 import { cn } from "@/lib/utils"
 
-import { useOptionalReviewSelection } from "./review-selection-context"
+import { useOptionalReviewSelectionActions } from "./review-selection-context"
 
 interface EvidencePillProps {
   evidence: EvidenceRef[]
@@ -13,7 +13,7 @@ interface EvidencePillProps {
 }
 
 export function EvidencePill({ evidence, className }: EvidencePillProps) {
-  const selection = useOptionalReviewSelection()
+  const selection = useOptionalReviewSelectionActions()
 
   const segmentIds = evidence.flatMap((ref) => ref.segmentIds)
   const uniqueIds = Array.from(new Set(segmentIds))

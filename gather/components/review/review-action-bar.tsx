@@ -18,8 +18,9 @@ import {
 import { toggleSessionExclusionAction } from "@/app/app/actions"
 import { Badge, type BadgeProps } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { useOptionalReviewSelection } from "@/components/review/review-selection-context"
 import { cn } from "@/lib/utils"
+
+import { useOptionalReviewSelectionActions } from "./review-selection-context"
 
 type StatusState = "ready" | "pending" | "failed" | "empty" | "idle"
 
@@ -95,7 +96,7 @@ export function ReviewActionBar({
   statuses,
 }: ReviewActionBarProps) {
   const aggregate = aggregateStatus(statuses)
-  const selection = useOptionalReviewSelection()
+  const selection = useOptionalReviewSelectionActions()
 
   return (
     <div className="sticky top-14 z-20 -mx-4 flex flex-col gap-3 border-b border-border/60 bg-background/82 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:flex-row lg:items-center lg:justify-between lg:px-8">

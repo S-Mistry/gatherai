@@ -76,11 +76,11 @@ export function buildGeneratedOutputPlaceholder(
     unresolvedQuestions: config.requiredQuestions.map(
       (question) => question.prompt
     ),
-    workshopImplications: [],
+    projectImplications: [],
     recommendedActions: [],
     analysisWarnings: [],
     confidenceScore: 0,
-    stakeholderProfile: session.metadata,
+    respondentProfile: session.metadata,
     promptVersionId: "pending",
     modelVersionId: "pending",
     createdAt: new Date().toISOString(),
@@ -170,8 +170,8 @@ export function buildSessionOutput(
     opportunities: [
       {
         id: `opportunity-${session.id}-1`,
-        label: "Workshop opportunity",
-        summary: `Use the workshop to resolve ${focusAreas[0] ?? "the highest-priority friction point"} with explicit decision-making examples.`,
+        label: "Project opportunity",
+        summary: `Use the next session or decision review to resolve ${focusAreas[0] ?? "the highest-priority friction point"} with explicit examples.`,
         evidence,
       },
     ],
@@ -180,7 +180,7 @@ export function buildSessionOutput(
         id: `risk-${session.id}-1`,
         label: "Open risk",
         summary: config.prohibitedTopics[0]
-          ? `Avoid drifting into ${config.prohibitedTopics[0]} while exploring the stakeholder's concerns.`
+          ? `Avoid drifting into ${config.prohibitedTopics[0]} while exploring the respondent's concerns.`
           : "A longer transcript is needed before risks can be assessed with confidence.",
         evidence,
       },
@@ -229,15 +229,15 @@ export function buildSessionOutput(
         session.runtimeState.remainingQuestionIds.includes(question.id)
       )
       .map((question) => question.prompt),
-    workshopImplications: [
-      "Use this interview as a starting point for workshop framing.",
+    projectImplications: [
+      "Use this interview as a starting point for project framing.",
     ],
     recommendedActions: [
       "Confirm the highest-friction approval path with additional stakeholders.",
     ],
     analysisWarnings: [],
     confidenceScore: Number(confidence.toFixed(2)),
-    stakeholderProfile: session.metadata,
+    respondentProfile: session.metadata,
     promptVersionId,
     modelVersionId,
     createdAt: new Date().toISOString(),
@@ -304,10 +304,10 @@ export function buildQualityScore(
         "Placeholder analysis is grounded only in persisted transcript segments.",
     },
     {
-      key: "workshop_usefulness",
+      key: "decision_usefulness",
       score: usefulness,
       rationale:
-        "Measures whether the session is sufficiently complete to influence workshop planning.",
+        "Measures whether the session is sufficiently complete to influence planning or improvement decisions.",
     },
   ]
 
@@ -337,7 +337,7 @@ export function buildEmptyProjectSynthesis(
     alignmentSignals: [],
     misalignmentSignals: [],
     topProblems: [],
-    suggestedWorkshopAgenda: [],
+    recommendedFocusAreas: [],
     notableQuotesByTheme: [],
     warning:
       "Synthesis will strengthen after the first completed interviews arrive.",
@@ -427,7 +427,7 @@ export function buildProjectSynthesis(
   const topProblems = uniqueStrings(
     outputs.flatMap((output) => output.painPoints.map((claim) => claim.label))
   ).slice(0, 3)
-  const suggestedWorkshopAgenda = uniqueStrings([
+  const recommendedFocusAreas = uniqueStrings([
     "Clarify the highest-friction decision path",
     "Review transcript-backed pain points",
     "Agree an exception-handling pilot",
@@ -449,7 +449,7 @@ export function buildProjectSynthesis(
     misalignmentSignals:
       contradictionMap.length > 0 ? contradictionMap.map((item) => item.topic) : [],
     topProblems,
-    suggestedWorkshopAgenda,
+    recommendedFocusAreas,
     notableQuotesByTheme,
     warning:
       includedSessions.length < 2

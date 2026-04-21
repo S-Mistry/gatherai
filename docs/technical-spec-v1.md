@@ -1,6 +1,6 @@
 # Technical Spec v1
 
-Last updated: April 16, 2026
+Last updated: April 18, 2026
 
 ## 1. Scope
 
@@ -40,33 +40,36 @@ Last updated: April 16, 2026
 - Participant path:
   - browser loads `/i/[linkToken]`
   - page creates or resumes a participant session through a public route handler
-  - route handler validates the link token, creates or resumes the session, and returns a signed recovery token plus session metadata
-  - browser requests an OpenAI realtime client secret from a server route
+  - the session-start route resolves the public link and current config once, creates the session, and returns a signed recovery token plus session metadata
+  - browser requests an OpenAI realtime client secret from a server route that validates the session and resolves the current public config without loading transcript history
   - browser connects to OpenAI Realtime over WebRTC
   - the realtime session explicitly triggers Mia's opening response so the participant does not need to speak first
   - participant runtime persists intro, readiness, pause, resume, and completion state updates alongside transcript items
   - the timed interview starts only after a soft readiness signal or a substantive first answer
   - browser subscribes to realtime history updates and persists completed participant and agent transcript items back to public route handlers
   - transcript ingest uses stable realtime source item IDs so reconnects and retry flushes stay idempotent
+  - transcript append and `order_index` assignment run through a server-only SQL helper so retries dedupe atomically and preserve transcript order
 - Consultant path:
   - browser loads `/sign-in`
   - page starts Supabase Google OAuth by default or exposes the magic-link fallback when the deploy-time auth flag enables it
   - Supabase redirects back through `/auth/callback`, which exchanges the auth code and establishes the consultant session
   - browser loads `/app/...`
-  - server components and server actions fetch consultant-scoped data from Supabase
+  - server components and server actions fetch consultant-scoped data from Supabase through route-specific repository loaders rather than one broad workspace snapshot path
   - the project synthesis surface lazily resolves transcript-backed evidence in a right-side drawer through an authenticated consultant read route
   - RLS restricts reads and writes to the consultant workspace
 - Analysis path:
   - session completion enqueues transcript cleaning, extraction, and quality scoring jobs
-  - transcript cleaning is deterministic: normalize whitespace, preserve speaker order, merge consecutive same-speaker fragments when safe, and mark low-signal greeting or channel-check turns for downstream analysis
+  - transcript cleaning is deterministic: normalize whitespace, preserve speaker order, merge consecutive same-speaker fragments when safe, preserve meaningful multi-segment participant spans, and mark low-signal greeting or channel-check turns for downstream analysis
   - session extraction is a staged pipeline:
-    - grounding pass extracts question-level coverage, verbatim quote candidates, and insight candidates with exact participant evidence refs
-    - narrative pass consumes only grounded artifacts to write summary, workshop implications, recommended actions, and unresolved questions
-    - hard sessions may escalate to a larger synthesis-grade model when the grounding pass is too thin for the available transcript
+    - grounding pass extracts question-level coverage, verbatim quote candidates, and insight candidates with exact participant evidence refs while explicitly separating obvious observations from subtle latent signals
+    - subtle session claims must be anchored across multiple participant segments or stay unresolved instead of being promoted as confident findings
+    - deterministic post-processing drops generic claim titles, empty or untraceable evidence, and over-reused single-segment evidence, and keeps required questions as `partial` or `missing` when transcript support is thin
+    - narrative pass consumes only grounded artifacts to write summary, project implications, recommended actions, and unresolved questions
+    - hard sessions may escalate to a larger synthesis-grade model when the grounding pass is too thin for the available transcript, quote support is sparse, or most evidence is concentrated in one segment
   - session outputs are append-only generated runs; read paths resolve the latest successful run and layer consultant overrides on top
-  - quality scoring combines deterministic structural checks with a cheap model-assisted faithfulness and workshop-usefulness pass, while manual consultant quality overrides remain separate from generated scores
-  - the completion route immediately claims and processes that session's queued jobs in deterministic order, then enqueues and runs project synthesis
-  - project synthesis uses only completed, non-excluded effective session outputs, consumes the latest generated run per session, and rejects claims without valid cited evidence
+  - quality scoring combines deterministic structural checks with a cheap model-assisted faithfulness and decision-usefulness pass, using the cleaned transcript plus a compact generated-analysis payload, while manual consultant quality overrides remain separate from generated scores
+  - the completion route immediately claims and processes that session's queued jobs in deterministic order, reusing one preloaded session analysis context through extraction, quality scoring, and async trace logging, then enqueues and runs project synthesis
+  - project synthesis uses only completed, non-excluded effective session outputs, consumes the latest generated run per session through a SQL helper instead of scanning append-only history in application code, normalizes synonymous session themes into shared clusters before prompting, computes theme frequency from distinct included sessions, and rejects claims without valid cited evidence
   - internal dispatch routes and cron sweeps remain recovery paths for queued or stuck jobs
   - Braintrust traces and online scores are stored asynchronously
 
@@ -107,7 +110,7 @@ Last updated: April 16, 2026
 - `POST /api/public/sessions/[sessionId]/client-secret`
   - mint an OpenAI realtime client secret after validating session eligibility
 - `POST /api/public/sessions/[sessionId]/events`
-  - ingest transcript segments plus runtime state changes such as intro delivered, readiness detected, and pause or resume, keyed by optional realtime source item IDs for idempotent persistence
+  - ingest transcript segments plus runtime state changes such as intro delivered, readiness detected, and pause or resume, keyed by optional realtime source item IDs for idempotent persistence and persisted through an atomic SQL append helper
 - `POST /api/public/sessions/[sessionId]/complete`
   - finalize the session, persist final elapsed interview timing, enqueue downstream session analysis jobs, and trigger immediate session-scoped dispatch
 
@@ -126,7 +129,7 @@ Last updated: April 16, 2026
 ### 4.6 Consultant server actions
 
 - project create/update/version
-- project create bootstraps the project row, initial config version, and initial public link atomically
+- project create bootstraps the project row, immutable `project_type`, initial config version, and initial public link atomically, applying mode-specific starter defaults when fields are omitted
 - session include/exclude toggle
 - session claim suppress/restore
 - session quality override
@@ -138,10 +141,14 @@ Last updated: April 16, 2026
 
 ### 5.1 Core types
 
+- `ProjectType`
+  - immutable project route selector: `discovery` or `feedback`
+- `ProjectRecord`
+  - consultant-owned project shell including immutable `projectType`, current config version, and active public link token
 - `ProjectConfigVersion`
   - immutable configuration snapshot used by one or more sessions
 - `PublicInterviewConfig`
-  - safe participant-facing subset of project configuration
+  - safe participant-facing subset of project configuration, including `projectType` plus mode-aware intro and disclosure copy
 - `ParticipantSession`
   - public session record pinned to one `project_config_version_id`
 - `SessionRuntimeState`
@@ -223,10 +230,12 @@ Last updated: April 16, 2026
 ### 6.4 Default heuristics
 
 - ask one core question at a time
-- allow two follow-ups by default
+- allow two follow-ups by default for discovery and one follow-up by default for feedback
 - exceed two follow-ups only if novelty remains high and there is time budget remaining
 - move on when the participant signals completion, novelty drops, time threshold is hit, or coverage confidence is high enough
 - end the session at the configured duration cap even if some questions remain
+- discovery defaults target roughly 15 minutes and pseudonymous collection
+- feedback defaults target roughly 6 minutes and anonymous collection
 
 ## 7. Supabase schema
 
@@ -255,6 +264,8 @@ Last updated: April 16, 2026
 - jobs are inserted with `status = 'queued'`
 - workers claim jobs via SQL function using `FOR UPDATE SKIP LOCKED`
 - route handlers call public RPC wrappers that delegate to `app.claim_analysis_jobs` and `app.release_stale_analysis_jobs`
+- participant transcript ingest uses a dedicated SQL helper that locks the session row, updates runtime state and activity timestamps, dedupes `source_item_id`, and assigns new transcript order indices in one transaction
+- project synthesis resolves the latest generated output per session through a dedicated SQL helper instead of reading full append-only output history into application memory
 - session completion also uses a session-scoped dispatch path so the respondent review is populated immediately after completion
 - retries increment `attempt_count` and set `next_attempt_at`
 - cron sweeps reclaim stuck `processing` jobs whose lock has expired
@@ -283,22 +294,25 @@ Last updated: April 16, 2026
 
 - signal-first dashboard
 - zero-project dashboard empty state with a single CTA to create the first project
-- projects list with status chips
-- project detail with config version history, session table, quality flags, and synthesis summary
-- session review page with evidence-backed claims and editable overrides
+- projects list with status chips and project-type badges
+- new-project setup uses explicit discovery and feedback choice cards, starter prompts, and a live participant/analysis preview rail rather than a hidden type dropdown
+- project detail with config version history, session table, quality flags, synthesis summary, and a share-timing hint for feedback projects
+- session review page with evidence-backed claims, editable overrides, answered or partial or missing required-question counts, and thin-evidence warnings when confidence is limited by transcript depth
 - session review page distinguishes transcript and analysis `pending`, `failed`, and `ready` states instead of showing placeholder copy as persisted content
+- authenticated app chrome stays server-rendered except for a small active-nav island, and review selection state updates are localized so transcript hover or focus does not rerender the full review surface
 
 ### 10.2 Participant UX
 
 - one-click entry from the public link
-- concise disclosure before microphone access
+- concise, mode-aware disclosure before microphone access
 - optional metadata collection driven by config
 - clear session length expectation
-- Mia speaks first with a short disclosure and readiness prompt
+- Mia speaks first with a mode-aware intro, disclosure, and readiness prompt
 - timer starts only after the participant indicates they are ready or begins substantively
 - live status uses an event-driven waveform that distinguishes listening, thinking, and speaking
 - microphone permission error state
 - paused, resumed, and completed states
+- completion copy mirrors the selected project type so discovery closes as planning input and feedback closes as improvement input
 
 ## 11. Environment variables
 
@@ -343,6 +357,8 @@ Last updated: April 16, 2026
 ## 13. Validation targets
 
 - `npm --prefix gather run supabase:bootstrap`
+- `npm --prefix gather run analysis:eval`
+- `npm --prefix gather run test:fixtures`
 - `npm run docs:check`
 - `npm --prefix gather run typecheck`
 - `npm --prefix gather run build`

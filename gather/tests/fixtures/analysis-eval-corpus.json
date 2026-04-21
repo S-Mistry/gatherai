@@ -1,0 +1,2655 @@
+{
+  "projects": [
+    {
+      "id": "proj-noisy-greetings",
+      "name": "Signal Hygiene Study",
+      "clientName": "Riverstone",
+      "objective": "Understand what the workshop should fix in the approval flow.",
+      "areasOfInterest": [
+        "approval speed",
+        "decision ownership",
+        "exception handling"
+      ],
+      "requiredQuestions": [
+        {
+          "id": "q-outcome",
+          "prompt": "What would make this workshop useful for you?",
+          "goal": "Capture success criteria."
+        },
+        {
+          "id": "q-friction",
+          "prompt": "Where is the biggest day-to-day friction today?",
+          "goal": "Find operational pain points."
+        },
+        {
+          "id": "q-risk",
+          "prompt": "What risk should we account for in the workshop?",
+          "goal": "Surface implementation risk."
+        }
+      ],
+      "sessions": [
+        {
+          "id": "sess-noisy-1",
+          "respondentLabel": "Avery",
+          "metadata": {
+            "department": "Operations"
+          },
+          "transcript": [
+            {
+              "id": "seg-noisy-1",
+              "speaker": "agent",
+              "text": "Hi, I am Mia. Say ready when you want to begin."
+            },
+            {
+              "id": "seg-noisy-2",
+              "speaker": "participant",
+              "text": "Hi."
+            },
+            {
+              "id": "seg-noisy-3",
+              "speaker": "participant",
+              "text": "Yes, I can hear you."
+            },
+            {
+              "id": "seg-noisy-4",
+              "speaker": "agent",
+              "text": "What would make this workshop useful for you?"
+            },
+            {
+              "id": "seg-noisy-5",
+              "speaker": "participant",
+              "text": "It would help if we finally agreed who can approve urgent exceptions."
+            },
+            {
+              "id": "seg-noisy-6",
+              "speaker": "participant",
+              "text": "Right now finance and operations both sign off, so routine requests wait for days."
+            },
+            {
+              "id": "seg-noisy-7",
+              "speaker": "agent",
+              "text": "What risk should the workshop account for?"
+            },
+            {
+              "id": "seg-noisy-8",
+              "speaker": "participant",
+              "text": "If we keep adding reviewers, the team will keep working around the process."
+            }
+          ],
+          "grounded": {
+            "questionReviews": [
+              {
+                "questionId": "q-outcome",
+                "status": "answered",
+                "answer": "The workshop should clarify who approves urgent exceptions.",
+                "confidence": 0.9,
+                "keyPoints": [
+                  "Clarify exception ownership",
+                  "Reduce duplicate sign-off"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-noisy-5",
+                      "seg-noisy-6"
+                    ],
+                    "rationale": "The respondent named exception ownership and duplicate approvals."
+                  }
+                ],
+                "followUpQuestions": []
+              },
+              {
+                "questionId": "q-friction",
+                "status": "answered",
+                "answer": "Routine work slows down because finance and operations both approve it.",
+                "confidence": 0.88,
+                "keyPoints": [
+                  "Duplicate approvals",
+                  "Requests wait for days"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-noisy-6"
+                    ],
+                    "rationale": "The respondent described the duplicated sign-off loop."
+                  }
+                ],
+                "followUpQuestions": []
+              },
+              {
+                "questionId": "q-risk",
+                "status": "answered",
+                "answer": "People bypass the process when approvals multiply.",
+                "confidence": 0.82,
+                "keyPoints": [
+                  "Process workarounds"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-noisy-8"
+                    ],
+                    "rationale": "The respondent said the team works around the process."
+                  }
+                ],
+                "followUpQuestions": []
+              }
+            ],
+            "quoteLibrary": [
+              {
+                "label": "Approval loop",
+                "context": "The respondent described the current review cycle.",
+                "questionIds": [
+                  "q-friction"
+                ],
+                "themeHints": [
+                  "Approval bottlenecks"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-noisy-6"
+                    ],
+                    "rationale": "Direct quote describing duplicated sign-off."
+                  }
+                ]
+              },
+              {
+                "label": "Process workaround",
+                "context": "The respondent explained what happens when the process feels too slow.",
+                "questionIds": [
+                  "q-risk"
+                ],
+                "themeHints": [
+                  "Workarounds"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-noisy-8"
+                    ],
+                    "rationale": "Direct quote about bypass behavior."
+                  }
+                ]
+              }
+            ],
+            "insightCards": [
+              {
+                "kind": "theme",
+                "title": "Approval bottlenecks",
+                "summary": "Routine work is slowed by duplicated sign-off between finance and operations.",
+                "priority": "high",
+                "signalStrength": "obvious",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-noisy-6"
+                    ],
+                    "rationale": "The respondent described duplicated sign-off."
+                  }
+                ]
+              },
+              {
+                "kind": "theme",
+                "title": "Emerging theme",
+                "summary": "There is some friction somewhere in the process.",
+                "priority": "low",
+                "signalStrength": "obvious",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-noisy-6"
+                    ],
+                    "rationale": "Generic placeholder theme."
+                  }
+                ]
+              },
+              {
+                "kind": "pain_point",
+                "title": "Duplicate approvals",
+                "summary": "Two functions review the same routine requests.",
+                "priority": "high",
+                "signalStrength": "obvious",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-noisy-6"
+                    ],
+                    "rationale": "The respondent described finance and operations both signing off."
+                  }
+                ]
+              },
+              {
+                "kind": "risk",
+                "title": "Workarounds replacing process",
+                "summary": "The team creates side routes when approvals feel too slow.",
+                "priority": "medium",
+                "signalStrength": "obvious",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-noisy-8"
+                    ],
+                    "rationale": "The respondent described bypass behavior."
+                  }
+                ]
+              },
+              {
+                "kind": "tension",
+                "title": "Faster exceptions versus control",
+                "summary": "The respondent wants urgent requests to move faster without losing approval discipline.",
+                "priority": "medium",
+                "signalStrength": "subtle",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-noisy-5",
+                      "seg-noisy-6"
+                    ],
+                    "rationale": "The respondent linked exception ownership to approval speed."
+                  }
+                ]
+              },
+              {
+                "kind": "opportunity",
+                "title": "Workshop opportunity",
+                "summary": "The workshop could improve something.",
+                "priority": "low",
+                "signalStrength": "obvious",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-noisy-5"
+                    ],
+                    "rationale": "Generic opportunity placeholder."
+                  }
+                ]
+              }
+            ],
+            "respondentProfile": {
+              "department": "Operations"
+            },
+            "analysisWarnings": []
+          },
+          "narrative": {
+            "summary": "Avery wants the workshop to clarify exception ownership and unblock duplicate approvals.",
+            "projectImplications": [
+              "Use the workshop to map who can approve routine versus urgent exceptions."
+            ],
+            "recommendedActions": [
+              "Pressure-test whether finance and operations both need to approve the same request."
+            ],
+            "unresolvedQuestions": [],
+            "confidenceScore": 0.83
+          },
+          "expectations": {
+            "lowSignalSegmentIds": [
+              "seg-noisy-2",
+              "seg-noisy-3"
+            ],
+            "answered": 3,
+            "partial": 0,
+            "missing": 0,
+            "themeTitles": [
+              "Approval bottlenecks"
+            ],
+            "absentThemeTitles": [
+              "Emerging theme"
+            ],
+            "tensionTitles": [
+              "Faster exceptions versus control"
+            ],
+            "warningIncludes": [
+              "Dropped generic theme title",
+              "Dropped generic opportunity title"
+            ],
+            "confidenceMin": 0.7,
+            "minQuoteCount": 2
+          }
+        }
+      ],
+      "projectType": "discovery"
+    },
+    {
+      "id": "proj-nonlinear-answers",
+      "name": "Question Mapping Check",
+      "clientName": "Northline",
+      "objective": "Check that non-linear answers still map back to the right questions.",
+      "areasOfInterest": [
+        "escalation paths",
+        "threshold clarity",
+        "risk"
+      ],
+      "requiredQuestions": [
+        {
+          "id": "q-outcome",
+          "prompt": "What would make this workshop useful for you?",
+          "goal": "Capture the desired outcome."
+        },
+        {
+          "id": "q-friction",
+          "prompt": "Where is the current friction?",
+          "goal": "Capture process friction."
+        },
+        {
+          "id": "q-risk",
+          "prompt": "What risk should we account for?",
+          "goal": "Capture risk."
+        }
+      ],
+      "sessions": [
+        {
+          "id": "sess-nonlinear-1",
+          "respondentLabel": "Mina",
+          "metadata": {
+            "department": "Regional Ops"
+          },
+          "transcript": [
+            {
+              "id": "seg-nonlinear-1",
+              "speaker": "agent",
+              "text": "What would make this workshop useful for you?"
+            },
+            {
+              "id": "seg-nonlinear-2",
+              "speaker": "participant",
+              "text": "The biggest risk is that regional teams escalate everything because nobody knows the exception threshold."
+            },
+            {
+              "id": "seg-nonlinear-3",
+              "speaker": "agent",
+              "text": "Where is the current friction?"
+            },
+            {
+              "id": "seg-nonlinear-4",
+              "speaker": "participant",
+              "text": "Friction shows up when each team asks for a second review before acting."
+            },
+            {
+              "id": "seg-nonlinear-5",
+              "speaker": "participant",
+              "text": "The workshop would be useful if we left with one escalation rule and one owner."
+            }
+          ],
+          "grounded": {
+            "questionReviews": [
+              {
+                "questionId": "q-risk",
+                "status": "answered",
+                "answer": "The risk is over-escalation because the threshold is unclear.",
+                "confidence": 0.9,
+                "keyPoints": [
+                  "Unclear exception threshold",
+                  "Teams escalate too much"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-nonlinear-2"
+                    ],
+                    "rationale": "The respondent named the risk before answering the workshop outcome question."
+                  }
+                ],
+                "followUpQuestions": []
+              },
+              {
+                "questionId": "q-friction",
+                "status": "answered",
+                "answer": "Friction comes from redundant second reviews.",
+                "confidence": 0.82,
+                "keyPoints": [
+                  "Second review loop"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-nonlinear-4"
+                    ],
+                    "rationale": "The respondent described each team asking for another review."
+                  }
+                ],
+                "followUpQuestions": []
+              },
+              {
+                "questionId": "q-outcome",
+                "status": "answered",
+                "answer": "The workshop should produce one escalation rule and one owner.",
+                "confidence": 0.86,
+                "keyPoints": [
+                  "One escalation rule",
+                  "One owner"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-nonlinear-5"
+                    ],
+                    "rationale": "The respondent directly answered the workshop outcome later in the conversation."
+                  }
+                ],
+                "followUpQuestions": []
+              }
+            ],
+            "quoteLibrary": [
+              {
+                "label": "Escalation threshold",
+                "context": "The respondent named the threshold ambiguity as a risk.",
+                "questionIds": [
+                  "q-risk"
+                ],
+                "themeHints": [
+                  "Escalation ownership"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-nonlinear-2"
+                    ],
+                    "rationale": "Direct risk quote."
+                  }
+                ]
+              },
+              {
+                "label": "One owner",
+                "context": "The respondent defined the desired workshop outcome.",
+                "questionIds": [
+                  "q-outcome"
+                ],
+                "themeHints": [
+                  "Escalation ownership"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-nonlinear-5"
+                    ],
+                    "rationale": "Direct outcome quote."
+                  }
+                ]
+              }
+            ],
+            "insightCards": [
+              {
+                "kind": "theme",
+                "title": "Escalation ownership",
+                "summary": "The respondent wants a single owner and a clear rule for escalation.",
+                "priority": "high",
+                "signalStrength": "obvious",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-nonlinear-2",
+                      "seg-nonlinear-5"
+                    ],
+                    "rationale": "The respondent linked escalation risk to the need for one owner."
+                  }
+                ]
+              },
+              {
+                "kind": "pain_point",
+                "title": "Redundant review loop",
+                "summary": "Teams delay action by requesting another review.",
+                "priority": "medium",
+                "signalStrength": "obvious",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-nonlinear-4"
+                    ],
+                    "rationale": "The respondent described a second-review pattern."
+                  }
+                ]
+              }
+            ],
+            "respondentProfile": {
+              "department": "Regional Ops"
+            },
+            "analysisWarnings": []
+          },
+          "narrative": {
+            "summary": "Mina wants a single escalation rule and sees redundant reviews plus threshold ambiguity as the main blockers.",
+            "projectImplications": [
+              "Use the workshop to define one escalation threshold and one accountable owner."
+            ],
+            "recommendedActions": [
+              "Map the second-review loop and identify where authority currently stalls."
+            ],
+            "unresolvedQuestions": [],
+            "confidenceScore": 0.8
+          },
+          "expectations": {
+            "questionStatuses": {
+              "q-outcome": "answered",
+              "q-friction": "answered",
+              "q-risk": "answered"
+            },
+            "answered": 3,
+            "partial": 0,
+            "missing": 0,
+            "themeTitles": [
+              "Escalation ownership"
+            ],
+            "confidenceMin": 0.7,
+            "minQuoteCount": 2
+          }
+        }
+      ],
+      "projectType": "discovery"
+    },
+    {
+      "id": "proj-governance-tension",
+      "name": "Governance Tension Signals",
+      "clientName": "Harbor",
+      "objective": "Capture the subtle governance tensions the workshop needs to surface.",
+      "areasOfInterest": [
+        "decision rights",
+        "regional autonomy",
+        "governance risk"
+      ],
+      "requiredQuestions": [
+        {
+          "id": "q-outcome",
+          "prompt": "What should this workshop resolve?",
+          "goal": "Capture the desired decision."
+        },
+        {
+          "id": "q-alignment",
+          "prompt": "Where do teams feel aligned or misaligned today?",
+          "goal": "Surface tensions."
+        },
+        {
+          "id": "q-risk",
+          "prompt": "What risk should we account for?",
+          "goal": "Surface risk."
+        }
+      ],
+      "sessions": [
+        {
+          "id": "sess-governance-1",
+          "respondentLabel": "Jonas",
+          "metadata": {
+            "department": "Ops Strategy"
+          },
+          "transcript": [
+            {
+              "id": "seg-gov-1",
+              "speaker": "participant",
+              "text": "The workshop needs to decide where routine exceptions should live."
+            },
+            {
+              "id": "seg-gov-2",
+              "speaker": "participant",
+              "text": "Regional leads need room to move quickly when the case is standard."
+            },
+            {
+              "id": "seg-gov-3",
+              "speaker": "participant",
+              "text": "Central operations still wants final sign-off when policy is stretched."
+            },
+            {
+              "id": "seg-gov-4",
+              "speaker": "participant",
+              "text": "If we do not resolve that split, people will keep escalating sideways."
+            }
+          ],
+          "grounded": {
+            "questionReviews": [
+              {
+                "questionId": "q-outcome",
+                "status": "answered",
+                "answer": "The workshop should decide where routine exceptions belong.",
+                "confidence": 0.82,
+                "keyPoints": [
+                  "Resolve exception location"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-gov-1"
+                    ],
+                    "rationale": "The respondent named the key workshop decision."
+                  }
+                ],
+                "followUpQuestions": []
+              },
+              {
+                "questionId": "q-alignment",
+                "status": "answered",
+                "answer": "Regional speed and central control are in tension.",
+                "confidence": 0.86,
+                "keyPoints": [
+                  "Regional autonomy",
+                  "Central sign-off"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-gov-2",
+                      "seg-gov-3"
+                    ],
+                    "rationale": "The respondent contrasted regional autonomy with central control."
+                  }
+                ],
+                "followUpQuestions": []
+              },
+              {
+                "questionId": "q-risk",
+                "status": "answered",
+                "answer": "The risk is that people keep escalating sideways if authority stays split.",
+                "confidence": 0.8,
+                "keyPoints": [
+                  "Side-channel escalation"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-gov-4"
+                    ],
+                    "rationale": "The respondent named sideways escalation as the risk."
+                  }
+                ],
+                "followUpQuestions": []
+              }
+            ],
+            "quoteLibrary": [
+              {
+                "label": "Regional room to move",
+                "context": "The respondent described the need for local autonomy.",
+                "questionIds": [
+                  "q-alignment"
+                ],
+                "themeHints": [
+                  "Exception decision rights"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-gov-2"
+                    ],
+                    "rationale": "Direct quote about regional speed."
+                  }
+                ]
+              },
+              {
+                "label": "Central sign-off",
+                "context": "The respondent described central control under policy stretch.",
+                "questionIds": [
+                  "q-alignment"
+                ],
+                "themeHints": [
+                  "Exception decision rights"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-gov-3"
+                    ],
+                    "rationale": "Direct quote about final sign-off."
+                  }
+                ]
+              }
+            ],
+            "insightCards": [
+              {
+                "kind": "theme",
+                "title": "Exception decision rights",
+                "summary": "The respondent sees unclear ownership for routine exceptions.",
+                "priority": "high",
+                "signalStrength": "obvious",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-gov-1",
+                      "seg-gov-2",
+                      "seg-gov-3"
+                    ],
+                    "rationale": "The respondent linked the workshop decision to the autonomy versus control split."
+                  }
+                ]
+              },
+              {
+                "kind": "tension",
+                "title": "Regional autonomy versus central control",
+                "summary": "The respondent wants standard cases to move locally while central operations keeps control when policy stretches.",
+                "priority": "high",
+                "signalStrength": "subtle",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-gov-2",
+                      "seg-gov-3"
+                    ],
+                    "rationale": "The respondent contrasted regional autonomy with central control."
+                  }
+                ]
+              },
+              {
+                "kind": "risk",
+                "title": "Latent governance split",
+                "summary": "An unresolved governance split could keep slowing decisions.",
+                "priority": "medium",
+                "signalStrength": "subtle",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-gov-3"
+                    ],
+                    "rationale": "Thin subtle risk that should not survive."
+                  }
+                ]
+              },
+              {
+                "kind": "risk",
+                "title": "Side-channel escalation",
+                "summary": "People escalate informally when authority remains split.",
+                "priority": "medium",
+                "signalStrength": "obvious",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-gov-4"
+                    ],
+                    "rationale": "The respondent explicitly named sideways escalation."
+                  }
+                ]
+              }
+            ],
+            "respondentProfile": {
+              "department": "Ops Strategy"
+            },
+            "analysisWarnings": []
+          },
+          "narrative": {
+            "summary": "Jonas wants the workshop to resolve exception decision rights and expose the tension between regional speed and central control.",
+            "projectImplications": [
+              "Design the workshop around which exception types should remain local and when central approval is still required."
+            ],
+            "recommendedActions": [
+              "Capture concrete cases where regional teams need autonomy but policy boundaries still matter."
+            ],
+            "unresolvedQuestions": [],
+            "confidenceScore": 0.82
+          },
+          "expectations": {
+            "answered": 3,
+            "partial": 0,
+            "missing": 0,
+            "themeTitles": [
+              "Exception decision rights"
+            ],
+            "tensionTitles": [
+              "Regional autonomy versus central control"
+            ],
+            "warningIncludes": [
+              "Dropped subtle claim"
+            ],
+            "minQuoteCount": 2
+          }
+        }
+      ],
+      "projectType": "discovery"
+    },
+    {
+      "id": "proj-thin-evidence",
+      "name": "Thin Transcript Guardrail",
+      "clientName": "Lantern",
+      "objective": "Ensure shallow interviews remain obviously low confidence.",
+      "areasOfInterest": [
+        "clarity",
+        "approvals"
+      ],
+      "requiredQuestions": [
+        {
+          "id": "q-outcome",
+          "prompt": "What would make this workshop useful?",
+          "goal": "Capture outcome."
+        },
+        {
+          "id": "q-friction",
+          "prompt": "Where is the friction?",
+          "goal": "Capture friction."
+        },
+        {
+          "id": "q-risk",
+          "prompt": "What risk should we account for?",
+          "goal": "Capture risk."
+        }
+      ],
+      "sessions": [
+        {
+          "id": "sess-thin-1",
+          "respondentLabel": "Leah",
+          "metadata": {
+            "department": "Finance"
+          },
+          "transcript": [
+            {
+              "id": "seg-thin-1",
+              "speaker": "participant",
+              "text": "Okay."
+            },
+            {
+              "id": "seg-thin-2",
+              "speaker": "agent",
+              "text": "What would make this workshop useful?"
+            },
+            {
+              "id": "seg-thin-3",
+              "speaker": "participant",
+              "text": "I just want less confusion."
+            },
+            {
+              "id": "seg-thin-4",
+              "speaker": "agent",
+              "text": "Where is the friction?"
+            },
+            {
+              "id": "seg-thin-5",
+              "speaker": "participant",
+              "text": "Mostly approvals."
+            }
+          ],
+          "grounded": {
+            "questionReviews": [
+              {
+                "questionId": "q-outcome",
+                "status": "answered",
+                "answer": "The workshop should reduce confusion.",
+                "confidence": 0.62,
+                "keyPoints": [
+                  "Less confusion"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-thin-3"
+                    ],
+                    "rationale": "The respondent gave a minimal outcome statement."
+                  }
+                ],
+                "followUpQuestions": []
+              },
+              {
+                "questionId": "q-friction",
+                "status": "answered",
+                "answer": "Approvals are the friction point.",
+                "confidence": 0.54,
+                "keyPoints": [
+                  "Approvals"
+                ],
+                "evidence": [],
+                "followUpQuestions": [
+                  "Which approvals cause the delay?"
+                ]
+              },
+              {
+                "questionId": "q-risk",
+                "status": "missing",
+                "answer": "",
+                "confidence": 0,
+                "keyPoints": [],
+                "evidence": [],
+                "followUpQuestions": [
+                  "What risk should we account for?"
+                ]
+              }
+            ],
+            "quoteLibrary": [
+              {
+                "label": "Less confusion",
+                "context": "The respondent gave a brief desired outcome.",
+                "questionIds": [
+                  "q-outcome"
+                ],
+                "themeHints": [
+                  "Clarity"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-thin-3"
+                    ],
+                    "rationale": "Direct quote about wanting less confusion."
+                  }
+                ]
+              }
+            ],
+            "insightCards": [
+              {
+                "kind": "theme",
+                "title": "Emerging theme",
+                "summary": "There is probably a theme around process clarity.",
+                "priority": "low",
+                "signalStrength": "obvious",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-thin-5"
+                    ],
+                    "rationale": "Generic theme placeholder."
+                  }
+                ]
+              },
+              {
+                "kind": "pain_point",
+                "title": "Approval ambiguity",
+                "summary": "Approvals might be confusing.",
+                "priority": "low",
+                "signalStrength": "subtle",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-thin-5"
+                    ],
+                    "rationale": "Thin subtle claim that should not survive."
+                  }
+                ]
+              }
+            ],
+            "respondentProfile": {
+              "department": "Finance"
+            },
+            "analysisWarnings": []
+          },
+          "narrative": {
+            "summary": "Leah gave a minimal response and pointed vaguely to approvals.",
+            "projectImplications": [
+              "Treat this interview as directional until follow-up detail is gathered."
+            ],
+            "recommendedActions": [
+              "Run a follow-up interview focused on which approvals create the confusion."
+            ],
+            "unresolvedQuestions": [
+              "Which approvals are actually causing the delay?"
+            ],
+            "confidenceScore": 0.46
+          },
+          "expectations": {
+            "lowSignalSegmentIds": [
+              "seg-thin-1"
+            ],
+            "answered": 1,
+            "partial": 1,
+            "missing": 1,
+            "warningIncludes": [
+              "Dropped subtle claim",
+              "Dropped generic theme title",
+              "Most grounded claims rely on thin transcript evidence"
+            ],
+            "confidenceMax": 0.4,
+            "minQuoteCount": 1
+          }
+        }
+      ],
+      "projectType": "discovery"
+    },
+    {
+      "id": "proj-synthesis-clustering",
+      "name": "Synthesis Clustering Regression",
+      "clientName": "Aster",
+      "objective": "Ensure cross-session synthesis clusters synonymous themes and ignores excluded noise.",
+      "areasOfInterest": [
+        "approval speed",
+        "decision ownership",
+        "regional delegation"
+      ],
+      "requiredQuestions": [
+        {
+          "id": "q-outcome",
+          "prompt": "What would make this workshop useful?",
+          "goal": "Capture outcome."
+        },
+        {
+          "id": "q-friction",
+          "prompt": "Where is the current friction?",
+          "goal": "Capture friction."
+        },
+        {
+          "id": "q-alignment",
+          "prompt": "Where do teams feel aligned or misaligned?",
+          "goal": "Capture alignment."
+        }
+      ],
+      "sessions": [
+        {
+          "id": "sess-synth-a",
+          "respondentLabel": "Amelia",
+          "metadata": {
+            "department": "Operations"
+          },
+          "transcript": [
+            {
+              "id": "seg-synth-a-1",
+              "speaker": "participant",
+              "text": "We need one owner for routine exceptions."
+            },
+            {
+              "id": "seg-synth-a-2",
+              "speaker": "participant",
+              "text": "We do not need another framework; we need a way to stop waiting on three approvals."
+            },
+            {
+              "id": "seg-synth-a-3",
+              "speaker": "participant",
+              "text": "Regional teams should handle standard cases, but central operations still wants final sign-off."
+            }
+          ],
+          "grounded": {
+            "questionReviews": [
+              {
+                "questionId": "q-outcome",
+                "status": "answered",
+                "answer": "The workshop should name one owner for routine exceptions.",
+                "confidence": 0.9,
+                "keyPoints": [
+                  "One owner"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-synth-a-1"
+                    ],
+                    "rationale": "The respondent asked for one owner."
+                  }
+                ],
+                "followUpQuestions": []
+              },
+              {
+                "questionId": "q-friction",
+                "status": "answered",
+                "answer": "The main friction is waiting on three approvals.",
+                "confidence": 0.88,
+                "keyPoints": [
+                  "Three approvals"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-synth-a-2"
+                    ],
+                    "rationale": "The respondent named the approval loop."
+                  }
+                ],
+                "followUpQuestions": []
+              },
+              {
+                "questionId": "q-alignment",
+                "status": "answered",
+                "answer": "Regional and central teams disagree on who should handle standard cases.",
+                "confidence": 0.84,
+                "keyPoints": [
+                  "Regional handling",
+                  "Central sign-off"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-synth-a-3"
+                    ],
+                    "rationale": "The respondent contrasted regional handling with central sign-off."
+                  }
+                ],
+                "followUpQuestions": []
+              }
+            ],
+            "quoteLibrary": [
+              {
+                "label": "Stop waiting on approvals",
+                "context": "The respondent described the lived approval pain.",
+                "questionIds": [
+                  "q-friction"
+                ],
+                "themeHints": [
+                  "Approval bottlenecks"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-synth-a-2"
+                    ],
+                    "rationale": "Direct quote about waiting on approvals."
+                  }
+                ]
+              }
+            ],
+            "insightCards": [
+              {
+                "kind": "theme",
+                "title": "Approval bottlenecks",
+                "summary": "Routine work waits because too many approvals are required.",
+                "priority": "high",
+                "signalStrength": "obvious",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-synth-a-2"
+                    ],
+                    "rationale": "The respondent named the approval loop."
+                  }
+                ]
+              },
+              {
+                "kind": "theme",
+                "title": "Exception ownership",
+                "summary": "Routine exceptions need one named owner.",
+                "priority": "high",
+                "signalStrength": "obvious",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-synth-a-1"
+                    ],
+                    "rationale": "The respondent asked for one owner."
+                  }
+                ]
+              },
+              {
+                "kind": "tension",
+                "title": "Regional delegation versus central sign-off",
+                "summary": "Standard cases should move locally, but central operations still wants control.",
+                "priority": "medium",
+                "signalStrength": "subtle",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-synth-a-1",
+                      "seg-synth-a-3"
+                    ],
+                    "rationale": "The respondent linked ownership to the delegation split."
+                  }
+                ]
+              }
+            ],
+            "respondentProfile": {
+              "department": "Operations"
+            },
+            "analysisWarnings": []
+          },
+          "narrative": {
+            "summary": "Amelia wants one owner for routine exceptions and sees the three-approval loop as the main drag on speed.",
+            "projectImplications": [
+              "Use the workshop to separate routine exception ownership from central escalation cases."
+            ],
+            "recommendedActions": [
+              "Define which approval steps are actually required for standard cases."
+            ],
+            "unresolvedQuestions": [],
+            "confidenceScore": 0.86
+          },
+          "expectations": {
+            "answered": 3,
+            "partial": 0,
+            "missing": 0,
+            "themeTitles": [
+              "Approval bottlenecks",
+              "Exception ownership"
+            ],
+            "tensionTitles": [
+              "Regional delegation versus central sign-off"
+            ],
+            "minQuoteCount": 1
+          }
+        },
+        {
+          "id": "sess-synth-b",
+          "respondentLabel": "Liam",
+          "metadata": {
+            "department": "Regional Ops"
+          },
+          "transcript": [
+            {
+              "id": "seg-synth-b-1",
+              "speaker": "participant",
+              "text": "Every standard exception seems to wait for another approval before anything moves."
+            },
+            {
+              "id": "seg-synth-b-2",
+              "speaker": "participant",
+              "text": "Regional teams should be trusted to decide the routine cases."
+            },
+            {
+              "id": "seg-synth-b-3",
+              "speaker": "participant",
+              "text": "If central operations keeps every final call, we will keep slowing down."
+            }
+          ],
+          "grounded": {
+            "questionReviews": [
+              {
+                "questionId": "q-outcome",
+                "status": "answered",
+                "answer": "The workshop should define which routine cases regional teams can decide.",
+                "confidence": 0.84,
+                "keyPoints": [
+                  "Regional trust"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-synth-b-2"
+                    ],
+                    "rationale": "The respondent asked for regional authority."
+                  }
+                ],
+                "followUpQuestions": []
+              },
+              {
+                "questionId": "q-friction",
+                "status": "answered",
+                "answer": "The friction is waiting for another approval on standard exceptions.",
+                "confidence": 0.86,
+                "keyPoints": [
+                  "Another approval"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-synth-b-1"
+                    ],
+                    "rationale": "The respondent described the approval delay."
+                  }
+                ],
+                "followUpQuestions": []
+              },
+              {
+                "questionId": "q-alignment",
+                "status": "answered",
+                "answer": "Regional teams want more authority while central operations keeps final control.",
+                "confidence": 0.83,
+                "keyPoints": [
+                  "Regional authority",
+                  "Central control"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-synth-b-2",
+                      "seg-synth-b-3"
+                    ],
+                    "rationale": "The respondent contrasted delegated authority with central control."
+                  }
+                ],
+                "followUpQuestions": []
+              }
+            ],
+            "quoteLibrary": [
+              {
+                "label": "Another approval",
+                "context": "The respondent described the repeated review loop.",
+                "questionIds": [
+                  "q-friction"
+                ],
+                "themeHints": [
+                  "Approval delays"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-synth-b-1"
+                    ],
+                    "rationale": "Direct quote about another approval."
+                  }
+                ]
+              }
+            ],
+            "insightCards": [
+              {
+                "kind": "theme",
+                "title": "Approval delays",
+                "summary": "Standard exceptions wait because another approval is always added.",
+                "priority": "high",
+                "signalStrength": "obvious",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-synth-b-1"
+                    ],
+                    "rationale": "The respondent described approval delay."
+                  }
+                ]
+              },
+              {
+                "kind": "theme",
+                "title": "Exception ownership",
+                "summary": "Routine cases need delegated authority closer to the work.",
+                "priority": "high",
+                "signalStrength": "obvious",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-synth-b-2",
+                      "seg-synth-b-3"
+                    ],
+                    "rationale": "The respondent linked ownership to delegated authority."
+                  }
+                ]
+              }
+            ],
+            "respondentProfile": {
+              "department": "Regional Ops"
+            },
+            "analysisWarnings": []
+          },
+          "narrative": {
+            "summary": "Liam sees approval delays and unclear authority on routine cases as the main reasons work slows down.",
+            "projectImplications": [
+              "Clarify which routine cases regional teams can decide without central review."
+            ],
+            "recommendedActions": [
+              "Document the extra approval that repeatedly gets added to standard exceptions."
+            ],
+            "unresolvedQuestions": [],
+            "confidenceScore": 0.84
+          },
+          "expectations": {
+            "answered": 3,
+            "partial": 0,
+            "missing": 0,
+            "themeTitles": [
+              "Approval delays",
+              "Exception ownership"
+            ],
+            "minQuoteCount": 1
+          }
+        },
+        {
+          "id": "sess-synth-c",
+          "respondentLabel": "Priya",
+          "metadata": {
+            "department": "People"
+          },
+          "excludedFromSynthesis": true,
+          "transcript": [
+            {
+              "id": "seg-synth-c-1",
+              "speaker": "participant",
+              "text": "People are tired and morale is slipping."
+            }
+          ],
+          "grounded": {
+            "questionReviews": [
+              {
+                "questionId": "q-outcome",
+                "status": "partial",
+                "answer": "Morale needs attention.",
+                "confidence": 0.4,
+                "keyPoints": [
+                  "Morale"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-synth-c-1"
+                    ],
+                    "rationale": "Thin morale comment."
+                  }
+                ],
+                "followUpQuestions": [
+                  "What would make this workshop useful?"
+                ]
+              },
+              {
+                "questionId": "q-friction",
+                "status": "missing",
+                "answer": "",
+                "confidence": 0,
+                "keyPoints": [],
+                "evidence": [],
+                "followUpQuestions": [
+                  "Where is the current friction?"
+                ]
+              },
+              {
+                "questionId": "q-alignment",
+                "status": "missing",
+                "answer": "",
+                "confidence": 0,
+                "keyPoints": [],
+                "evidence": [],
+                "followUpQuestions": [
+                  "Where do teams feel aligned or misaligned?"
+                ]
+              }
+            ],
+            "quoteLibrary": [
+              {
+                "label": "Morale slip",
+                "context": "A brief morale comment.",
+                "questionIds": [
+                  "q-outcome"
+                ],
+                "themeHints": [
+                  "Team morale"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-synth-c-1"
+                    ],
+                    "rationale": "Direct morale quote."
+                  }
+                ]
+              }
+            ],
+            "insightCards": [
+              {
+                "kind": "theme",
+                "title": "Team morale",
+                "summary": "Morale is slipping.",
+                "priority": "low",
+                "signalStrength": "obvious",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-synth-c-1"
+                    ],
+                    "rationale": "Thin morale note."
+                  }
+                ]
+              }
+            ],
+            "respondentProfile": {
+              "department": "People"
+            },
+            "analysisWarnings": [
+              "This interview is too thin for confident synthesis."
+            ]
+          },
+          "narrative": {
+            "summary": "Priya raised morale concerns but gave little operational detail.",
+            "projectImplications": [
+              "Treat morale as a weak directional signal only."
+            ],
+            "recommendedActions": [
+              "Exclude this interview from synthesis unless more operational detail is gathered."
+            ],
+            "unresolvedQuestions": [
+              "What operational issue is actually driving the morale drop?"
+            ],
+            "confidenceScore": 0.32
+          },
+          "expectations": {
+            "answered": 0,
+            "partial": 1,
+            "missing": 2,
+            "themeTitles": [
+              "Team morale"
+            ],
+            "confidenceMax": 0.3
+          }
+        }
+      ],
+      "rawSynthesis": {
+        "executiveSummary": "Approval bottlenecks and unclear exception ownership are the strongest themes.",
+        "crossInterviewThemes": [
+          {
+            "title": "Approval bottlenecks",
+            "summary": "Standard work keeps waiting because the approval loop is too long.",
+            "frequency": 1,
+            "evidence": [
+              {
+                "sessionId": "sess-synth-a",
+                "segmentIds": [
+                  "seg-synth-a-2"
+                ],
+                "rationale": "Amelia described the three-approval loop."
+              }
+            ]
+          },
+          {
+            "title": "Approval delays",
+            "summary": "Another approval gets added before routine work can move.",
+            "frequency": 1,
+            "evidence": [
+              {
+                "sessionId": "sess-synth-b",
+                "segmentIds": [
+                  "seg-synth-b-1"
+                ],
+                "rationale": "Liam described the extra approval."
+              }
+            ]
+          },
+          {
+            "title": "Exception ownership",
+            "summary": "Teams need clearer authority over routine exception calls.",
+            "frequency": 2,
+            "evidence": [
+              {
+                "sessionId": "sess-synth-a",
+                "segmentIds": [
+                  "seg-synth-a-1"
+                ],
+                "rationale": "Amelia asked for one owner."
+              },
+              {
+                "sessionId": "sess-synth-b",
+                "segmentIds": [
+                  "seg-synth-b-2",
+                  "seg-synth-b-3"
+                ],
+                "rationale": "Liam linked delegated authority to routine cases."
+              }
+            ]
+          },
+          {
+            "title": "Team morale",
+            "summary": "Morale is slipping and should become a theme.",
+            "frequency": 1,
+            "evidence": [
+              {
+                "sessionId": "sess-synth-c",
+                "segmentIds": [
+                  "seg-synth-c-1"
+                ],
+                "rationale": "Priya mentioned morale."
+              }
+            ]
+          }
+        ],
+        "contradictionMap": [
+          {
+            "topic": "Where authority should sit",
+            "positions": [
+              "Routine cases should be delegated to regional teams.",
+              "Central operations should keep final sign-off when policy is stretched."
+            ],
+            "evidence": [
+              {
+                "sessionId": "sess-synth-a",
+                "segmentIds": [
+                  "seg-synth-a-3"
+                ],
+                "rationale": "Amelia described the split."
+              },
+              {
+                "sessionId": "sess-synth-b",
+                "segmentIds": [
+                  "seg-synth-b-2",
+                  "seg-synth-b-3"
+                ],
+                "rationale": "Liam described delegated authority versus central control."
+              }
+            ]
+          }
+        ],
+        "alignmentSignals": [
+          "Everyone agrees the approval loop is too slow."
+        ],
+        "misalignmentSignals": [
+          "Teams disagree on who should own routine exceptions."
+        ],
+        "topProblems": [
+          "Too many approvals on standard cases"
+        ],
+        "recommendedFocusAreas": [
+          "Decide which routine exception types can be resolved locally."
+        ],
+        "notableQuotesByTheme": [
+          {
+            "label": "Stop waiting on approvals",
+            "summary": "A generic summary that should be replaced by the actual quote.",
+            "evidence": [
+              {
+                "sessionId": "sess-synth-a",
+                "segmentIds": [
+                  "seg-synth-a-2"
+                ],
+                "rationale": "Amelia's approval quote."
+              }
+            ]
+          }
+        ],
+        "warning": ""
+      },
+      "synthesisExpectations": {
+        "includedSessionIds": [
+          "sess-synth-a",
+          "sess-synth-b"
+        ],
+        "themeTitles": [
+          "Approval bottlenecks",
+          "Exception ownership"
+        ],
+        "absentThemeTitles": [
+          "Team morale"
+        ],
+        "themeFrequencies": {
+          "Approval bottlenecks": 2,
+          "Exception ownership": 2
+        },
+        "contradictionTopics": [
+          "Where authority should sit"
+        ],
+        "quoteSummaryIncludes": [
+          "stop waiting on three approvals"
+        ]
+      },
+      "projectType": "discovery"
+    },
+    {
+      "id": "proj-feedback-positive",
+      "projectType": "feedback",
+      "name": "Post-Program Reflection Pulse",
+      "clientName": "Northlight",
+      "objective": "Capture what landed well after the completed facilitation program and what should be repeated.",
+      "areasOfInterest": [
+        "Most useful moments",
+        "What changed afterwards",
+        "What should stay in the next cohort",
+        "What could be made even easier to apply"
+      ],
+      "requiredQuestions": [
+        {
+          "id": "q-useful",
+          "prompt": "What part of the program was most useful to you?",
+          "goal": "Capture the strongest positive signal."
+        },
+        {
+          "id": "q-missing",
+          "prompt": "What felt unclear, missing, or less useful?",
+          "goal": "Capture gaps or friction."
+        },
+        {
+          "id": "q-change",
+          "prompt": "What changed for you afterwards, if anything?",
+          "goal": "Capture behavior change."
+        },
+        {
+          "id": "q-repeat",
+          "prompt": "If we ran this again, what should stay the same?",
+          "goal": "Capture repeat-worthy design choices."
+        }
+      ],
+      "sessions": [
+        {
+          "id": "sess-feedback-positive-1",
+          "respondentLabel": "Participant A",
+          "metadata": {
+            "cohort": "Spring 2026"
+          },
+          "transcript": [
+            {
+              "id": "seg-feedback-positive-1",
+              "speaker": "participant",
+              "text": "The live practice blocks were the most useful part because I could try the framework immediately."
+            },
+            {
+              "id": "seg-feedback-positive-2",
+              "speaker": "participant",
+              "text": "Nothing felt badly broken, but I would have loved the worksheet one day earlier."
+            },
+            {
+              "id": "seg-feedback-positive-3",
+              "speaker": "participant",
+              "text": "Since the program ended, I have used the debrief template in three team retrospectives."
+            },
+            {
+              "id": "seg-feedback-positive-4",
+              "speaker": "participant",
+              "text": "Please keep the breakout coaching and the real examples exactly as they are."
+            }
+          ],
+          "grounded": {
+            "questionReviews": [
+              {
+                "questionId": "q-useful",
+                "status": "answered",
+                "answer": "The live practice blocks were the most useful because they turned theory into immediate application.",
+                "confidence": 0.93,
+                "keyPoints": [
+                  "Live practice blocks",
+                  "Immediate application"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-positive-1"
+                    ],
+                    "rationale": "The participant explicitly named live practice as the strongest part."
+                  }
+                ],
+                "followUpQuestions": []
+              },
+              {
+                "questionId": "q-missing",
+                "status": "answered",
+                "answer": "The only gap was receiving the worksheet a little earlier.",
+                "confidence": 0.84,
+                "keyPoints": [
+                  "Worksheet earlier"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-positive-2"
+                    ],
+                    "rationale": "The participant asked for materials earlier, not a major redesign."
+                  }
+                ],
+                "followUpQuestions": []
+              },
+              {
+                "questionId": "q-change",
+                "status": "answered",
+                "answer": "The participant has already reused the debrief template in real team retrospectives.",
+                "confidence": 0.91,
+                "keyPoints": [
+                  "Used debrief template",
+                  "Applied in retrospectives"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-positive-3"
+                    ],
+                    "rationale": "The participant described a concrete post-program behavior change."
+                  }
+                ],
+                "followUpQuestions": []
+              },
+              {
+                "questionId": "q-repeat",
+                "status": "answered",
+                "answer": "Keep the breakout coaching and real examples in the next cohort.",
+                "confidence": 0.89,
+                "keyPoints": [
+                  "Keep breakout coaching",
+                  "Keep real examples"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-positive-4"
+                    ],
+                    "rationale": "The participant clearly described what should remain unchanged."
+                  }
+                ],
+                "followUpQuestions": []
+              }
+            ],
+            "quoteLibrary": [
+              {
+                "label": "Live practice mattered",
+                "context": "The participant explained why the format felt useful.",
+                "questionIds": [
+                  "q-useful"
+                ],
+                "themeHints": [
+                  "Hands-on practice"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-positive-1"
+                    ],
+                    "rationale": "Direct quote about immediate application."
+                  }
+                ]
+              },
+              {
+                "label": "Template reuse",
+                "context": "The participant described behavior change after the program.",
+                "questionIds": [
+                  "q-change"
+                ],
+                "themeHints": [
+                  "Applied afterwards"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-positive-3"
+                    ],
+                    "rationale": "Direct quote about reusing the template in the workplace."
+                  }
+                ]
+              }
+            ],
+            "insightCards": [
+              {
+                "kind": "theme",
+                "title": "Hands-on practice",
+                "summary": "The strongest positive signal is that live practice turned the material into something usable immediately.",
+                "priority": "high",
+                "signalStrength": "obvious",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-positive-1"
+                    ],
+                    "rationale": "The participant explicitly tied usefulness to practice."
+                  }
+                ]
+              },
+              {
+                "kind": "opportunity",
+                "title": "Send materials earlier",
+                "summary": "A small operational improvement would be to share the worksheet before the session starts.",
+                "priority": "medium",
+                "signalStrength": "obvious",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-positive-2"
+                    ],
+                    "rationale": "The participant asked for the worksheet earlier."
+                  }
+                ]
+              }
+            ],
+            "respondentProfile": {
+              "cohort": "Spring 2026"
+            },
+            "analysisWarnings": []
+          },
+          "narrative": {
+            "summary": "The participant saw the program as highly useful because live practice led directly to real-world reuse, with only a minor materials-timing tweak suggested.",
+            "projectImplications": [
+              "Keep the live practice blocks and breakout coaching as a core part of the next cohort."
+            ],
+            "recommendedActions": [
+              "Send the worksheet the day before the session so participants arrive ready to use it."
+            ],
+            "unresolvedQuestions": [],
+            "confidenceScore": 0.9
+          },
+          "expectations": {
+            "answered": 4,
+            "partial": 0,
+            "missing": 0,
+            "themeTitles": [
+              "Hands-on practice"
+            ],
+            "confidenceMin": 0.8,
+            "minQuoteCount": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "proj-feedback-mixed",
+      "projectType": "feedback",
+      "name": "Mixed Cohort Debrief",
+      "clientName": "Bright Path",
+      "objective": "Capture what worked, what felt rushed, and what to improve after the completed learning sprint.",
+      "areasOfInterest": [
+        "Strongest moments",
+        "Pacing and clarity",
+        "Behavior change",
+        "Design improvements"
+      ],
+      "requiredQuestions": [
+        {
+          "id": "q-useful",
+          "prompt": "What part of the learning sprint was most useful to you?",
+          "goal": "Capture the strongest positive signal."
+        },
+        {
+          "id": "q-missing",
+          "prompt": "What felt unclear, missing, or less useful?",
+          "goal": "Capture friction or gaps."
+        },
+        {
+          "id": "q-change",
+          "prompt": "What changed for you afterwards, if anything?",
+          "goal": "Capture post-program effect."
+        },
+        {
+          "id": "q-improve",
+          "prompt": "If we ran this again, what should we improve?",
+          "goal": "Capture next-round improvements."
+        }
+      ],
+      "sessions": [
+        {
+          "id": "sess-feedback-mixed-1",
+          "respondentLabel": "Participant B",
+          "metadata": {
+            "team": "Sales Enablement"
+          },
+          "transcript": [
+            {
+              "id": "seg-feedback-mixed-1",
+              "speaker": "participant",
+              "text": "The facilitator was excellent at turning abstract ideas into examples I could actually use."
+            },
+            {
+              "id": "seg-feedback-mixed-2",
+              "speaker": "participant",
+              "text": "The middle section moved too quickly, so I understood the idea but not how to repeat it alone later."
+            },
+            {
+              "id": "seg-feedback-mixed-3",
+              "speaker": "participant",
+              "text": "I have started using the opening checklist with my team, but I still need more practice on the harder scenarios."
+            },
+            {
+              "id": "seg-feedback-mixed-4",
+              "speaker": "participant",
+              "text": "Next time, cut one topic and give us one more worked example instead."
+            }
+          ],
+          "grounded": {
+            "questionReviews": [
+              {
+                "questionId": "q-useful",
+                "status": "answered",
+                "answer": "The most useful element was the facilitator translating abstract material into practical examples.",
+                "confidence": 0.91,
+                "keyPoints": [
+                  "Practical examples",
+                  "Strong facilitation"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-mixed-1"
+                    ],
+                    "rationale": "The participant directly praised the facilitator for making the material usable."
+                  }
+                ],
+                "followUpQuestions": []
+              },
+              {
+                "questionId": "q-missing",
+                "status": "answered",
+                "answer": "The middle section felt too rushed to become repeatable without more examples.",
+                "confidence": 0.87,
+                "keyPoints": [
+                  "Too rushed",
+                  "Need repeatable examples"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-mixed-2"
+                    ],
+                    "rationale": "The participant linked pacing to weak repeatability."
+                  }
+                ],
+                "followUpQuestions": []
+              },
+              {
+                "questionId": "q-change",
+                "status": "partial",
+                "answer": "The participant has started using the checklist, but deeper scenarios still need more practice.",
+                "confidence": 0.71,
+                "keyPoints": [
+                  "Using checklist",
+                  "Needs more practice"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-mixed-3"
+                    ],
+                    "rationale": "The participant named one concrete change and one remaining gap."
+                  }
+                ],
+                "followUpQuestions": [
+                  "Which harder scenarios still feel difficult?"
+                ]
+              },
+              {
+                "questionId": "q-improve",
+                "status": "answered",
+                "answer": "Reduce the number of topics and add one more worked example.",
+                "confidence": 0.88,
+                "keyPoints": [
+                  "Cut one topic",
+                  "Add one worked example"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-mixed-4"
+                    ],
+                    "rationale": "The participant gave a clear improvement recommendation."
+                  }
+                ],
+                "followUpQuestions": []
+              }
+            ],
+            "quoteLibrary": [
+              {
+                "label": "Useful facilitation",
+                "context": "The participant explained why the delivery style worked.",
+                "questionIds": [
+                  "q-useful"
+                ],
+                "themeHints": [
+                  "Facilitation quality"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-mixed-1"
+                    ],
+                    "rationale": "Direct quote about practical facilitation."
+                  }
+                ]
+              },
+              {
+                "label": "Rushed middle section",
+                "context": "The participant described where the format started to strain.",
+                "questionIds": [
+                  "q-missing"
+                ],
+                "themeHints": [
+                  "Pacing"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-mixed-2"
+                    ],
+                    "rationale": "Direct quote about pacing and repeatability."
+                  }
+                ]
+              }
+            ],
+            "insightCards": [
+              {
+                "kind": "theme",
+                "title": "Facilitation quality",
+                "summary": "Clear facilitation made complex material usable, even when the pacing dipped later.",
+                "priority": "high",
+                "signalStrength": "obvious",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-mixed-1"
+                    ],
+                    "rationale": "The participant strongly praised the facilitator."
+                  }
+                ]
+              },
+              {
+                "kind": "pain_point",
+                "title": "Pace felt rushed",
+                "summary": "One section moved too quickly for the participant to feel confident repeating it alone.",
+                "priority": "medium",
+                "signalStrength": "obvious",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-mixed-2"
+                    ],
+                    "rationale": "The participant said the middle section moved too quickly."
+                  }
+                ]
+              },
+              {
+                "kind": "tension",
+                "title": "Depth versus pace",
+                "summary": "The participant liked the ambition of the material but wanted fewer topics covered more thoroughly.",
+                "priority": "medium",
+                "signalStrength": "subtle",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-mixed-2",
+                      "seg-feedback-mixed-4"
+                    ],
+                    "rationale": "The participant linked the rushed section to the need to cut content."
+                  }
+                ]
+              }
+            ],
+            "respondentProfile": {
+              "team": "Sales Enablement"
+            },
+            "analysisWarnings": []
+          },
+          "narrative": {
+            "summary": "The participant valued the facilitator and practical framing, but thought the middle section tried to cover too much too quickly.",
+            "projectImplications": [
+              "Keep the facilitator style, but narrow the content so the more complex section gets more worked examples."
+            ],
+            "recommendedActions": [
+              "Remove one topic from the middle section and replace it with a deeper example-based exercise."
+            ],
+            "unresolvedQuestions": [
+              "Which harder scenarios still need more practice support?"
+            ],
+            "confidenceScore": 0.82
+          },
+          "expectations": {
+            "answered": 3,
+            "partial": 1,
+            "missing": 0,
+            "themeTitles": [
+              "Facilitation quality"
+            ],
+            "tensionTitles": [
+              "Depth versus pace"
+            ],
+            "minQuoteCount": 2,
+            "confidenceMin": 0.75
+          }
+        }
+      ]
+    },
+    {
+      "id": "proj-feedback-polarized",
+      "projectType": "feedback",
+      "name": "Polarized Program Retrospective",
+      "clientName": "Signal House",
+      "objective": "Capture where participant reactions diverged after the completed leadership program.",
+      "areasOfInterest": [
+        "Most useful elements",
+        "Pacing",
+        "What changed afterwards",
+        "What to improve next time"
+      ],
+      "requiredQuestions": [
+        {
+          "id": "q-useful",
+          "prompt": "What part of the program was most useful to you?",
+          "goal": "Capture strongest positive signals."
+        },
+        {
+          "id": "q-missing",
+          "prompt": "What felt unclear, missing, or less useful?",
+          "goal": "Capture friction and gaps."
+        },
+        {
+          "id": "q-change",
+          "prompt": "What changed for you afterwards, if anything?",
+          "goal": "Capture effect after the program."
+        },
+        {
+          "id": "q-improve",
+          "prompt": "If we ran this again, what should we improve?",
+          "goal": "Capture recommendations for the next round."
+        }
+      ],
+      "sessions": [
+        {
+          "id": "sess-feedback-polarized-a",
+          "respondentLabel": "Participant C",
+          "metadata": {
+            "cohort": "Manager track"
+          },
+          "transcript": [
+            {
+              "id": "seg-feedback-polarized-a-1",
+              "speaker": "participant",
+              "text": "The breakout practice was excellent because it forced us to apply the model in real time."
+            },
+            {
+              "id": "seg-feedback-polarized-a-2",
+              "speaker": "participant",
+              "text": "I actually liked the fast pace because it kept the session sharp and energizing."
+            },
+            {
+              "id": "seg-feedback-polarized-a-3",
+              "speaker": "participant",
+              "text": "After the program, I ran the same debrief structure with my direct reports the next week."
+            }
+          ],
+          "grounded": {
+            "questionReviews": [
+              {
+                "questionId": "q-useful",
+                "status": "answered",
+                "answer": "Breakout practice was the most useful part because it demanded live application.",
+                "confidence": 0.92,
+                "keyPoints": [
+                  "Breakout practice",
+                  "Live application"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-polarized-a-1"
+                    ],
+                    "rationale": "The participant explicitly praised breakout practice."
+                  }
+                ],
+                "followUpQuestions": []
+              },
+              {
+                "questionId": "q-missing",
+                "status": "answered",
+                "answer": "The participant did not see pacing as a problem and preferred the fast tempo.",
+                "confidence": 0.8,
+                "keyPoints": [
+                  "Fast pace worked"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-polarized-a-2"
+                    ],
+                    "rationale": "The participant explicitly defended the fast pace."
+                  }
+                ],
+                "followUpQuestions": []
+              },
+              {
+                "questionId": "q-change",
+                "status": "answered",
+                "answer": "The participant immediately reused the debrief structure with direct reports.",
+                "confidence": 0.9,
+                "keyPoints": [
+                  "Reused debrief structure"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-polarized-a-3"
+                    ],
+                    "rationale": "The participant described a concrete behavior change."
+                  }
+                ],
+                "followUpQuestions": []
+              },
+              {
+                "questionId": "q-improve",
+                "status": "partial",
+                "answer": "No major change was requested beyond keeping the breakout practice strong.",
+                "confidence": 0.64,
+                "keyPoints": [
+                  "Keep breakout practice"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-polarized-a-1"
+                    ],
+                    "rationale": "The participant mostly reinforced what worked."
+                  }
+                ],
+                "followUpQuestions": [
+                  "What small tweak would make the next round even better?"
+                ]
+              }
+            ],
+            "quoteLibrary": [
+              {
+                "label": "Breakout practice worked",
+                "context": "The participant explained why the applied exercise mattered.",
+                "questionIds": [
+                  "q-useful"
+                ],
+                "themeHints": [
+                  "Hands-on practice"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-polarized-a-1"
+                    ],
+                    "rationale": "Direct quote about breakout practice."
+                  }
+                ]
+              }
+            ],
+            "insightCards": [
+              {
+                "kind": "theme",
+                "title": "Hands-on practice",
+                "summary": "Applied breakout work helped the participant use the model immediately.",
+                "priority": "high",
+                "signalStrength": "obvious",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-polarized-a-1"
+                    ],
+                    "rationale": "The participant said the breakout practice was excellent."
+                  }
+                ]
+              },
+              {
+                "kind": "theme",
+                "title": "Fast pace felt energizing",
+                "summary": "For this participant, the fast pace kept the session sharp.",
+                "priority": "medium",
+                "signalStrength": "obvious",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-polarized-a-2"
+                    ],
+                    "rationale": "The participant explicitly liked the fast pace."
+                  }
+                ]
+              }
+            ],
+            "respondentProfile": {
+              "cohort": "Manager track"
+            },
+            "analysisWarnings": []
+          },
+          "narrative": {
+            "summary": "This participant saw the breakout practice as highly useful and experienced the fast pace as energizing rather than problematic.",
+            "projectImplications": [
+              "Protect the applied breakout blocks because they are driving immediate reuse after the program."
+            ],
+            "recommendedActions": [
+              "Retain the high-energy pace for advanced cohorts if the applied exercises stay intact."
+            ],
+            "unresolvedQuestions": [
+              "Would the same pace still work for less experienced cohorts?"
+            ],
+            "confidenceScore": 0.84
+          },
+          "expectations": {
+            "answered": 3,
+            "partial": 1,
+            "missing": 0,
+            "themeTitles": [
+              "Hands-on practice"
+            ],
+            "minQuoteCount": 1,
+            "confidenceMin": 0.68
+          }
+        },
+        {
+          "id": "sess-feedback-polarized-b",
+          "respondentLabel": "Participant D",
+          "metadata": {
+            "cohort": "Manager track"
+          },
+          "transcript": [
+            {
+              "id": "seg-feedback-polarized-b-1",
+              "speaker": "participant",
+              "text": "The examples were useful, but the pace was too fast for me to really absorb the framework."
+            },
+            {
+              "id": "seg-feedback-polarized-b-2",
+              "speaker": "participant",
+              "text": "I did not use the model afterwards because I still was not confident with the harder conversations."
+            },
+            {
+              "id": "seg-feedback-polarized-b-3",
+              "speaker": "participant",
+              "text": "If this runs again, slow the second half down and add one more guided practice round."
+            }
+          ],
+          "grounded": {
+            "questionReviews": [
+              {
+                "questionId": "q-useful",
+                "status": "answered",
+                "answer": "The examples were useful, even though the pace made them hard to absorb fully.",
+                "confidence": 0.83,
+                "keyPoints": [
+                  "Useful examples"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-polarized-b-1"
+                    ],
+                    "rationale": "The participant credited the examples while criticizing pacing."
+                  }
+                ],
+                "followUpQuestions": []
+              },
+              {
+                "questionId": "q-missing",
+                "status": "answered",
+                "answer": "The biggest issue was the pace being too fast to absorb the framework.",
+                "confidence": 0.9,
+                "keyPoints": [
+                  "Too fast to absorb"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-polarized-b-1"
+                    ],
+                    "rationale": "The participant clearly described the pacing issue."
+                  }
+                ],
+                "followUpQuestions": []
+              },
+              {
+                "questionId": "q-change",
+                "status": "answered",
+                "answer": "The participant did not use the model afterwards because confidence remained low in harder conversations.",
+                "confidence": 0.87,
+                "keyPoints": [
+                  "No follow-through",
+                  "Low confidence on harder conversations"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-polarized-b-2"
+                    ],
+                    "rationale": "The participant reported no post-program adoption."
+                  }
+                ],
+                "followUpQuestions": []
+              },
+              {
+                "questionId": "q-improve",
+                "status": "answered",
+                "answer": "Slow the second half down and add another guided practice round.",
+                "confidence": 0.92,
+                "keyPoints": [
+                  "Slow second half",
+                  "Add guided practice"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-polarized-b-3"
+                    ],
+                    "rationale": "The participant gave a concrete design improvement."
+                  }
+                ],
+                "followUpQuestions": []
+              }
+            ],
+            "quoteLibrary": [
+              {
+                "label": "Pace was too fast",
+                "context": "The participant described why the program did not stick.",
+                "questionIds": [
+                  "q-missing"
+                ],
+                "themeHints": [
+                  "Pacing"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-polarized-b-1"
+                    ],
+                    "rationale": "Direct quote about the pace being too fast."
+                  }
+                ]
+              }
+            ],
+            "insightCards": [
+              {
+                "kind": "theme",
+                "title": "Hands-on practice",
+                "summary": "The useful core was still the examples and guided practice, even though more of it was needed.",
+                "priority": "medium",
+                "signalStrength": "obvious",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-polarized-b-1",
+                      "seg-feedback-polarized-b-3"
+                    ],
+                    "rationale": "The participant connected the useful examples to the request for more guided practice."
+                  }
+                ]
+              },
+              {
+                "kind": "theme",
+                "title": "Pace felt too fast",
+                "summary": "For this participant, the second half moved too quickly to build confidence.",
+                "priority": "high",
+                "signalStrength": "obvious",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-polarized-b-1"
+                    ],
+                    "rationale": "The participant explicitly said the pace was too fast."
+                  }
+                ]
+              },
+              {
+                "kind": "risk",
+                "title": "Low post-program adoption",
+                "summary": "Participants may not use the model afterwards if confidence never catches up during the session.",
+                "priority": "medium",
+                "signalStrength": "obvious",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-polarized-b-2"
+                    ],
+                    "rationale": "The participant described not using the model after the program."
+                  }
+                ]
+              }
+            ],
+            "respondentProfile": {
+              "cohort": "Manager track"
+            },
+            "analysisWarnings": []
+          },
+          "narrative": {
+            "summary": "This participant found the examples useful but thought the pace was too fast to build confidence or adoption afterwards.",
+            "projectImplications": [
+              "Keep the practical examples, but slow the second half down so the practice actually sticks for less confident participants."
+            ],
+            "recommendedActions": [
+              "Add another guided practice round and reduce the pace of the second half."
+            ],
+            "unresolvedQuestions": [],
+            "confidenceScore": 0.86
+          },
+          "expectations": {
+            "answered": 4,
+            "partial": 0,
+            "missing": 0,
+            "themeTitles": [
+              "Hands-on practice",
+              "Pace felt too fast"
+            ],
+            "minQuoteCount": 1,
+            "confidenceMin": 0.7
+          }
+        }
+      ],
+      "rawSynthesis": {
+        "executiveSummary": "Applied practice is consistently valued, but participant reactions to the pacing diverge sharply.",
+        "crossInterviewThemes": [
+          {
+            "title": "Hands-on practice",
+            "summary": "Applied exercises are the clearest part of the design to preserve.",
+            "frequency": 1,
+            "evidence": [
+              {
+                "sessionId": "sess-feedback-polarized-a",
+                "segmentIds": [
+                  "seg-feedback-polarized-a-1"
+                ],
+                "rationale": "Participant C praised the breakout practice."
+              }
+            ]
+          },
+          {
+            "title": "Hands-on practice",
+            "summary": "Participants want more time applying the model, not less.",
+            "frequency": 1,
+            "evidence": [
+              {
+                "sessionId": "sess-feedback-polarized-b",
+                "segmentIds": [
+                  "seg-feedback-polarized-b-3"
+                ],
+                "rationale": "Participant D asked for another guided practice round."
+              }
+            ]
+          }
+        ],
+        "contradictionMap": [
+          {
+            "topic": "Whether the pacing felt right",
+            "positions": [
+              "The fast pace felt energizing and helped the session stay sharp.",
+              "The fast pace made the framework hard to absorb and apply afterwards."
+            ],
+            "evidence": [
+              {
+                "sessionId": "sess-feedback-polarized-a",
+                "segmentIds": [
+                  "seg-feedback-polarized-a-2"
+                ],
+                "rationale": "Participant C explicitly liked the fast pace."
+              },
+              {
+                "sessionId": "sess-feedback-polarized-b",
+                "segmentIds": [
+                  "seg-feedback-polarized-b-1"
+                ],
+                "rationale": "Participant D said the pace was too fast."
+              }
+            ]
+          }
+        ],
+        "alignmentSignals": [
+          "Applied practice is the clearest strength across both sessions."
+        ],
+        "misalignmentSignals": [
+          "Participants disagreed sharply on whether the pace felt energizing or overwhelming."
+        ],
+        "topProblems": [
+          "Pacing works for some participants and blocks confidence for others."
+        ],
+        "recommendedFocusAreas": [
+          "Keep the applied exercises, then rebalance pacing by cohort or experience level."
+        ],
+        "notableQuotesByTheme": [
+          {
+            "label": "Applied practice worked",
+            "summary": "A generic summary that should be replaced by the actual quote.",
+            "evidence": [
+              {
+                "sessionId": "sess-feedback-polarized-a",
+                "segmentIds": [
+                  "seg-feedback-polarized-a-1"
+                ],
+                "rationale": "Participant C described why breakout practice worked."
+              }
+            ]
+          }
+        ],
+        "warning": ""
+      },
+      "synthesisExpectations": {
+        "includedSessionIds": [
+          "sess-feedback-polarized-a",
+          "sess-feedback-polarized-b"
+        ],
+        "themeTitles": [
+          "Hands-on practice"
+        ],
+        "themeFrequencies": {
+          "Hands-on practice": 2
+        },
+        "contradictionTopics": [
+          "Whether the pacing felt right"
+        ],
+        "quoteSummaryIncludes": [
+          "breakout practice was excellent"
+        ]
+      }
+    }
+  ]
+}

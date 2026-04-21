@@ -9,7 +9,10 @@ import { Button } from "@/components/ui/button"
 import type { TranscriptSegment } from "@/lib/domain/types"
 import { cn } from "@/lib/utils"
 
-import { useReviewSelection } from "./review-selection-context"
+import {
+  useOptionalReviewSelectionActions,
+  useReviewSelectionSelector,
+} from "./review-selection-context"
 import { ReviewTranscriptPane } from "./review-transcript-pane"
 
 interface ReviewEvidenceDrawerProps {
@@ -23,18 +26,23 @@ export function ReviewEvidenceDrawer({
   segments,
   emptyState,
 }: ReviewEvidenceDrawerProps) {
-  const selection = useReviewSelection()
+  const selection = useOptionalReviewSelectionActions()
   const [query, setQuery] = useState("")
+  const drawerOpen = useReviewSelectionSelector((state) => state.drawerOpen)
+  const drawerMode = useReviewSelectionSelector((state) => state.drawerMode)
+  const drawerSegmentIds = useReviewSelectionSelector(
+    (state) => state.drawerSegmentIds
+  )
   const selectedSegments = useMemo(
     () =>
-      segments.filter((segment) => selection.drawerSegmentIds.has(segment.id)),
-    [segments, selection.drawerSegmentIds]
+      segments.filter((segment) => drawerSegmentIds.has(segment.id)),
+    [segments, drawerSegmentIds]
   )
 
   const filteredSegments = useMemo(() => {
-    if (selection.drawerMode === "evidence" && selection.drawerSegmentIds.size > 0) {
+    if (drawerMode === "evidence" && drawerSegmentIds.size > 0) {
       const selectedIndexes = segments.flatMap((segment, index) =>
-        selection.drawerSegmentIds.has(segment.id) ? [index] : []
+        drawerSegmentIds.has(segment.id) ? [index] : []
       )
       const contextIndexes = new Set<number>()
 
@@ -57,21 +65,21 @@ export function ReviewEvidenceDrawer({
     return segments.filter((segment) =>
       segment.text.toLowerCase().includes(trimmed)
     )
-  }, [segments, query, selection.drawerMode, selection.drawerSegmentIds])
+  }, [segments, query, drawerMode, drawerSegmentIds])
 
   const title =
-    selection.drawerMode === "evidence"
-      ? `Evidence · ${selection.drawerSegmentIds.size} ${
-          selection.drawerSegmentIds.size === 1 ? "segment" : "segments"
+    drawerMode === "evidence"
+      ? `Evidence · ${drawerSegmentIds.size} ${
+          drawerSegmentIds.size === 1 ? "segment" : "segments"
         }`
       : "Full transcript"
 
   return (
     <RadixDialog.Root
-      open={selection.drawerOpen}
+      open={drawerOpen}
       onOpenChange={(open) => {
         if (!open) {
-          selection.closeDrawer()
+          selection?.closeDrawer()
         }
       }}
     >
@@ -118,7 +126,7 @@ export function ReviewEvidenceDrawer({
             </RadixDialog.Close>
           </div>
 
-          {selection.drawerMode === "transcript" ? (
+          {drawerMode === "transcript" ? (
             <div className="border-b border-border/60 px-5 py-3">
               <label className="relative block">
                 <span className="sr-only">Search transcript</span>
@@ -132,7 +140,7 @@ export function ReviewEvidenceDrawer({
                 />
               </label>
             </div>
-          ) : selection.drawerSegmentIds.size > 0 ? (
+          ) : drawerSegmentIds.size > 0 ? (
             <div className="flex items-center justify-between gap-2 border-b border-border/60 px-5 py-2.5">
               <Badge variant="accent">Focused evidence</Badge>
               <span className="text-[10px] tracking-[0.22em] text-muted-foreground uppercase">
@@ -142,7 +150,7 @@ export function ReviewEvidenceDrawer({
           ) : null}
 
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-            {selection.drawerMode === "evidence" && selectedSegments.length > 0 ? (
+            {drawerMode === "evidence" && selectedSegments.length > 0 ? (
               <div className="mb-5 space-y-3">
                 <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
                   Exact excerpts
@@ -184,11 +192,11 @@ export function ReviewEvidenceDrawer({
           </div>
 
           <div className="flex items-center justify-between gap-3 border-t border-border/60 px-5 py-3">
-            {selection.drawerMode === "evidence" ? (
+            {drawerMode === "evidence" ? (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => selection.openDrawer("transcript")}
+                onClick={() => selection?.openDrawer("transcript")}
               >
                 Open full transcript
               </Button>

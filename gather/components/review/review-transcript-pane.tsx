@@ -6,7 +6,10 @@ import { Badge } from "@/components/ui/badge"
 import type { TranscriptSegment } from "@/lib/domain/types"
 import { cn } from "@/lib/utils"
 
-import { useReviewSelection } from "./review-selection-context"
+import {
+  useReviewSelectionActions,
+  useReviewSelectionSelector,
+} from "./review-selection-context"
 
 interface ReviewTranscriptPaneProps {
   segments: TranscriptSegment[]
@@ -31,7 +34,7 @@ export function ReviewTranscriptPane({
 }
 
 function TranscriptSegmentCard({ segment }: { segment: TranscriptSegment }) {
-  const selection = useReviewSelection()
+  const selection = useReviewSelectionActions()
   const ref = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -45,8 +48,12 @@ function TranscriptSegmentCard({ segment }: { segment: TranscriptSegment }) {
     }
   }, [segment.id, selection])
 
-  const isHovered = selection.hoveredSegmentIds.has(segment.id)
-  const isActive = selection.activeSegmentIds.has(segment.id)
+  const isHovered = useReviewSelectionSelector((state) =>
+    state.hoveredSegmentIds.has(segment.id)
+  )
+  const isActive = useReviewSelectionSelector((state) =>
+    state.activeSegmentIds.has(segment.id)
+  )
 
   return (
     <div

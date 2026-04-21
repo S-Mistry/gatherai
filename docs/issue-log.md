@@ -1,6 +1,6 @@
 # Issue Log
 
-Last updated: April 16, 2026
+Last updated: April 20, 2026
 
 Use this file for confirmed repo-specific issues only. Keep entries short and practical.
 
@@ -80,3 +80,17 @@ Use this file for confirmed repo-specific issues only. Keep entries short and pr
 - Cause: The consultant-authenticated RPC `public.create_project_with_defaults(...)` called `app.has_workspace_access(...)`, but the migrations never granted `USAGE` on schema `app` to the `authenticated` role.
 - Avoid: Any consultant-authenticated RPC or RLS path that resolves objects from an internal schema must ship with the required schema privileges for the runtime role; function grants alone are not sufficient.
 - Fix/Check: Confirm `has_schema_privilege('authenticated', 'app', 'USAGE')` is true after `npm --prefix gather run supabase:bootstrap`, then create a project successfully from `/app/projects/new`.
+
+## I-012 Thin transcript evidence was over-promoted into confident themes
+
+- Problem: Session analysis and project synthesis could overstate findings by promoting generic titles, reusing one weak transcript segment across multiple claims, or turning single-session noise into a cross-interview theme.
+- Cause: The pipeline accepted loosely grounded insight candidates, did not consistently normalize overlapping theme labels, and lacked a deterministic eval corpus covering noisy greetings, non-linear answers, thin transcripts, subtle tensions, and synonym-heavy synthesis cases.
+- Avoid: Keep analysis evidence-first. Drop claims with generic labels or untraceable quotes, require multi-segment support for subtle claims, compute synthesis theme frequency from distinct included sessions, and run `npm --prefix gather run analysis:eval` before shipping transcript-analysis changes.
+- Fix/Check: Verify the analysis eval corpus passes for noisy, non-linear, thin-evidence, governance-tension, and synthesis-clustering fixture projects, and confirm shallow transcripts remain `partial` or `missing` instead of becoming confident insights.
+
+## I-013 Session analysis context dropped project-level mode data
+
+- Problem: After adding mode-aware prompts and labels, session analysis jobs no longer had access to the project record they needed to branch by `projectType`.
+- Cause: `getParticipantSessionRuntimeBundle()` loaded the session and config version, but not the mapped project, so downstream analysis code could not safely pass project context into extraction and quality scoring.
+- Avoid: Whenever prompt builders or runtime copy branch on immutable project metadata, make that metadata part of the shared analysis/runtime bundle instead of re-querying ad hoc at individual call sites.
+- Fix/Check: Ensure `SessionAnalysisContext` includes `project`, then run `npm --prefix gather run typecheck` and complete both a discovery session and a feedback session to confirm extraction and quality scoring receive the right project type.

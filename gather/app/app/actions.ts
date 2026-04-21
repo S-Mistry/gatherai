@@ -17,6 +17,7 @@ import {
 
 export async function createProjectAction(formData: FormData) {
   const record = await createProjectFromForm({
+    projectType: String(formData.get("projectType") ?? "discovery"),
     name: String(formData.get("name") ?? ""),
     clientName: String(formData.get("clientName") ?? ""),
     objective: String(formData.get("objective") ?? ""),

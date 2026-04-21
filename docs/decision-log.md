@@ -1,6 +1,6 @@
 # Decision Log
 
-Last updated: April 16, 2026
+Last updated: April 20, 2026
 
 ## Locked Decisions
 
@@ -78,6 +78,11 @@ Last updated: April 16, 2026
 - Status: accepted
 - Decision: session grounding and narrative extraction use `gpt-5.4-mini` by default, quality grading uses `gpt-5.4-nano`, and project synthesis plus hard-session escalation use `gpt-5.4`, all through structured Responses API calls with validated evidence refs.
 - Consequence: the runtime environment contract includes dedicated grounding, enrichment, grader, escalation, and project synthesis model variables, and generated outputs must not fall back to placeholder rows when structured extraction is unavailable.
+
+### D-016 Dual-mode project flow
+- Status: accepted
+- Decision: ship two first-class project types in v1, `discovery` and `feedback`, backed by one shared participant journey, one evidence model, and one consultant workspace model.
+- Consequence: `project_type` is immutable on project creation, project setup uses explicit choice cards instead of a hidden dropdown, participant framing and default runtime settings branch by project type before analysis, and analysis outputs use generic names such as `projectImplications`, `respondentProfile`, `recommendedFocusAreas`, and `decision_usefulness`.
 
 ## Reference Notes
 - OpenAI Realtime docs describe WebRTC as ideal for browser and client-side interactions and document server-side controls for realtime sessions.

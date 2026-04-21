@@ -67,6 +67,7 @@ export default async function SessionReviewPage({
             <ReviewSynthesisTabs
               projectId={projectId}
               sessionId={sessionId}
+              projectType={review.project.projectType}
               generatedStatus={review.generatedStatus}
               generatedOutput={review.generatedOutput}
               effectiveOutput={review.effectiveOutput}
