@@ -26,7 +26,7 @@ export function AppShell({ children, userEmail, demoMode }: AppShellProps) {
               <MicrophoneStage className="size-3.5" weight="fill" />
             </span>
             <span className="text-sm font-semibold tracking-tight">
-              GatherAI
+              Gather
             </span>
           </Link>
 

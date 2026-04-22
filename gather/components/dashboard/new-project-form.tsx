@@ -1,7 +1,7 @@
 "use client"
 
-import type { ComponentType, ReactNode } from "react"
-import { useState } from "react"
+import type { KeyboardEvent, ReactNode } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useFormStatus } from "react-dom"
 import {
   ArrowRight,
@@ -9,7 +9,9 @@ import {
   Clock,
   Detective,
   NotePencil,
+  Plus,
   Sparkle,
+  X,
 } from "@phosphor-icons/react"
 
 import { createProjectAction } from "@/app/app/actions"
@@ -32,23 +34,19 @@ const ANONYMITY_OPTIONS: Array<{
   {
     value: "named",
     label: "Named",
-    description: "Each response stays attributable by name.",
+    description: "Responses stay tied to each participant's name.",
   },
   {
     value: "pseudonymous",
     label: "Pseudonymous",
-    description: "Responses keep context, but names stay hidden behind labels.",
+    description: "Labels preserve context while names stay private.",
   },
   {
     value: "anonymous",
     label: "Anonymous",
-    description: "No name or role is attached to what someone says.",
+    description: "No name, no role. Just the response.",
   },
 ]
-
-function formatLines(lines: string[]) {
-  return lines.join("\n")
-}
 
 function SubmitButton() {
   const { pending } = useFormStatus()
@@ -67,11 +65,11 @@ export function NewProjectForm() {
   const [name, setName] = useState("")
   const [clientName, setClientName] = useState("")
   const [objective, setObjective] = useState(preset.objective)
-  const [areasOfInterest, setAreasOfInterest] = useState(
-    formatLines(preset.areasOfInterest)
+  const [areasOfInterest, setAreasOfInterest] = useState<string[]>(
+    preset.areasOfInterest
   )
-  const [requiredQuestions, setRequiredQuestions] = useState(
-    formatLines(preset.requiredQuestions)
+  const [requiredQuestions, setRequiredQuestions] = useState<string[]>(
+    preset.requiredQuestions
   )
   const [durationCapMinutes, setDurationCapMinutes] = useState(
     String(preset.durationCapMinutes)
@@ -84,8 +82,8 @@ export function NewProjectForm() {
     const nextPreset = getProjectTypePreset(type)
     setProjectType(type)
     setObjective(nextPreset.objective)
-    setAreasOfInterest(formatLines(nextPreset.areasOfInterest))
-    setRequiredQuestions(formatLines(nextPreset.requiredQuestions))
+    setAreasOfInterest(nextPreset.areasOfInterest)
+    setRequiredQuestions(nextPreset.requiredQuestions)
     setDurationCapMinutes(String(nextPreset.durationCapMinutes))
     setAnonymityMode(nextPreset.anonymityMode)
   }
@@ -103,42 +101,29 @@ export function NewProjectForm() {
         <input type="hidden" name="projectType" value={projectType} />
 
         <section className="panel-flush overflow-hidden">
-          <div className="relative overflow-hidden px-6 py-6">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(43,91,255,0.12),transparent_42%),radial-gradient(circle_at_bottom_right,rgba(12,173,124,0.12),transparent_38%)]" />
-            <div className="relative stack gap-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="accent">New project</Badge>
-                <span className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
-                  one flow, two routes
-                </span>
-              </div>
-              <div className="stack gap-2">
-                <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-balance">
-                  Choose the collection mode first, then shape the conversation.
-                </h1>
-                <p className="max-w-3xl text-base leading-7 text-muted-foreground">
-                  Discovery and feedback share the same engine, but the participant
-                  framing, defaults, and synthesis language should not be forced
-                  into one generic setup.
-                </p>
-              </div>
+          <header className="flex flex-col justify-between gap-3 px-6 py-5 lg:flex-row lg:items-end">
+            <div className="stack gap-1">
+              <p className="eyebrow-sm">New project</p>
+              <h1 className="text-2xl font-semibold tracking-tight text-balance">
+                Start a new project
+              </h1>
+              <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+                Pick a mode. We&apos;ll tune the questions, pacing, and
+                synthesis to match.
+              </p>
             </div>
-          </div>
+            <Badge variant="accent">{preset.label}</Badge>
+          </header>
 
           <div className="divider" />
 
           <div className="stack gap-6 px-6 py-6">
             <section className="stack gap-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="stack gap-1">
-                  <p className="eyebrow-sm">Type</p>
-                  <h2 className="text-lg font-semibold tracking-tight text-foreground">
-                    Pick the route this project is taking
-                  </h2>
-                </div>
-                <span className="rounded-full border border-border/70 bg-background/70 px-3 py-1 text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-                  visible branching
-                </span>
+              <div className="stack gap-1">
+                <p className="eyebrow-sm">Mode</p>
+                <h2 className="text-lg font-semibold tracking-tight text-foreground">
+                  What are you trying to learn?
+                </h2>
               </div>
 
               <div className="grid gap-3 lg:grid-cols-2">
@@ -154,7 +139,7 @@ export function NewProjectForm() {
                       className={cn(
                         "focus-ring group rounded-[28px] border p-5 text-left transition-all",
                         selected
-                          ? "border-primary/50 bg-primary/[0.08] shadow-[0_20px_45px_-30px_rgba(43,91,255,0.55)]"
+                          ? "border-primary/50 bg-primary/[0.08]"
                           : "border-border/70 bg-background/75 hover:border-primary/30 hover:bg-primary/[0.04]"
                       )}
                     >
@@ -176,7 +161,7 @@ export function NewProjectForm() {
                         </div>
                         <div
                           className={cn(
-                            "mt-0.5 size-3 rounded-full border transition-colors",
+                            "mt-0.5 size-3 shrink-0 rounded-full border transition-colors",
                             selected
                               ? "border-primary bg-primary"
                               : "border-border bg-transparent"
@@ -184,26 +169,21 @@ export function NewProjectForm() {
                         />
                       </div>
 
-                      <div className="mt-5 grid gap-2 sm:grid-cols-3">
-                        <PreviewMetric
-                          icon={Clock}
-                          label="Duration"
-                          value={`~${typePreset.durationCapMinutes} min`}
-                        />
-                        <PreviewMetric
-                          icon={ChatCircleDots}
-                          label="Follow-up"
-                          value={
-                            typePreset.followUpLimit === 1
-                              ? "1 focused probe"
-                              : `${typePreset.followUpLimit} probes max`
-                          }
-                        />
-                        <PreviewMetric
-                          icon={NotePencil}
-                          label="Identity"
-                          value={typePreset.anonymityMode}
-                        />
+                      <div className="mt-4 flex flex-wrap gap-1.5">
+                        <span className="chip">
+                          <Clock className="size-3" />
+                          ~{typePreset.durationCapMinutes} min
+                        </span>
+                        <span className="chip">
+                          <ChatCircleDots className="size-3" />
+                          {typePreset.followUpLimit === 1
+                            ? "1 probe"
+                            : `${typePreset.followUpLimit} probes`}
+                        </span>
+                        <span className="chip">
+                          <NotePencil className="size-3" />
+                          {typePreset.anonymityMode}
+                        </span>
                       </div>
                     </button>
                   )
@@ -213,9 +193,9 @@ export function NewProjectForm() {
 
             <section className="stack gap-4">
               <div className="stack gap-1">
-                <p className="eyebrow-sm">What you need to learn</p>
+                <p className="eyebrow-sm">Essentials</p>
                 <h2 className="text-lg font-semibold tracking-tight text-foreground">
-                  Start from a strong default, then sharpen the specifics
+                  Name it and set the brief
                 </h2>
               </div>
 
@@ -251,7 +231,7 @@ export function NewProjectForm() {
               <Field
                 label="Objective"
                 htmlFor="objective"
-                hint="Switching project type swaps in a mode-appropriate starter objective."
+                hint="Pre-filled to match your mode. Edit freely."
               >
                 <Textarea
                   id="objective"
@@ -264,40 +244,31 @@ export function NewProjectForm() {
               </Field>
 
               <div className="grid gap-4 xl:grid-cols-2">
-                <Field
+                <BulletListField
                   label="Topics to cover"
-                  htmlFor="areasOfInterest"
-                  hint="One topic per line."
-                >
-                  <Textarea
-                    id="areasOfInterest"
-                    name="areasOfInterest"
-                    rows={8}
-                    value={areasOfInterest}
-                    onChange={(event) => setAreasOfInterest(event.target.value)}
-                  />
-                </Field>
-                <Field
+                  name="areasOfInterest"
+                  items={areasOfInterest}
+                  onChange={setAreasOfInterest}
+                  addLabel="Add topic"
+                  placeholder="e.g. Current blockers"
+                />
+                <BulletListField
                   label="Must-ask questions"
-                  htmlFor="requiredQuestions"
-                  hint="One question per line. These become the backbone of the conversation."
-                >
-                  <Textarea
-                    id="requiredQuestions"
-                    name="requiredQuestions"
-                    rows={8}
-                    value={requiredQuestions}
-                    onChange={(event) => setRequiredQuestions(event.target.value)}
-                  />
-                </Field>
+                  name="requiredQuestions"
+                  items={requiredQuestions}
+                  onChange={setRequiredQuestions}
+                  addLabel="Add question"
+                  placeholder="e.g. What would make this useful?"
+                  hint="These anchor every conversation."
+                />
               </div>
             </section>
 
             <section className="stack gap-4">
               <div className="stack gap-1">
-                <p className="eyebrow-sm">How the Conversation Runs</p>
+                <p className="eyebrow-sm">Conversation</p>
                 <h2 className="text-lg font-semibold tracking-tight text-foreground">
-                  Tune the runtime without turning this into survey-builder busywork
+                  How it runs
                 </h2>
               </div>
 
@@ -316,7 +287,7 @@ export function NewProjectForm() {
 
                 <div className="stack gap-2">
                   <span className="text-sm font-medium text-foreground">
-                    Identity handling
+                    Identity
                   </span>
                   <div className="grid gap-3 md:grid-cols-3">
                     {ANONYMITY_OPTIONS.map((option) => {
@@ -358,14 +329,14 @@ export function NewProjectForm() {
                   label="Follow-up depth"
                   value={
                     preset.followUpLimit === 1
-                      ? "One focused probe when needed."
-                      : `${preset.followUpLimit} follow-up turns max before moving on.`
+                      ? "One focused probe when it matters."
+                      : `Up to ${preset.followUpLimit} probes before moving on.`
                   }
                 />
                 <RuntimeNote label="Tone" value={preset.toneStyle} />
                 <RuntimeNote
                   label="Session model"
-                  value="Strict mode in v1, with one topic at a time and transcript-only storage."
+                  value="One topic at a time. Transcripts only, no audio stored."
                 />
               </div>
             </section>
@@ -375,8 +346,8 @@ export function NewProjectForm() {
 
           <div className="flex flex-col gap-3 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
             <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-              Saving creates the project, its first config version, and the public
-              participant link immediately.
+              Saving creates your project and a shareable participant link,
+              ready to send.
             </p>
             <SubmitButton />
           </div>
@@ -388,9 +359,9 @@ export function NewProjectForm() {
           <div className="px-5 py-5">
             <div className="flex items-center justify-between gap-3">
               <div className="stack gap-1">
-                <p className="eyebrow-sm">Live preview</p>
+                <p className="eyebrow-sm">Preview</p>
                 <h2 className="text-lg font-semibold tracking-tight text-foreground">
-                  What this route feels like
+                  How participants see it
                 </h2>
               </div>
               <Badge variant={preset.badgeVariant}>{preset.label}</Badge>
@@ -424,7 +395,7 @@ export function NewProjectForm() {
 
             <section className="rounded-[28px] border border-border/70 bg-background/75 p-5">
               <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
-                Analysis readout
+                Synthesis
               </p>
               <div className="mt-4 stack gap-3">
                 {previewAnalysisHeadings.map((heading) => (
@@ -443,22 +414,16 @@ export function NewProjectForm() {
 
             <section className="rounded-[28px] border border-border/70 bg-background/75 p-5">
               <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
-                Default posture
+                Defaults
               </p>
               <ul className="mt-4 space-y-2 text-sm leading-6 text-muted-foreground">
-                <li>
-                  About {preset.durationCapMinutes} minutes, with one topic at a
-                  time.
-                </li>
+                <li>~{preset.durationCapMinutes} minutes, one topic at a time.</li>
                 <li>
                   {preset.followUpLimit === 1
-                    ? "Keeps follow-up tight so reflections stay lightweight."
-                    : "Allows deeper probing so upcoming decisions are well framed."}
+                    ? "Light follow-ups keep reflections easy to give."
+                    : "Deeper probing gives enough context to frame a decision."}
                 </li>
-                <li>
-                  Starts with {preset.audiencePlural} in mind, not generic survey
-                  respondents.
-                </li>
+                <li>Built for {preset.audiencePlural}, not generic survey takers.</li>
               </ul>
             </section>
           </div>
@@ -490,22 +455,127 @@ function Field({
   )
 }
 
-function PreviewMetric({
-  icon: Icon,
+function BulletListField({
   label,
-  value,
+  name,
+  hint,
+  items,
+  onChange,
+  addLabel,
+  placeholder,
 }: {
-  icon: ComponentType<{ className?: string }>
   label: string
-  value: string
+  name: string
+  hint?: string
+  items: string[]
+  onChange: (items: string[]) => void
+  addLabel: string
+  placeholder?: string
 }) {
+  const itemRefs = useRef<(HTMLTextAreaElement | null)[]>([])
+  const pendingFocusRef = useRef<number | null>(null)
+
+  const visibleItems = items.length === 0 ? [""] : items
+  const serialized = visibleItems
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .join("\n")
+
+  useEffect(() => {
+    const target = pendingFocusRef.current
+    if (target === null) return
+    const el = itemRefs.current[target]
+    if (el) {
+      el.focus()
+      el.setSelectionRange(el.value.length, el.value.length)
+    }
+    pendingFocusRef.current = null
+  }, [items])
+
+  function updateItem(index: number, value: string) {
+    const cleaned = value.replace(/\n+/g, " ")
+    onChange(visibleItems.map((item, idx) => (idx === index ? cleaned : item)))
+  }
+  function insertItemAfter(index: number) {
+    const next = [...visibleItems]
+    next.splice(index + 1, 0, "")
+    pendingFocusRef.current = index + 1
+    onChange(next)
+  }
+  function removeItem(index: number) {
+    const next = visibleItems.filter((_, idx) => idx !== index)
+    pendingFocusRef.current = Math.max(0, index - 1)
+    onChange(next.length === 0 ? [""] : next)
+  }
+  function addItem() {
+    pendingFocusRef.current = visibleItems.length
+    onChange([...visibleItems, ""])
+  }
+  function handleKeyDown(
+    event: KeyboardEvent<HTMLTextAreaElement>,
+    index: number
+  ) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault()
+      insertItemAfter(index)
+    } else if (
+      event.key === "Backspace" &&
+      visibleItems[index] === "" &&
+      visibleItems.length > 1
+    ) {
+      event.preventDefault()
+      removeItem(index)
+    }
+  }
+
   return (
-    <div className="rounded-2xl border border-border/60 bg-background/75 px-3 py-3">
-      <div className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-        <Icon className="size-3.5" />
-        {label}
+    <div className="stack gap-3">
+      <span className="text-sm font-medium text-foreground">{label}</span>
+      <input type="hidden" name={name} value={serialized} />
+      <div className="max-h-64 overflow-y-auto pr-1">
+        <ul className="stack gap-2">
+          {visibleItems.map((item, idx) => (
+            <li key={idx} className="flex items-start gap-2">
+              <span
+                aria-hidden
+                className="mt-[1.1rem] size-1.5 shrink-0 rounded-full bg-muted-foreground/50"
+              />
+              <textarea
+                ref={(el) => {
+                  itemRefs.current[idx] = el
+                }}
+                rows={1}
+                value={item}
+                onChange={(event) => updateItem(idx, event.target.value)}
+                onKeyDown={(event) => handleKeyDown(event, idx)}
+                placeholder={placeholder}
+                className="w-full resize-none rounded-2xl border border-border/70 bg-white/80 px-4 py-3 text-sm leading-6 text-foreground shadow-sm outline-none transition [field-sizing:content] placeholder:text-muted-foreground focus:border-primary/50 focus:ring-4 focus:ring-primary/10 dark:bg-card/70"
+              />
+              {visibleItems.length > 1 ? (
+                <button
+                  type="button"
+                  onClick={() => removeItem(idx)}
+                  aria-label="Remove item"
+                  className="focus-ring mt-2 inline-flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  <X className="size-3.5" />
+                </button>
+              ) : null}
+            </li>
+          ))}
+        </ul>
       </div>
-      <p className="mt-2 text-sm font-medium text-foreground">{value}</p>
+      <button
+        type="button"
+        onClick={addItem}
+        className="focus-ring inline-flex items-center gap-1.5 self-start rounded-full border border-dashed border-border/70 px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+      >
+        <Plus className="size-3" weight="bold" />
+        {addLabel}
+      </button>
+      {hint ? (
+        <span className="text-xs leading-5 text-muted-foreground">{hint}</span>
+      ) : null}
     </div>
   )
 }

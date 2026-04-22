@@ -52,7 +52,7 @@ const PROJECT_TYPE_PRESETS: Record<ProjectType, ProjectTypePreset> = {
     anonymityMode: "pseudonymous",
     toneStyle: "Warm, neutral, researcher-like.",
     followUpLimit: 2,
-    participantTitle: "Before the workshop — a short conversation.",
+    participantTitle: "A short conversation before the workshop.",
     participantIntro:
       "Before the live session, the team running this workshop would love to hear what's working, what isn't, and what you would change. I'll ask a few questions and listen carefully.",
     disclosureLines: [
@@ -60,7 +60,7 @@ const PROJECT_TYPE_PRESETS: Record<ProjectType, ProjectTypePreset> = {
       "Your voice recording is not saved.",
       "Only the consultant sees the transcript.",
     ],
-    completionTitle: "Thanks — that gives the team a clearer starting point.",
+    completionTitle: "Thanks. That gives the team a clearer starting point.",
     completionDescription:
       "Your voice isn't saved. The transcript helps shape the upcoming workshop or program.",
     implicationsLabel: "Workshop implications",
@@ -101,7 +101,7 @@ const PROJECT_TYPE_PRESETS: Record<ProjectType, ProjectTypePreset> = {
       "Your voice recording is not saved.",
       "Only the organizer sees the transcript.",
     ],
-    completionTitle: "Thanks — that feedback is now part of the improvement loop.",
+    completionTitle: "Thanks. Your feedback is now part of the improvement loop.",
     completionDescription:
       "Your voice isn't saved. The transcript helps improve the next round of the program.",
     implicationsLabel: "Program implications",
