@@ -23,8 +23,10 @@ import {
   deriveCaptureMonitorSnapshot,
 } from "@/lib/participant/capture-monitor"
 import {
+  classifyMicAcquireFailure,
   collectMicDiagnostics,
   detectMicSupport,
+  getMicBrowserFamily,
   type MicSupport,
 } from "@/lib/participant/mic-support"
 import { detectInterviewStartSignal } from "@/lib/participant/runtime"
@@ -85,107 +87,6 @@ function teardownRealtime({
   if (audio) {
     audio.pause()
     audio.srcObject = null
-  }
-}
-
-type MicErrorCode =
-  | "insecure"
-  | "unsupported"
-  | "denied"
-  | "not-found"
-  | "in-use"
-  | "unknown"
-
-class MicError extends Error {
-  readonly code: MicErrorCode
-
-  constructor(code: MicErrorCode, message: string) {
-    super(message)
-    this.code = code
-    this.name = "MicError"
-  }
-}
-
-function describeMicFailure(error: unknown): MicError {
-  if (error instanceof MicError) {
-    return error
-  }
-
-  const isIos =
-    typeof navigator !== "undefined" &&
-    /iPad|iPhone|iPod/.test(navigator.userAgent)
-
-  const permissionHint = isIos
-    ? "On iPhone, open Settings → Safari → Microphone and allow this site, then reload."
-    : "Tap the lock icon in the address bar, enable Microphone, then reload."
-
-  const name = error instanceof DOMException ? error.name : ""
-
-  if (name === "NotAllowedError" || name === "PermissionDeniedError") {
-    return new MicError(
-      "denied",
-      `Microphone access was blocked. ${permissionHint}`
-    )
-  }
-
-  if (name === "NotFoundError" || name === "DevicesNotFoundError") {
-    return new MicError(
-      "not-found",
-      "No microphone was detected on this device."
-    )
-  }
-
-  if (name === "NotReadableError" || name === "TrackStartError") {
-    return new MicError(
-      "in-use",
-      "Another app is using your microphone. Close any calls or recorders and try again."
-    )
-  }
-
-  if (name === "SecurityError") {
-    return new MicError(
-      "insecure",
-      "Your browser blocked microphone access because this page isn't loaded securely. Open it over HTTPS."
-    )
-  }
-
-  const message =
-    error instanceof Error && error.message
-      ? error.message
-      : "We couldn't turn on the microphone. Try again in a moment."
-  return new MicError("unknown", message)
-}
-
-async function acquireMicrophoneStream(): Promise<MediaStream> {
-  if (typeof window === "undefined") {
-    throw new MicError(
-      "unsupported",
-      "Voice interviews aren't available in this environment."
-    )
-  }
-
-  if (window.isSecureContext === false) {
-    throw new MicError(
-      "insecure",
-      "Open this link over HTTPS. Mobile browsers block microphone access on insecure pages."
-    )
-  }
-
-  if (
-    typeof navigator === "undefined" ||
-    !navigator.mediaDevices ||
-    typeof navigator.mediaDevices.getUserMedia !== "function"
-  ) {
-    throw new MicError(
-      "unsupported",
-      "This browser can't access the microphone. Try the latest Safari on iPhone or Chrome on Android."
-    )
-  }
-
-  try {
-    return await navigator.mediaDevices.getUserMedia({ audio: true })
-  } catch (error) {
-    throw describeMicFailure(error)
   }
 }
 
@@ -321,16 +222,23 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
     }
   }, [])
 
-  const recheckMicSupport = useCallback(async () => {
-    setErrorMessage(null)
-    setStatus("ready")
+  const refreshMicSupport = useCallback(async (): Promise<MicSupport> => {
     try {
       const support = await detectMicSupport()
       setMicSupport(support)
+      return support
     } catch {
-      setMicSupport({ kind: "ready" })
+      const fallback = { kind: "ready" } as const
+      setMicSupport(fallback)
+      return fallback
     }
   }, [])
+
+  const recheckMicSupport = useCallback(async () => {
+    setErrorMessage(null)
+    setStatus("ready")
+    await refreshMicSupport()
+  }, [refreshMicSupport])
 
   useEffect(() => {
     if (status !== "live" || !interviewStarted) return
@@ -772,12 +680,29 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
     inflightItemIdsRef.current.clear()
     flushPromiseRef.current = Promise.resolve()
 
+    const browserFamily =
+      typeof navigator !== "undefined"
+        ? getMicBrowserFamily(navigator.userAgent)
+        : "other"
+
+    if (micSupport && micSupport.kind !== "ready") {
+      setStatus("error")
+      setErrorMessage(micSupport.message)
+      return
+    }
+
     try {
-      micStreamRef.current = await acquireMicrophoneStream()
+      micStreamRef.current = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+      })
     } catch (error) {
       console.error("Microphone acquisition failed.", error)
-      const failure = describeMicFailure(error)
-      void detectMicSupport().then(setMicSupport).catch(() => undefined)
+      const support = await refreshMicSupport()
+      const failure = classifyMicAcquireFailure({
+        errorName: error instanceof DOMException ? error.name : null,
+        browserFamily,
+        support,
+      })
       setStatus("error")
       setErrorMessage(failure.message)
       return

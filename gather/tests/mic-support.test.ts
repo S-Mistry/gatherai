@@ -2,15 +2,20 @@ import assert from "node:assert/strict"
 import test from "node:test"
 
 import {
+  classifyMicAcquireFailure,
   detectMicSupport,
+  getMicBrowserFamily,
   isAndroid,
   isBraveUserAgent,
   isInAppWebView,
   isIos,
+  type MicSupport,
 } from "../lib/participant/mic-support"
 
 const SAFARI_IOS =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1"
+const CHROME_IOS =
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/122.0.6261.52 Mobile/15E148 Safari/604.1"
 const CHROME_ANDROID =
   "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36"
 const BRAVE_IOS =
@@ -23,6 +28,8 @@ const INSTAGRAM_ANDROID =
   "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/122.0.0.0 Mobile Safari/537.36 Instagram 320.0.0.40.109 Android"
 const LINKEDIN_IOS =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 [LinkedInApp]"
+const FIREFOX_IOS =
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/125.0 Mobile/15E148 Safari/605.1.15"
 
 test("platform helpers identify iOS and Android user agents", () => {
   assert.equal(isIos(SAFARI_IOS), true)
@@ -38,6 +45,15 @@ test("isBraveUserAgent recognizes Brave marker in the UA string", () => {
   assert.equal(isBraveUserAgent(BRAVE_ANDROID), true)
   assert.equal(isBraveUserAgent(SAFARI_IOS), false)
   assert.equal(isBraveUserAgent(CHROME_ANDROID), false)
+})
+
+test("getMicBrowserFamily distinguishes Safari, Chrome, and Brave mobile browsers", () => {
+  assert.equal(getMicBrowserFamily(SAFARI_IOS), "ios-safari")
+  assert.equal(getMicBrowserFamily(CHROME_IOS), "ios-chrome")
+  assert.equal(getMicBrowserFamily(BRAVE_IOS), "ios-brave")
+  assert.equal(getMicBrowserFamily(CHROME_ANDROID), "android-chrome")
+  assert.equal(getMicBrowserFamily(BRAVE_ANDROID), "android-brave")
+  assert.equal(getMicBrowserFamily(FIREFOX_IOS), "other")
 })
 
 test("isInAppWebView detects common in-app browsers", () => {
@@ -100,16 +116,43 @@ test("detectMicSupport falls back to no-api for missing mediaDevices on a regula
 })
 
 test("detectMicSupport surfaces denied permission with platform-specific recovery copy", async () => {
-  const ios = await detectMicSupport({
+  const safari = await detectMicSupport({
     userAgent: SAFARI_IOS,
     isSecureContext: true,
     hasMediaDevices: true,
     permissionState: "denied",
     isBrave: false,
   })
-  assert.equal(ios.kind, "denied")
-  if (ios.kind === "denied") {
-    assert.match(ios.message, /Settings → Safari → Microphone/)
+  assert.equal(safari.kind, "denied")
+  if (safari.kind === "denied") {
+    assert.match(safari.message, /Settings → Safari → Microphone/)
+  }
+
+  const chromeIos = await detectMicSupport({
+    userAgent: CHROME_IOS,
+    isSecureContext: true,
+    hasMediaDevices: true,
+    permissionState: "denied",
+    isBrave: false,
+  })
+  assert.equal(chromeIos.kind, "denied")
+  if (chromeIos.kind === "denied") {
+    assert.match(chromeIos.message, /Settings → Chrome → Microphone/)
+    assert.match(chromeIos.message, /microphone icon in the address bar/)
+    assert.doesNotMatch(chromeIos.message, /Settings → Safari → Microphone/)
+  }
+
+  const braveIos = await detectMicSupport({
+    userAgent: BRAVE_IOS,
+    isSecureContext: true,
+    hasMediaDevices: true,
+    permissionState: "denied",
+    isBrave: true,
+  })
+  assert.equal(braveIos.kind, "denied")
+  if (braveIos.kind === "denied") {
+    assert.match(braveIos.message, /Settings → Brave → Microphone/)
+    assert.doesNotMatch(braveIos.message, /Settings → Safari → Microphone/)
   }
 
   const android = await detectMicSupport({
@@ -143,4 +186,58 @@ test("detectMicSupport returns ready on a capable, granted or prompt-state brows
     isBrave: false,
   })
   assert.equal(fresh.kind, "ready")
+})
+
+test("classifyMicAcquireFailure uses Chrome iOS guidance for no-prompt deny failures", () => {
+  const failure = classifyMicAcquireFailure({
+    errorName: "NotAllowedError",
+    browserFamily: "ios-chrome",
+    support: { kind: "ready" },
+  })
+
+  assert.equal(failure.code, "denied")
+  assert.match(failure.message, /Settings → Chrome → Microphone/)
+  assert.doesNotMatch(failure.message, /Settings → Safari → Microphone/)
+})
+
+test("classifyMicAcquireFailure uses Brave iOS guidance for no-prompt deny failures", () => {
+  const failure = classifyMicAcquireFailure({
+    errorName: "NotAllowedError",
+    browserFamily: "ios-brave",
+    support: { kind: "ready" },
+  })
+
+  assert.equal(failure.code, "denied")
+  assert.match(failure.message, /Settings → Brave → Microphone/)
+  assert.doesNotMatch(failure.message, /Settings → Safari → Microphone/)
+})
+
+test("classifyMicAcquireFailure keeps Safari-only recovery copy on Safari", () => {
+  const failure = classifyMicAcquireFailure({
+    errorName: "NotAllowedError",
+    browserFamily: "ios-safari",
+    support: { kind: "ready" },
+  })
+
+  assert.equal(failure.code, "denied")
+  assert.match(failure.message, /Settings → Safari → Microphone/)
+})
+
+test("classifyMicAcquireFailure prefers Brave Shields guidance over generic Brave copy", () => {
+  const support: MicSupport = {
+    kind: "unsupported",
+    reason: "brave-shields",
+    message:
+      "Brave Shields is blocking the microphone. Tap the lion icon next to the address bar, set Shields to 'Standard' for this site, then reload.",
+  }
+
+  const failure = classifyMicAcquireFailure({
+    errorName: "NotAllowedError",
+    browserFamily: "ios-brave",
+    support,
+  })
+
+  assert.equal(failure.code, "unsupported")
+  assert.match(failure.message, /Brave Shields is blocking the microphone/)
+  assert.doesNotMatch(failure.message, /Settings → Brave → Microphone/)
 })
