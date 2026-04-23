@@ -1,6 +1,6 @@
 # Issue Log
 
-Last updated: April 22, 2026
+Last updated: April 23, 2026
 
 Use this file for confirmed repo-specific issues only. Keep entries short and practical.
 
@@ -122,3 +122,10 @@ Use this file for confirmed repo-specific issues only. Keep entries short and pr
 - Cause: `followUpLimit` was stored in project config but omitted from public realtime config, and the participant shell did not derive live coverage, novelty, or wrap-up signals to guide the realtime agent.
 - Avoid: Keep participant-facing config aligned with stored capture policy, and steer live feedback sessions with app-owned capture signals instead of relying on prompt-only behavior.
 - Fix/Check: Verify feedback public config exposes `followUpLimit`, realtime instructions include adaptive feedback probing, and capture-monitor tests cover high-signal, thin-answer, and wrap-up guidance.
+
+## I-018 Participant completion waited on network before local teardown
+
+- Problem: After a respondent or Mia finished the interview, the mic indicator and agent availability could linger until transcript flush and `/complete` finished.
+- Cause: The participant shell treated transcript persistence and session completion as blocking work before it closed the realtime session, and it had no client-side completion trigger for Mia's explicit final turn.
+- Avoid: Treat participant completion as local-first. Snapshot completed transcript items already in memory, shut down realtime audio immediately on every exit path, ignore late transport events after completion starts, and let final `/events` plus `/complete` finish in the background.
+- Fix/Check: Click `I'm done` while Mia is speaking and while idle, then let Mia finish with her explicit final line. In every case, confirm the browser mic indicator turns off immediately, the completion screen renders right away, and no further agent audio or transcript updates arrive afterward.

@@ -1,4 +1,8 @@
-import type { AnonymityMode, ProjectType } from "@/lib/domain/types"
+import type {
+  AnonymityMode,
+  PublicInterviewConfig,
+  ProjectType,
+} from "@/lib/domain/types"
 
 export const PROJECT_TYPE_ORDER: ProjectType[] = ["discovery", "feedback"]
 export const DEFAULT_CREATE_PROJECT_TYPE: ProjectType = "feedback"
@@ -36,7 +40,7 @@ const PROJECT_TYPE_PRESETS: Record<ProjectType, ProjectTypePreset> = {
     audiencePlural: "stakeholders",
     anonymousRespondentLabel: "Stakeholder",
     objective:
-      "Understand the friction, contradictions, and decisions the upcoming workshop or program needs to address.",
+      "Understand the friction, contradictions, and decisions the team should address next.",
     areasOfInterest: [
       "Current blockers",
       "Decision ownership",
@@ -44,18 +48,18 @@ const PROJECT_TYPE_PRESETS: Record<ProjectType, ProjectTypePreset> = {
       "What a useful outcome would look like",
     ],
     requiredQuestions: [
-      "What would make this workshop or program useful for you?",
+      "What outcome would make this useful for you?",
       "Where is the biggest friction today?",
       "What tension, contradiction, or tradeoff should we surface?",
-      "What risk should we account for while planning this session?",
+      "What risk should we account for as we plan next steps?",
     ],
     durationCapMinutes: 15,
     anonymityMode: "pseudonymous",
     toneStyle: "Warm, neutral, researcher-like.",
     followUpLimit: 2,
-    participantTitle: "A short conversation before the workshop.",
+    participantTitle: "A short conversation to help the team prepare.",
     participantIntro:
-      "Before the live session, the team running this workshop would love to hear what's working, what isn't, and what you would change. I'll ask a few questions and listen carefully.",
+      "Before the team decides what to do next, they'd love to hear what's working, what isn't, and what you would change. I'll ask a few questions and listen carefully.",
     disclosureLines: [
       "I'll listen and write down what you say.",
       "Your voice recording is not saved.",
@@ -63,7 +67,7 @@ const PROJECT_TYPE_PRESETS: Record<ProjectType, ProjectTypePreset> = {
     ],
     completionTitle: "Thanks. That gives the team a clearer starting point.",
     completionDescription:
-      "Your voice isn't saved. The transcript helps shape the upcoming workshop or program.",
+      "Your voice isn't saved. The transcript helps the team prepare for what comes next.",
     implicationsLabel: "Workshop implications",
     implicationsEmptyMessage:
       "No workshop implications were grounded from this transcript yet.",
@@ -102,7 +106,8 @@ const PROJECT_TYPE_PRESETS: Record<ProjectType, ProjectTypePreset> = {
       "Your voice recording is not saved.",
       "Only the organizer sees the transcript.",
     ],
-    completionTitle: "Thanks. Your feedback is now part of the improvement loop.",
+    completionTitle:
+      "Thanks. Your feedback is now part of the improvement loop.",
     completionDescription:
       "Your voice isn't saved. The transcript helps the team improve the experience.",
     implicationsLabel: "Improvement implications",
@@ -112,6 +117,79 @@ const PROJECT_TYPE_PRESETS: Record<ProjectType, ProjectTypePreset> = {
     shareHint:
       "Best shared the same day or within 24 hours, while the experience is still fresh.",
   },
+}
+
+const LEGACY_DISCOVERY_OBJECTIVES = new Map<string, string>([
+  [
+    "Capture workshop discovery inputs.",
+    PROJECT_TYPE_PRESETS.discovery.objective,
+  ],
+  [
+    "Understand the friction, contradictions, and decisions the upcoming workshop or program needs to address.",
+    PROJECT_TYPE_PRESETS.discovery.objective,
+  ],
+])
+
+const LEGACY_DISCOVERY_REQUIRED_QUESTIONS = new Map<string, string>([
+  [
+    "What would make this workshop useful for you?",
+    PROJECT_TYPE_PRESETS.discovery.requiredQuestions[0],
+  ],
+  [
+    "What would make this workshop or program useful for you?",
+    PROJECT_TYPE_PRESETS.discovery.requiredQuestions[0],
+  ],
+  [
+    "What risk should we account for while planning this session?",
+    PROJECT_TYPE_PRESETS.discovery.requiredQuestions[3],
+  ],
+])
+
+const LEGACY_FEEDBACK_OBJECTIVES = new Map<string, string>([
+  [
+    "Capture what landed, what missed, and what should change after the workshop, course, or program.",
+    PROJECT_TYPE_PRESETS.feedback.objective,
+  ],
+])
+
+const LEGACY_FEEDBACK_REQUIRED_QUESTIONS = new Map<string, string>([
+  [
+    "What part of the workshop or program was most useful to you?",
+    PROJECT_TYPE_PRESETS.feedback.requiredQuestions[0],
+  ],
+  [
+    "What felt unclear, missing, or less useful?",
+    PROJECT_TYPE_PRESETS.feedback.requiredQuestions[1],
+  ],
+  [
+    "What changed for you afterwards, if anything?",
+    PROJECT_TYPE_PRESETS.feedback.requiredQuestions[2],
+  ],
+  [
+    "If we ran this again, what should we do differently?",
+    PROJECT_TYPE_PRESETS.feedback.requiredQuestions[3],
+  ],
+])
+
+function sanitizeLegacyObjective(projectType: ProjectType, objective: string) {
+  const legacyObjectives =
+    projectType === "feedback"
+      ? LEGACY_FEEDBACK_OBJECTIVES
+      : LEGACY_DISCOVERY_OBJECTIVES
+
+  return legacyObjectives.get(objective) ?? objective
+}
+
+function sanitizeLegacyRequiredQuestion(
+  projectType: ProjectType,
+  prompt: string
+) {
+  const legacyRequiredQuestions =
+    projectType === "feedback"
+      ? LEGACY_FEEDBACK_REQUIRED_QUESTIONS
+      : LEGACY_DISCOVERY_REQUIRED_QUESTIONS
+
+  return legacyRequiredQuestions.get(prompt) ?? prompt
 }
 
 export function isProjectType(value: unknown): value is ProjectType {
@@ -166,4 +244,20 @@ export function buildParticipantIntro(projectType: unknown) {
 
 export function buildParticipantDisclosure(projectType: unknown) {
   return getProjectTypePreset(projectType).disclosureLines.join("\n")
+}
+
+export function sanitizePublicInterviewConfig(
+  config: PublicInterviewConfig
+): PublicInterviewConfig {
+  const projectType = normalizeProjectType(config.projectType)
+
+  return {
+    ...config,
+    projectType,
+    objective: sanitizeLegacyObjective(projectType, config.objective),
+    requiredQuestions: config.requiredQuestions.map((question) => ({
+      ...question,
+      prompt: sanitizeLegacyRequiredQuestion(projectType, question.prompt),
+    })),
+  }
 }

@@ -51,6 +51,7 @@ Last updated: April 23, 2026
   - browser subscribes to realtime history updates and persists completed participant and agent transcript items back to public route handlers
   - browser derives lightweight capture signals from transcript history during the session, including likely required-question coverage, answer thinness, novelty, repetition, and feedback wrap-up pressure
   - for feedback projects, the participant shell can update the active realtime agent instructions with capture guidance through `RealtimeSession.updateAgent(...)`; it does not send hidden user messages or add coaching text to the transcript
+  - participant completion is local-first: when the respondent clicks done or Mia delivers her explicit final line, the browser snapshots any completed transcript items already in memory, tears down the realtime session and microphone immediately, renders the completion surface, and finishes the final `/events` flush plus `/complete` request in the background
   - transcript ingest uses stable realtime source item IDs so reconnects and retry flushes stay idempotent
   - transcript append and `order_index` assignment run through a server-only SQL helper so retries dedupe atomically and preserve transcript order
 - Consultant path:
@@ -319,6 +320,7 @@ Last updated: April 23, 2026
 - live status uses an event-driven waveform that distinguishes listening, thinking, and speaking
 - microphone permission error state
 - paused, resumed, and completed states
+- completed state appears immediately after local teardown instead of waiting on completion-network latency, and no further agent audio or transcript events should arrive after that transition
 - completion copy mirrors the selected project type so discovery closes as planning input and feedback closes as improvement input
 
 ## 11. Environment variables

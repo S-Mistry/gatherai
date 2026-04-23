@@ -69,6 +69,7 @@ import {
   getProjectTypePreset,
   normalizeProjectType,
   resolveCreateProjectType,
+  sanitizePublicInterviewConfig,
 } from "@/lib/project-types"
 import { isDiscoveryProjectsEnabled, openAiModels } from "@/lib/env"
 import {
@@ -1347,7 +1348,7 @@ function buildPublicInterviewConfig(bundle: {
 }) {
   const projectType = normalizeProjectType(bundle.project.project_type)
 
-  return {
+  return sanitizePublicInterviewConfig({
     projectId: bundle.project.id,
     projectType,
     projectName: bundle.project.name,
@@ -1361,7 +1362,7 @@ function buildPublicInterviewConfig(bundle: {
     areasOfInterest: bundle.config.areasOfInterest,
     requiredQuestions: bundle.config.requiredQuestions,
     metadataPrompts: bundle.config.metadataPrompts,
-  }
+  })
 }
 
 async function getProjectBundleByLinkToken(
@@ -1466,7 +1467,10 @@ async function getParticipantSessionRuntimeBundle(
       .single<ProjectConfigVersionRow>(),
   ])
 
-  const configRow = expectData(configResult, "Unable to load session config version")
+  const configRow = expectData(
+    configResult,
+    "Unable to load session config version"
+  )
   const projectRow = expectData(projectResult, "Unable to load session project")
 
   return {
@@ -1487,10 +1491,9 @@ async function getSessionTranscript(
     .eq("session_id", sessionId)
     .order("order_index", { ascending: true })
 
-  return expectRows(
-    transcriptResult,
-    "Unable to load session transcript"
-  ).map((row) => mapTranscript(row as TranscriptSegmentRow))
+  return expectRows(transcriptResult, "Unable to load session transcript").map(
+    (row) => mapTranscript(row as TranscriptSegmentRow)
+  )
 }
 
 async function getSessionAnalysisContext(
@@ -1519,9 +1522,10 @@ async function getLatestSessionOutputRow(
     .order("created_at", { ascending: false })
     .limit(1)
 
-  return expectRows(result, "Unable to load latest generated session output")[0] as
-    | SessionOutputGeneratedRow
-    | undefined
+  return expectRows(
+    result,
+    "Unable to load latest generated session output"
+  )[0] as SessionOutputGeneratedRow | undefined
 }
 
 async function getLatestProjectSessionOutputRows(
@@ -1600,7 +1604,10 @@ function mergeRuntimeStatePatch(
     nextState.followUpCount = Math.max(0, Math.round(patch.followUpCount))
   }
 
-  if (typeof patch.elapsedSeconds === "number" && Number.isFinite(patch.elapsedSeconds)) {
+  if (
+    typeof patch.elapsedSeconds === "number" &&
+    Number.isFinite(patch.elapsedSeconds)
+  ) {
     nextState.elapsedSeconds = Math.max(0, Math.round(patch.elapsedSeconds))
   }
 
@@ -1614,7 +1621,10 @@ function mergeRuntimeStatePatch(
     )
   }
 
-  if (typeof patch.noveltyScore === "number" && Number.isFinite(patch.noveltyScore)) {
+  if (
+    typeof patch.noveltyScore === "number" &&
+    Number.isFinite(patch.noveltyScore)
+  ) {
     nextState.noveltyScore = Math.max(0, Math.min(1, patch.noveltyScore))
   }
 
@@ -1635,7 +1645,10 @@ function mergeRuntimeStatePatch(
     )
   }
 
-  if (typeof patch.introDeliveredAt === "string" && patch.introDeliveredAt.trim()) {
+  if (
+    typeof patch.introDeliveredAt === "string" &&
+    patch.introDeliveredAt.trim()
+  ) {
     nextState.introDeliveredAt = patch.introDeliveredAt
   }
 
@@ -2021,25 +2034,24 @@ async function persistProjectSynthesis(projectId: string) {
   )
   const workspaceId = projectRow.workspace_id
 
-  const [configRows, linkRows, sessionRows] =
-    await Promise.all([
-      client
-        .from("project_config_versions")
-        .select("*")
-        .eq("project_id", projectId)
-        .order("version_number", { ascending: false }),
-      client
-        .from("project_public_links")
-        .select("*")
-        .eq("project_id", projectId)
-        .is("revoked_at", null)
-        .order("created_at", { ascending: false }),
-      client
-        .from("participant_sessions")
-        .select("*")
-        .eq("project_id", projectId)
-        .order("started_at", { ascending: false }),
-    ])
+  const [configRows, linkRows, sessionRows] = await Promise.all([
+    client
+      .from("project_config_versions")
+      .select("*")
+      .eq("project_id", projectId)
+      .order("version_number", { ascending: false }),
+    client
+      .from("project_public_links")
+      .select("*")
+      .eq("project_id", projectId)
+      .is("revoked_at", null)
+      .order("created_at", { ascending: false }),
+    client
+      .from("participant_sessions")
+      .select("*")
+      .eq("project_id", projectId)
+      .order("started_at", { ascending: false }),
+  ])
 
   const configRow = expectRows(configRows, "Unable to load project configs")[0]
   const linkRow = expectRows(linkRows, "Unable to load project links")[0]
@@ -2264,7 +2276,10 @@ export async function getWorkspaceSnapshot() {
     getLatestPublicLinks(client, projectIds),
     getLatestSyntheses(client, projectIds),
     projectIds.length === 0
-      ? Promise.resolve({ data: [] as ParticipantSessionListRow[], error: null })
+      ? Promise.resolve({
+          data: [] as ParticipantSessionListRow[],
+          error: null,
+        })
       : client
           .from("participant_sessions")
           .select(
@@ -2359,7 +2374,10 @@ export async function listProjects() {
     getLatestConfigVersions(client, projectIds),
     getLatestPublicLinks(client, projectIds),
     projectIds.length === 0
-      ? Promise.resolve({ data: [] as ParticipantSessionListRow[], error: null })
+      ? Promise.resolve({
+          data: [] as ParticipantSessionListRow[],
+          error: null,
+        })
       : client
           .from("participant_sessions")
           .select(
@@ -2368,7 +2386,10 @@ export async function listProjects() {
           .in("project_id", projectIds),
   ])
   const sessionSummaries = (
-    expectRows(sessionsResult, "Unable to load participant sessions") as ParticipantSessionListRow[]
+    expectRows(
+      sessionsResult,
+      "Unable to load participant sessions"
+    ) as ParticipantSessionListRow[]
   ).map((row) => ({
     id: row.id,
     projectId: row.project_id,
@@ -2520,7 +2541,10 @@ export async function getProjectDetail(projectId: string) {
     configVersion,
     configHistory,
     sessions,
-    synthesis: mergeSynthesisWithOverride(generatedSynthesis, synthesisOverride),
+    synthesis: mergeSynthesisWithOverride(
+      generatedSynthesis,
+      synthesisOverride
+    ),
     generatedSynthesis,
     synthesisOverride,
     qualityScores,
@@ -2577,8 +2601,13 @@ export async function getProjectClaimEvidence(
     return null
   }
 
-  const displayedEvidence = claim.evidence.slice(0, MAX_PROJECT_EVIDENCE_EXCERPTS)
-  const referencedSessionIds = [...new Set(displayedEvidence.map((ref) => ref.sessionId))]
+  const displayedEvidence = claim.evidence.slice(
+    0,
+    MAX_PROJECT_EVIDENCE_EXCERPTS
+  )
+  const referencedSessionIds = [
+    ...new Set(displayedEvidence.map((ref) => ref.sessionId)),
+  ]
   const referencedSegmentIds = [
     ...new Set(displayedEvidence.flatMap((ref) => ref.segmentIds)),
   ]
@@ -2641,7 +2670,9 @@ export async function getSessionReview(projectId: string, sessionId: string) {
     .maybeSingle<ProjectRow>()
 
   if (projectResult.error) {
-    fail(`Unable to load session review project: ${projectResult.error.message}`)
+    fail(
+      `Unable to load session review project: ${projectResult.error.message}`
+    )
   }
 
   if (!projectResult.data) {
@@ -2716,11 +2747,17 @@ export async function getSessionReview(projectId: string, sessionId: string) {
   )[0] as ProjectPublicLinkRow | undefined
 
   if (!configRow || !linkRow) {
-    fail("Session review is missing the current project configuration or active link.")
+    fail(
+      "Session review is missing the current project configuration or active link."
+    )
   }
 
   const configVersion = mapConfigVersion(configRow)
-  const project = mapProject(projectResult.data, configRow.id, linkRow.link_token)
+  const project = mapProject(
+    projectResult.data,
+    configRow.id,
+    linkRow.link_token
+  )
   const siblingSessions = expectRows(
     siblingSessionsResult,
     "Unable to load project sessions"
@@ -2970,7 +3007,10 @@ export async function appendSessionEvents(
 
 export async function completeParticipantSession(
   sessionId: string,
-  runtimePatch?: Pick<SessionRuntimePatch, "elapsedSeconds" | "questionElapsedSeconds">
+  runtimePatch?: Pick<
+    SessionRuntimePatch,
+    "elapsedSeconds" | "questionElapsedSeconds"
+  >
 ) {
   const bundle = await getParticipantSessionRuntimeBundle(sessionId)
 
@@ -2990,11 +3030,15 @@ export async function completeParticipantSession(
   }
 
   const completedAt = new Date().toISOString()
-  const updatedRuntimeState = mergeRuntimeStatePatch(bundle.session, bundle.config, {
-    ...runtimePatch,
-    state: "complete",
-    pausedAt: null,
-  })
+  const updatedRuntimeState = mergeRuntimeStatePatch(
+    bundle.session,
+    bundle.config,
+    {
+      ...runtimePatch,
+      state: "complete",
+      pausedAt: null,
+    }
+  )
 
   const [sessionResult, jobsResult] = await Promise.all([
     bundle.client
@@ -3097,7 +3141,10 @@ async function loadSessionAnalysisArtifacts(
 export async function getSessionAnalysisTracePayloadFromContext(
   context: SessionAnalysisContext
 ) {
-  const artifacts = await loadSessionAnalysisArtifacts(context.client, context.session.id)
+  const artifacts = await loadSessionAnalysisArtifacts(
+    context.client,
+    context.session.id
+  )
 
   return {
     session: context.session,
@@ -3446,7 +3493,10 @@ export async function createProjectConfigVersion(input: {
       .limit(1),
   ])
 
-  const project = expectData(projectResult, "Unable to load project for editing")
+  const project = expectData(
+    projectResult,
+    "Unable to load project for editing"
+  )
   const currentConfigRow = expectRows(
     configResult,
     "Unable to load current project configuration"
@@ -3475,7 +3525,9 @@ export async function createProjectConfigVersion(input: {
       version_number: currentConfig.versionNumber + 1,
       objective: input.objective.trim() || currentConfig.objective,
       areas_of_interest:
-        areasOfInterest.length > 0 ? areasOfInterest : currentConfig.areasOfInterest,
+        areasOfInterest.length > 0
+          ? areasOfInterest
+          : currentConfig.areasOfInterest,
       required_questions: nextRequiredQuestions,
       background_context: input.backgroundContext.trim() || null,
       duration_cap_minutes: Math.min(
@@ -3523,11 +3575,15 @@ export async function createProjectConfigVersion(input: {
   ])
 
   if (projectUpdateResult.error) {
-    fail(`Unable to update project metadata: ${projectUpdateResult.error.message}`)
+    fail(
+      `Unable to update project metadata: ${projectUpdateResult.error.message}`
+    )
   }
 
   if (linkUpdateResult.error) {
-    fail(`Unable to repoint project public links: ${linkUpdateResult.error.message}`)
+    fail(
+      `Unable to repoint project public links: ${linkUpdateResult.error.message}`
+    )
   }
 
   return mapConfigVersion(nextConfig)

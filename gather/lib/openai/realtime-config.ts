@@ -2,6 +2,23 @@ import type { PublicInterviewConfig } from "@/lib/domain/types"
 import { getProjectTypePreset } from "@/lib/project-types"
 
 export const PARTICIPANT_INTERVIEWER_NAME = "Mia"
+export const PARTICIPANT_INTERVIEWER_FINAL_LINE =
+  "Thanks for sharing that. We're finished now."
+
+function normalizeRealtimeLine(text: string) {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ")
+}
+
+export function isParticipantInterviewerFinalLine(text: string) {
+  return (
+    normalizeRealtimeLine(text) ===
+    normalizeRealtimeLine(PARTICIPANT_INTERVIEWER_FINAL_LINE)
+  )
+}
 
 function buildTimingGuidance(config: PublicInterviewConfig) {
   if (config.projectType === "feedback" && config.durationCapMinutes <= 10) {
@@ -75,6 +92,8 @@ export function buildRealtimeInstructions(
     "Ask one primary question at a time and keep the interview purposeful, concise, and evidence-seeking.",
     buildTimingGuidance(config),
     buildCapturePolicy(config),
+    `When you end the interview, your final spoken line must be exactly: ${PARTICIPANT_INTERVIEWER_FINAL_LINE}`,
+    "Do not add any extra sentence after that final line.",
     "Use these required questions as the backbone of the interview:",
     requiredQuestions,
     "Do not spend time on greetings, channel checks, or filler once the interview begins.",

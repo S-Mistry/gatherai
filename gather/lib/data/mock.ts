@@ -24,6 +24,7 @@ import {
   getAnonymousRespondentLabel,
   getProjectTypePreset,
   isProjectType,
+  sanitizePublicInterviewConfig,
 } from "@/lib/project-types"
 import {
   signRecoveryToken,
@@ -936,7 +937,7 @@ export function getPublicInterviewConfig(linkToken: string) {
 
   const config = store.configVersions[project.currentConfigVersionId]
 
-  return {
+  return sanitizePublicInterviewConfig({
     projectId: project.id,
     projectType: project.projectType,
     projectName: project.name,
@@ -950,7 +951,7 @@ export function getPublicInterviewConfig(linkToken: string) {
     areasOfInterest: config.areasOfInterest,
     requiredQuestions: config.requiredQuestions,
     metadataPrompts: config.metadataPrompts,
-  }
+  })
 }
 
 export function createParticipantSession(

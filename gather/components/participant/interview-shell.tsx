@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import {
   Microphone,
   PauseCircle,
@@ -16,6 +16,7 @@ import type { ProjectType, PublicInterviewConfig } from "@/lib/domain/types"
 import {
   PARTICIPANT_INTERVIEWER_NAME,
   buildRealtimeInstructions,
+  isParticipantInterviewerFinalLine,
 } from "@/lib/openai/realtime-config"
 import {
   buildRuntimePatchFromCaptureSnapshot,
@@ -31,10 +32,10 @@ type RealtimeHistoryContentPart =
 type RealtimeSessionHandle = import("@openai/agents/realtime").RealtimeSession
 type RealtimeTransportHandle =
   import("@openai/agents/realtime").OpenAIRealtimeWebRTC
-type RealtimeTransportEvent =
-  import("@openai/agents/realtime").TransportEvent
+type RealtimeTransportEvent = import("@openai/agents/realtime").TransportEvent
 
 type TranscriptSpeaker = "participant" | "agent"
+type CompletionTrigger = "participant" | "assistant"
 
 type ShellStatus =
   | "ready"
@@ -158,16 +159,20 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [voiceState, setVoiceState] = useState<VoiceState>("idle")
   const [interviewStarted, setInterviewStarted] = useState(false)
-  const [pending, startTransition] = useTransition()
   const realtimeSessionRef = useRef<RealtimeSessionHandle | null>(null)
   const realtimeTransportRef = useRef<RealtimeTransportHandle | null>(null)
   const micStreamRef = useRef<MediaStream | null>(null)
   const sessionIdRef = useRef<string | null>(null)
   const statusRef = useRef<ShellStatus>("ready")
+  const voiceStateRef = useRef<VoiceState>("idle")
   const interviewStartedRef = useRef(false)
   const elapsedSecondsRef = useRef(0)
   const introDeliveredRef = useRef(false)
   const latestHistoryRef = useRef<RealtimeHistoryItem[]>([])
+  const completionStartedRef = useRef(false)
+  const pendingAssistantCompletionHistoryRef = useRef<
+    RealtimeHistoryItem[] | null
+  >(null)
   const lastCoachingKeyRef = useRef<string | null>(null)
   const lastRuntimeSignatureRef = useRef<string | null>(null)
   const persistedItemIdsRef = useRef<Set<string>>(new Set())
@@ -176,7 +181,11 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
 
   useEffect(() => {
     return () =>
-      teardownRealtime({ realtimeSessionRef, realtimeTransportRef, micStreamRef })
+      teardownRealtime({
+        realtimeSessionRef,
+        realtimeTransportRef,
+        micStreamRef,
+      })
   }, [])
 
   useEffect(() => {
@@ -201,88 +210,189 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
     elapsedSecondsRef.current = elapsedSeconds
   }, [elapsedSeconds])
 
-  const postRuntimeEvent = useCallback(async (runtime: Record<string, unknown>) => {
-    const activeSessionId = sessionIdRef.current
+  useEffect(() => {
+    voiceStateRef.current = voiceState
+  }, [voiceState])
 
-    if (!activeSessionId) {
-      return
-    }
-
-    const response = await fetch(`/api/public/sessions/${activeSessionId}/events`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ runtime }),
-    })
-
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({}))
-      throw new Error(
-        payload.error ?? "We couldn't save the latest interview state update."
-      )
-    }
+  const updateVoiceState = useCallback((nextState: VoiceState) => {
+    voiceStateRef.current = nextState
+    setVoiceState(nextState)
   }, [])
 
-  const updateRealtimeGuidance = useCallback(async ({
-    coachingKey,
-    coachingInstructions,
-  }: {
-    coachingKey?: string
-    coachingInstructions?: string
-  }) => {
-    const handle = realtimeSessionRef.current
+  const postRuntimeEvent = useCallback(
+    async (runtime: Record<string, unknown>) => {
+      if (completionStartedRef.current) {
+        return
+      }
 
-    if (!handle || !coachingKey || !coachingInstructions) {
-      return
-    }
+      const activeSessionId = sessionIdRef.current
 
-    if (lastCoachingKeyRef.current === coachingKey) {
-      return
-    }
+      if (!activeSessionId) {
+        return
+      }
 
-    lastCoachingKeyRef.current = coachingKey
-
-    try {
-      const realtime = await import("@openai/agents/realtime")
-      await handle.updateAgent(
-        new realtime.RealtimeAgent({
-          name: PARTICIPANT_INTERVIEWER_NAME,
-          instructions: buildRealtimeInstructions(config, coachingInstructions),
-        })
+      const response = await fetch(
+        `/api/public/sessions/${activeSessionId}/events`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ runtime }),
+        }
       )
-    } catch (error) {
-      console.error("Unable to update feedback capture guidance.", error)
-    }
-  }, [config])
 
-  const buildCaptureRuntimePatch = useCallback((history: RealtimeHistoryItem[]) => {
-    if (!interviewStartedRef.current || statusRef.current === "paused") {
-      return null
-    }
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        throw new Error(
+          payload.error ?? "We couldn't save the latest interview state update."
+        )
+      }
+    },
+    []
+  )
 
-    const snapshot = deriveCaptureMonitorSnapshot({
-      config,
-      turns: extractTranscriptSegments(history),
-      elapsedSeconds: elapsedSecondsRef.current,
-      interviewStarted: interviewStartedRef.current,
-    })
+  const updateRealtimeGuidance = useCallback(
+    async ({
+      coachingKey,
+      coachingInstructions,
+    }: {
+      coachingKey?: string
+      coachingInstructions?: string
+    }) => {
+      if (completionStartedRef.current) {
+        return
+      }
 
-    if (snapshot.shouldCoach) {
-      void updateRealtimeGuidance(snapshot)
-    }
+      const handle = realtimeSessionRef.current
 
-    const runtime = {
-      ...buildRuntimePatchFromCaptureSnapshot(snapshot),
-      elapsedSeconds: elapsedSecondsRef.current,
-    }
-    const signature = JSON.stringify(runtime)
+      if (!handle || !coachingKey || !coachingInstructions) {
+        return
+      }
 
-    if (lastRuntimeSignatureRef.current === signature) {
-      return null
-    }
+      if (lastCoachingKeyRef.current === coachingKey) {
+        return
+      }
 
-    lastRuntimeSignatureRef.current = signature
-    return runtime
-  }, [config, updateRealtimeGuidance])
+      lastCoachingKeyRef.current = coachingKey
+
+      try {
+        const realtime = await import("@openai/agents/realtime")
+        await handle.updateAgent(
+          new realtime.RealtimeAgent({
+            name: PARTICIPANT_INTERVIEWER_NAME,
+            instructions: buildRealtimeInstructions(
+              config,
+              coachingInstructions
+            ),
+          })
+        )
+      } catch (error) {
+        console.error("Unable to update feedback capture guidance.", error)
+      }
+    },
+    [config]
+  )
+
+  const buildCaptureRuntimePatch = useCallback(
+    (history: RealtimeHistoryItem[]) => {
+      if (
+        completionStartedRef.current ||
+        !interviewStartedRef.current ||
+        statusRef.current === "paused"
+      ) {
+        return null
+      }
+
+      const snapshot = deriveCaptureMonitorSnapshot({
+        config,
+        turns: extractTranscriptSegments(history),
+        elapsedSeconds: elapsedSecondsRef.current,
+        interviewStarted: interviewStartedRef.current,
+      })
+
+      if (snapshot.shouldCoach) {
+        void updateRealtimeGuidance(snapshot)
+      }
+
+      const runtime = {
+        ...buildRuntimePatchFromCaptureSnapshot(snapshot),
+        elapsedSeconds: elapsedSecondsRef.current,
+      }
+      const signature = JSON.stringify(runtime)
+
+      if (lastRuntimeSignatureRef.current === signature) {
+        return null
+      }
+
+      lastRuntimeSignatureRef.current = signature
+      return runtime
+    },
+    [config, updateRealtimeGuidance]
+  )
+
+  const queueSessionEventPersist = useCallback(
+    (
+      history: RealtimeHistoryItem[],
+      runtime?: Record<string, unknown>
+    ): Promise<void> => {
+      const activeSessionId = sessionIdRef.current
+
+      if (!activeSessionId) {
+        return flushPromiseRef.current
+      }
+
+      const segments = extractTranscriptSegments(history).filter((segment) => {
+        return (
+          !persistedItemIdsRef.current.has(segment.sourceItemId) &&
+          !inflightItemIdsRef.current.has(segment.sourceItemId)
+        )
+      })
+
+      if (segments.length === 0 && runtime === undefined) {
+        return flushPromiseRef.current
+      }
+
+      segments.forEach((segment) =>
+        inflightItemIdsRef.current.add(segment.sourceItemId)
+      )
+
+      flushPromiseRef.current = flushPromiseRef.current
+        .catch(() => undefined)
+        .then(async () => {
+          const body =
+            runtime === undefined
+              ? { segments }
+              : segments.length > 0
+                ? { segments, runtime }
+                : { runtime }
+          const response = await fetch(
+            `/api/public/sessions/${activeSessionId}/events`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(body),
+            }
+          )
+
+          if (!response.ok) {
+            const payload = await response.json().catch(() => ({}))
+            segments.forEach((segment) =>
+              inflightItemIdsRef.current.delete(segment.sourceItemId)
+            )
+            throw new Error(
+              payload.error ?? "We couldn't save the latest transcript updates."
+            )
+          }
+
+          segments.forEach((segment) => {
+            inflightItemIdsRef.current.delete(segment.sourceItemId)
+            persistedItemIdsRef.current.add(segment.sourceItemId)
+          })
+        })
+
+      return flushPromiseRef.current
+    },
+    []
+  )
 
   useEffect(() => {
     if (
@@ -314,14 +424,15 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
   ])
 
   function maybeStartInterview(history: RealtimeHistoryItem[]) {
-    if (interviewStartedRef.current) {
+    if (completionStartedRef.current || interviewStartedRef.current) {
       return
     }
 
     const participantSegments = extractTranscriptSegments(history).filter(
       (segment) => segment.speaker === "participant"
     )
-    const latestParticipantTurn = participantSegments[participantSegments.length - 1]
+    const latestParticipantTurn =
+      participantSegments[participantSegments.length - 1]
 
     if (!latestParticipantTurn) {
       return
@@ -338,7 +449,7 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
     interviewStartedRef.current = true
     setInterviewStarted(true)
     setElapsedSeconds(0)
-    setVoiceState("idle")
+    updateVoiceState("idle")
     void postRuntimeEvent({
       state: "question_active",
       activeQuestionId,
@@ -352,93 +463,150 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
   }
 
   function handleTransportEvent(event: RealtimeTransportEvent) {
-    if (statusRef.current === "paused") {
+    if (completionStartedRef.current || statusRef.current === "paused") {
       return
     }
 
     if (event.type === "input_audio_buffer.speech_started") {
-      setVoiceState("listening")
+      updateVoiceState("listening")
       return
     }
 
     if (event.type === "input_audio_buffer.speech_stopped") {
-      setVoiceState("thinking")
+      updateVoiceState("thinking")
     }
-  }
-
-  function queueTranscriptFlush(history: RealtimeHistoryItem[]) {
-    latestHistoryRef.current = history
-    maybeStartInterview(history)
-    const activeSessionId = sessionIdRef.current
-
-    if (!activeSessionId) {
-      return
-    }
-
-    const runtime = buildCaptureRuntimePatch(history)
-    const segments = extractTranscriptSegments(history).filter((segment) => {
-      return (
-        !persistedItemIdsRef.current.has(segment.sourceItemId) &&
-        !inflightItemIdsRef.current.has(segment.sourceItemId)
-      )
-    })
-
-    if (segments.length === 0) {
-      if (runtime) {
-        void postRuntimeEvent(runtime).catch((error) => {
-          console.error("Unable to persist feedback capture state.", error)
-        })
-      }
-      return
-    }
-
-    segments.forEach((segment) =>
-      inflightItemIdsRef.current.add(segment.sourceItemId)
-    )
-
-    flushPromiseRef.current = flushPromiseRef.current
-      .catch(() => undefined)
-      .then(async () => {
-        const response = await fetch(
-          `/api/public/sessions/${activeSessionId}/events`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(runtime ? { segments, runtime } : { segments }),
-          }
-        )
-
-        if (!response.ok) {
-          const payload = await response.json().catch(() => ({}))
-          segments.forEach((segment) =>
-            inflightItemIdsRef.current.delete(segment.sourceItemId)
-          )
-          throw new Error(
-            payload.error ?? "We couldn't save the latest transcript updates."
-          )
-        }
-
-        segments.forEach((segment) => {
-          inflightItemIdsRef.current.delete(segment.sourceItemId)
-          persistedItemIdsRef.current.add(segment.sourceItemId)
-        })
-      })
   }
 
   async function flushTranscriptQueue() {
     await flushPromiseRef.current
   }
 
+  const beginCompletion = useCallback(
+    (
+      trigger: CompletionTrigger,
+      historySnapshot = latestHistoryRef.current
+    ) => {
+      const activeSessionId = sessionIdRef.current
+
+      if (!activeSessionId || completionStartedRef.current) {
+        return
+      }
+
+      const wasSpeaking = voiceStateRef.current === "speaking"
+      completionStartedRef.current = true
+      pendingAssistantCompletionHistoryRef.current = null
+      statusRef.current = "complete"
+      setStatus("complete")
+      updateVoiceState("idle")
+
+      void queueSessionEventPersist(historySnapshot).catch((error) => {
+        console.error("Unable to persist the final transcript snapshot.", error)
+      })
+
+      const handle = realtimeSessionRef.current
+
+      if (trigger === "participant" && wasSpeaking) {
+        handle?.interrupt()
+      }
+
+      teardownRealtime({
+        realtimeSessionRef,
+        realtimeTransportRef,
+        micStreamRef,
+      })
+
+      const completionElapsedSeconds = elapsedSecondsRef.current
+
+      void (async () => {
+        try {
+          await flushTranscriptQueue()
+        } catch (error) {
+          console.error(
+            "Unable to flush transcript updates before completion.",
+            error
+          )
+        }
+
+        try {
+          const response = await fetch(
+            `/api/public/sessions/${activeSessionId}/complete`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                elapsedSeconds: completionElapsedSeconds,
+              }),
+            }
+          )
+
+          if (!response.ok) {
+            const payload = await response.json().catch(() => ({}))
+            console.error(
+              payload.error ??
+                "We couldn't wrap up the interview after local completion."
+            )
+          }
+        } catch (error) {
+          console.error("Unable to finalize participant completion.", error)
+        }
+      })()
+    },
+    [queueSessionEventPersist, updateVoiceState]
+  )
+
+  function maybeQueueAssistantCompletion(history: RealtimeHistoryItem[]) {
+    if (completionStartedRef.current) {
+      return
+    }
+
+    const agentSegments = extractTranscriptSegments(history).filter(
+      (segment) => segment.speaker === "agent"
+    )
+    const latestAgentTurn = agentSegments[agentSegments.length - 1]
+
+    if (
+      !latestAgentTurn ||
+      !isParticipantInterviewerFinalLine(latestAgentTurn.text)
+    ) {
+      return
+    }
+
+    pendingAssistantCompletionHistoryRef.current = history
+
+    if (voiceStateRef.current !== "speaking") {
+      beginCompletion("assistant", history)
+    }
+  }
+
+  function queueTranscriptFlush(history: RealtimeHistoryItem[]) {
+    if (completionStartedRef.current) {
+      return
+    }
+
+    latestHistoryRef.current = history
+    maybeStartInterview(history)
+    const runtime = buildCaptureRuntimePatch(history)
+
+    void queueSessionEventPersist(history, runtime ?? undefined).catch(
+      (error) => {
+        console.error("Unable to persist transcript updates.", error)
+      }
+    )
+    maybeQueueAssistantCompletion(history)
+  }
+
   async function handleStart() {
     setErrorMessage(null)
     setStatus("requesting_mic")
-    setVoiceState("idle")
+    updateVoiceState("idle")
     setElapsedSeconds(0)
     setInterviewStarted(false)
     interviewStartedRef.current = false
     elapsedSecondsRef.current = 0
     introDeliveredRef.current = false
     latestHistoryRef.current = []
+    completionStartedRef.current = false
+    pendingAssistantCompletionHistoryRef.current = null
     lastCoachingKeyRef.current = null
     lastRuntimeSignatureRef.current = null
     teardownRealtime({ realtimeSessionRef, realtimeTransportRef, micStreamRef })
@@ -493,7 +661,11 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
       const secret = extractClientSecretValue(secretPayload)
 
       if (!secretResponse.ok || !secret) {
-        teardownRealtime({ realtimeSessionRef, realtimeTransportRef, micStreamRef })
+        teardownRealtime({
+          realtimeSessionRef,
+          realtimeTransportRef,
+          micStreamRef,
+        })
         setStatus("fallback")
         setErrorMessage(
           secretPayload.error ??
@@ -524,12 +696,16 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
       await session.connect({ apiKey: secret })
       session.on("transport_event", handleTransportEvent)
       session.on("agent_start", () => {
-        if (statusRef.current !== "paused") {
-          setVoiceState("thinking")
+        if (!completionStartedRef.current && statusRef.current !== "paused") {
+          updateVoiceState("thinking")
         }
       })
       session.on("audio_start", () => {
-        setVoiceState("speaking")
+        if (completionStartedRef.current) {
+          return
+        }
+
+        updateVoiceState("speaking")
 
         if (!introDeliveredRef.current) {
           introDeliveredRef.current = true
@@ -542,22 +718,37 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
         }
       })
       session.on("audio_stopped", () => {
+        if (completionStartedRef.current) {
+          return
+        }
+
+        const completionHistory = pendingAssistantCompletionHistoryRef.current
+
+        if (completionHistory) {
+          beginCompletion("assistant", completionHistory)
+          return
+        }
+
         if (statusRef.current !== "paused") {
-          setVoiceState("idle")
+          updateVoiceState("idle")
         }
       })
       session.on("audio_interrupted", () => {
-        if (statusRef.current !== "paused") {
-          setVoiceState("idle")
+        if (!completionStartedRef.current && statusRef.current !== "paused") {
+          updateVoiceState("idle")
         }
       })
       session.on("history_updated", queueTranscriptFlush)
 
       setStatus("live")
-      setVoiceState("thinking")
+      updateVoiceState("thinking")
       transport.requestResponse()
     } catch (error) {
-      teardownRealtime({ realtimeSessionRef, realtimeTransportRef, micStreamRef })
+      teardownRealtime({
+        realtimeSessionRef,
+        realtimeTransportRef,
+        micStreamRef,
+      })
       setStatus("error")
       setErrorMessage(
         error instanceof Error
@@ -568,13 +759,17 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
   }
 
   function handleTogglePause() {
+    if (completionStartedRef.current) {
+      return
+    }
+
     const handle = realtimeSessionRef.current
     if (!handle) return
 
     if (status === "live") {
       handle.mute(true)
       setStatus("paused")
-      setVoiceState("idle")
+      updateVoiceState("idle")
       void postRuntimeEvent({
         state: "paused",
         elapsedSeconds,
@@ -585,7 +780,7 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
     } else if (status === "paused") {
       handle.mute(false)
       setStatus("live")
-      setVoiceState("idle")
+      updateVoiceState("idle")
       void postRuntimeEvent({
         state: interviewStartedRef.current ? "question_active" : "intro",
         elapsedSeconds,
@@ -597,48 +792,7 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
   }
 
   function handleComplete() {
-    if (!sessionId) return
-
-    startTransition(async () => {
-      try {
-        await flushTranscriptQueue()
-      } catch (error) {
-        teardownRealtime({ realtimeSessionRef, realtimeTransportRef, micStreamRef })
-        setStatus("error")
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "We couldn't save the latest transcript updates."
-        )
-        return
-      }
-
-      const response = await fetch(
-        `/api/public/sessions/${sessionId}/complete`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            elapsedSeconds,
-          }),
-        }
-      )
-      const payload = await response.json()
-
-      if (!response.ok) {
-        teardownRealtime({ realtimeSessionRef, realtimeTransportRef, micStreamRef })
-        setStatus("error")
-        setErrorMessage(
-          payload.error ??
-            "We couldn't wrap up the interview. Please refresh and try again."
-        )
-        return
-      }
-
-      teardownRealtime({ realtimeSessionRef, realtimeTransportRef, micStreamRef })
-      setVoiceState("idle")
-      setStatus("complete")
-    })
+    beginCompletion("participant")
   }
 
   if (status === "complete") {
@@ -677,7 +831,6 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
               paused={status === "paused"}
               onTogglePause={handleTogglePause}
               onComplete={handleComplete}
-              completing={pending}
             />
           ) : (
             <PreStartSurface
@@ -792,7 +945,6 @@ function LiveSurface({
   paused,
   onTogglePause,
   onComplete,
-  completing,
 }: {
   voiceState: VoiceState
   elapsedSeconds: number
@@ -802,7 +954,6 @@ function LiveSurface({
   paused: boolean
   onTogglePause: () => void
   onComplete: () => void
-  completing: boolean
 }) {
   const statusLabel = paused
     ? `${PARTICIPANT_INTERVIEWER_NAME} is paused`
@@ -841,12 +992,7 @@ function LiveSurface({
           )}
           {paused ? "Resume" : "Pause"}
         </Button>
-        <Button
-          variant="secondary"
-          size="lg"
-          onClick={onComplete}
-          disabled={completing}
-        >
+        <Button variant="secondary" size="lg" onClick={onComplete}>
           I&apos;m done
         </Button>
       </div>
