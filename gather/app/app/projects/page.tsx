@@ -104,7 +104,7 @@ export default async function ProjectsPage({
         <EmptyState
           icon={FolderOpen}
           title="No projects yet."
-          description="Create one to share a link with stakeholders or participants."
+          description="Create one to share a link with respondents."
           action={
             <Button asChild>
               <Link href="/app/projects/new">New project</Link>
@@ -147,9 +147,6 @@ export default async function ProjectsPage({
                     </Link>
                     <ProjectTypeBadge projectType={project.projectType} />
                   </div>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {project.clientName}
-                  </p>
                 </div>
 
                 <div>

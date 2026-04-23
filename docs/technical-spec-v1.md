@@ -1,12 +1,14 @@
 # Technical Spec v1
 
-Last updated: April 18, 2026
+Last updated: April 23, 2026
 
 ## 1. Scope
 
-- This spec implements the AI Workshop Discovery Interviewer MVP.
+- This spec implements the post-experience feedback interviewer MVP.
 - The repository root owns governance, docs, and repo automation.
 - The `gather/` Next.js app owns all product code.
+- `feedback` is the default project type and the only visible creation path when `ENABLE_DISCOVERY_PROJECTS=false`.
+- `discovery` remains supported for legacy data and feature-flagged creation paths.
 
 ## 2. Verified platform assumptions
 
@@ -131,7 +133,7 @@ Last updated: April 18, 2026
 ### 4.6 Consultant server actions
 
 - project create/update/version
-- project create bootstraps the project row, immutable `project_type`, initial config version, and initial public link atomically, applying mode-specific starter defaults when fields are omitted
+- project create bootstraps the project row, immutable `project_type`, initial config version, and initial public link atomically, applying mode-specific starter defaults when fields are omitted and rejecting discovery creation when `ENABLE_DISCOVERY_PROJECTS=false`
 - session include/exclude toggle
 - session claim suppress/restore
 - session quality override
@@ -144,9 +146,9 @@ Last updated: April 18, 2026
 ### 5.1 Core types
 
 - `ProjectType`
-  - immutable project route selector: `discovery` or `feedback`
+  - immutable project route selector: `discovery` or `feedback`, with discovery hidden by default from creation flows
 - `ProjectRecord`
-  - consultant-owned project shell including immutable `projectType`, current config version, and active public link token
+  - consultant-owned project shell including immutable `projectType`, project `name`, current config version, and active public link token
 - `ProjectConfigVersion`
   - immutable configuration snapshot used by one or more sessions
 - `PublicInterviewConfig`
@@ -236,6 +238,7 @@ Last updated: April 18, 2026
 - allow two follow-ups by default for discovery and one follow-up by default for feedback
 - exceed two follow-ups only if novelty remains high and there is time budget remaining
 - in feedback projects, treat required questions as a backbone rather than a rigid survey script; probe high-signal answers as they appear, then return to uncovered must-ask topics
+- in feedback projects, mirror the nouns and context in the configured objective and questions instead of assuming workshop or program framing
 - move on when the participant signals completion, novelty drops, time threshold is hit, or coverage confidence is high enough
 - end the session at the configured duration cap even if some questions remain
 - discovery defaults target roughly 15 minutes and pseudonymous collection
@@ -299,7 +302,7 @@ Last updated: April 18, 2026
 - signal-first dashboard
 - zero-project dashboard empty state with a single CTA to create the first project
 - projects list with status chips and project-type badges
-- new-project setup uses explicit discovery and feedback choice cards, starter prompts, and a live participant/analysis preview rail rather than a hidden type dropdown
+- new-project setup uses the feedback starter configuration and a live participant/analysis preview rail; discovery cards appear only when `ENABLE_DISCOVERY_PROJECTS=true`
 - project detail with config version history, session table, quality flags, synthesis summary, and a share-timing hint for feedback projects
 - session review page with evidence-backed claims, editable overrides, answered or partial or missing required-question counts, and thin-evidence warnings when confidence is limited by transcript depth
 - session review page distinguishes transcript and analysis `pending`, `failed`, and `ready` states instead of showing placeholder copy as persisted content

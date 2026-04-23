@@ -8,6 +8,10 @@ const envSchema = z.object({
   SUPABASE_ACCESS_TOKEN: z.string().min(1).optional(),
   CONSULTANT_AUTH_MODE: z.string().optional(),
   SUPABASE_OAUTH_PROVIDER: z.string().optional(),
+  ENABLE_DISCOVERY_PROJECTS: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
   OPENAI_API_KEY: z.string().min(1).optional(),
   OPENAI_REALTIME_MODEL: z.string().min(1).default("gpt-realtime-1.5"),
   OPENAI_VOICE_NAME: z.string().min(1).default("marin"),
@@ -32,6 +36,8 @@ export const isSupabaseConfigured = Boolean(
     env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY &&
     env.SUPABASE_SECRET_KEY
 )
+
+export const isDiscoveryProjectsEnabled = env.ENABLE_DISCOVERY_PROJECTS
 
 export const isRealtimeConfigured = Boolean(env.OPENAI_API_KEY)
 

@@ -17,7 +17,14 @@ import type {
   WorkspaceSummary,
 } from "@/lib/domain/types"
 import { buildCompletionJobs } from "@/lib/jobs/analysis"
-import { getProjectTypePreset, isProjectType } from "@/lib/project-types"
+import {
+  buildParticipantDisclosure,
+  buildParticipantIntro,
+  DEFAULT_CREATE_PROJECT_TYPE,
+  getAnonymousRespondentLabel,
+  getProjectTypePreset,
+  isProjectType,
+} from "@/lib/project-types"
 import {
   signRecoveryToken,
   verifyRecoveryToken,
@@ -404,7 +411,6 @@ function seedStore(): MockStore {
     projectType: "discovery",
     name: "Riverstone operating model sprint",
     slug: "riverstone-operating-model-sprint",
-    clientName: "Riverstone",
     createdAt: iso(-480),
     updatedAt: iso(-30),
     status: "collecting",
@@ -939,10 +945,8 @@ export function getPublicInterviewConfig(linkToken: string) {
     anonymityMode: config.anonymityMode,
     toneStyle: config.toneStyle,
     followUpLimit: config.followUpLimit,
-    intro:
-      "Thanks for taking part. This short interview helps shape a workshop agenda that reflects what stakeholders actually need.",
-    disclosure:
-      "You are speaking with an AI interviewer. Your conversation is transcribed for workshop discovery. Audio is not stored in this MVP.",
+    intro: buildParticipantIntro(project.projectType),
+    disclosure: buildParticipantDisclosure(project.projectType),
     areasOfInterest: config.areasOfInterest,
     requiredQuestions: config.requiredQuestions,
     metadataPrompts: config.metadataPrompts,
@@ -975,7 +979,9 @@ export function createParticipantSession(
     projectConfigVersionId: config.id,
     publicLinkToken: linkToken,
     respondentLabel:
-      config.anonymityMode === "named" ? "Respondent" : "Stakeholder",
+      config.anonymityMode === "named"
+        ? "Respondent"
+        : getAnonymousRespondentLabel(project.projectType),
     status: "in_progress",
     startedAt,
     lastActivityAt: startedAt,
@@ -1143,7 +1149,6 @@ export function getParticipantSession(sessionId: string) {
 export function createProjectFromForm(input: {
   projectType: string
   name: string
-  clientName: string
   objective: string
   areasOfInterest: string
   requiredQuestions: string
@@ -1156,7 +1161,7 @@ export function createProjectFromForm(input: {
   const createdAt = new Date().toISOString()
   const projectType: ProjectType = isProjectType(input.projectType)
     ? input.projectType
-    : "discovery"
+    : DEFAULT_CREATE_PROJECT_TYPE
   const preset = getProjectTypePreset(projectType)
 
   const areasOfInterest = input.areasOfInterest
@@ -1182,7 +1187,6 @@ export function createProjectFromForm(input: {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, ""),
-    clientName: input.clientName || "Client",
     createdAt,
     updatedAt: createdAt,
     status: "draft",

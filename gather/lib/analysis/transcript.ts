@@ -153,8 +153,14 @@ const GENERIC_CLAIM_EXACT_MATCHES = new Set([
   "tensions",
   "stakeholder concern",
   "stakeholder concerns",
+  "participant concern",
+  "participant concerns",
+  "respondent concern",
+  "respondent concerns",
   "workshop opportunity",
   "workshop opportunities",
+  "experience opportunity",
+  "experience opportunities",
   "representative quote",
   "important quote",
   "quote",
@@ -176,9 +182,12 @@ const GENERIC_CLAIM_WORDS = new Set([
   "risk",
   "signal",
   "stakeholder",
+  "participant",
   "theme",
   "tension",
   "workshop",
+  "respondent",
+  "experience",
 ])
 
 const THEME_STOP_WORDS = new Set([

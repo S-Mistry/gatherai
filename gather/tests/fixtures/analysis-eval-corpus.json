@@ -3,7 +3,6 @@
     {
       "id": "proj-noisy-greetings",
       "name": "Signal Hygiene Study",
-      "clientName": "Riverstone",
       "objective": "Understand what the workshop should fix in the approval flow.",
       "areasOfInterest": [
         "approval speed",
@@ -314,7 +313,6 @@
     {
       "id": "proj-nonlinear-answers",
       "name": "Question Mapping Check",
-      "clientName": "Northline",
       "objective": "Check that non-linear answers still map back to the right questions.",
       "areasOfInterest": [
         "escalation paths",
@@ -540,7 +538,6 @@
     {
       "id": "proj-governance-tension",
       "name": "Governance Tension Signals",
-      "clientName": "Harbor",
       "objective": "Capture the subtle governance tensions the workshop needs to surface.",
       "areasOfInterest": [
         "decision rights",
@@ -793,7 +790,6 @@
     {
       "id": "proj-thin-evidence",
       "name": "Thin Transcript Guardrail",
-      "clientName": "Lantern",
       "objective": "Ensure shallow interviews remain obviously low confidence.",
       "areasOfInterest": [
         "clarity",
@@ -987,7 +983,6 @@
     {
       "id": "proj-synthesis-clustering",
       "name": "Synthesis Clustering Regression",
-      "clientName": "Aster",
       "objective": "Ensure cross-session synthesis clusters synonymous themes and ignores excluded noise.",
       "areasOfInterest": [
         "approval speed",
@@ -1632,7 +1627,6 @@
       "id": "proj-feedback-positive",
       "projectType": "feedback",
       "name": "Post-Program Reflection Pulse",
-      "clientName": "Northlight",
       "objective": "Capture what landed well after the completed facilitation program and what should be repeated.",
       "areasOfInterest": [
         "Most useful moments",
@@ -1872,7 +1866,6 @@
       "id": "proj-feedback-mixed",
       "projectType": "feedback",
       "name": "Mixed Cohort Debrief",
-      "clientName": "Bright Path",
       "objective": "Capture what worked, what felt rushed, and what to improve after the completed learning sprint.",
       "areasOfInterest": [
         "Strongest moments",
@@ -2136,7 +2129,6 @@
       "id": "proj-feedback-polarized",
       "projectType": "feedback",
       "name": "Polarized Program Retrospective",
-      "clientName": "Signal House",
       "objective": "Capture where participant reactions diverged after the completed leadership program.",
       "areasOfInterest": [
         "Most useful elements",
@@ -2650,6 +2642,265 @@
           "breakout practice was excellent"
         ]
       }
+    },
+    {
+      "id": "proj-feedback-restaurant",
+      "projectType": "feedback",
+      "name": "Saturday Dinner Service Feedback",
+      "objective": "Capture what worked, what broke the flow, and what to improve after the dining experience.",
+      "areasOfInterest": [
+        "Strongest part of the visit",
+        "Service and timing friction",
+        "Likelihood to return",
+        "Most useful improvement"
+      ],
+      "requiredQuestions": [
+        {
+          "id": "q-positive",
+          "prompt": "What part of the dining experience felt most positive to you?",
+          "goal": "Capture the strongest positive signal."
+        },
+        {
+          "id": "q-friction",
+          "prompt": "What felt unclear, frustrating, or less useful?",
+          "goal": "Capture friction or gaps."
+        },
+        {
+          "id": "q-after",
+          "prompt": "What happened afterwards, if anything?",
+          "goal": "Capture what the experience changed or how it affected likelihood to return."
+        },
+        {
+          "id": "q-improve",
+          "prompt": "If we improved this experience, what should we change?",
+          "goal": "Capture the most useful next improvement."
+        }
+      ],
+      "sessions": [
+        {
+          "id": "sess-feedback-restaurant-1",
+          "respondentLabel": "Table 12",
+          "metadata": {
+            "visit": "Saturday dinner"
+          },
+          "transcript": [
+            {
+              "id": "seg-feedback-restaurant-1",
+              "speaker": "participant",
+              "text": "Our server was warm and checked in at the right moments, which made the evening feel relaxed instead of rushed."
+            },
+            {
+              "id": "seg-feedback-restaurant-2",
+              "speaker": "participant",
+              "text": "The mains took too long, and by the time they arrived the table had lost momentum."
+            },
+            {
+              "id": "seg-feedback-restaurant-3",
+              "speaker": "participant",
+              "text": "We still stayed for dessert, but I would only come back on a busy night if the kitchen timing improves."
+            },
+            {
+              "id": "seg-feedback-restaurant-4",
+              "speaker": "participant",
+              "text": "If you change one thing, tighten the gap between starters and mains and tell the table what is happening when there is a delay."
+            }
+          ],
+          "grounded": {
+            "questionReviews": [
+              {
+                "questionId": "q-positive",
+                "status": "answered",
+                "answer": "The strongest positive signal was warm, well-timed service that kept the evening relaxed.",
+                "confidence": 0.9,
+                "keyPoints": [
+                  "Warm service",
+                  "Well-timed check-ins"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-restaurant-1"
+                    ],
+                    "rationale": "The respondent explicitly praised the service style."
+                  }
+                ],
+                "followUpQuestions": []
+              },
+              {
+                "questionId": "q-friction",
+                "status": "answered",
+                "answer": "The biggest friction was the gap before mains, which broke the energy at the table.",
+                "confidence": 0.92,
+                "keyPoints": [
+                  "Mains arrived too slowly",
+                  "Table energy dropped"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-restaurant-2"
+                    ],
+                    "rationale": "The respondent described the long wait for mains and its impact."
+                  }
+                ],
+                "followUpQuestions": []
+              },
+              {
+                "questionId": "q-after",
+                "status": "answered",
+                "answer": "The respondent still finished the meal, but future return on busy nights now depends on better kitchen timing.",
+                "confidence": 0.83,
+                "keyPoints": [
+                  "Stayed for dessert",
+                  "Return intent is conditional"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-restaurant-3"
+                    ],
+                    "rationale": "The respondent linked future return intent to better timing."
+                  }
+                ],
+                "followUpQuestions": []
+              },
+              {
+                "questionId": "q-improve",
+                "status": "answered",
+                "answer": "Shorten the gap between courses and proactively explain delays at the table.",
+                "confidence": 0.94,
+                "keyPoints": [
+                  "Shorter gap between courses",
+                  "Explain delays proactively"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-restaurant-4"
+                    ],
+                    "rationale": "The respondent gave a clear service recovery recommendation."
+                  }
+                ],
+                "followUpQuestions": []
+              }
+            ],
+            "quoteLibrary": [
+              {
+                "label": "Warm service",
+                "context": "The respondent explained why the front-of-house experience felt strong.",
+                "questionIds": [
+                  "q-positive"
+                ],
+                "themeHints": [
+                  "Attentive service"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-restaurant-1"
+                    ],
+                    "rationale": "Direct quote about relaxed, well-timed service."
+                  }
+                ]
+              },
+              {
+                "label": "Slow mains",
+                "context": "The respondent described where the experience lost momentum.",
+                "questionIds": [
+                  "q-friction"
+                ],
+                "themeHints": [
+                  "Kitchen timing"
+                ],
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-restaurant-2"
+                    ],
+                    "rationale": "Direct quote about the wait for mains."
+                  }
+                ]
+              }
+            ],
+            "insightCards": [
+              {
+                "kind": "theme",
+                "title": "Attentive front-of-house service",
+                "summary": "Warm, well-timed service made the visit feel relaxed and cared for.",
+                "priority": "high",
+                "signalStrength": "obvious",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-restaurant-1"
+                    ],
+                    "rationale": "The respondent strongly praised the service style."
+                  }
+                ]
+              },
+              {
+                "kind": "pain_point",
+                "title": "Kitchen timing broke the flow",
+                "summary": "A long gap before mains disrupted the energy of the evening.",
+                "priority": "high",
+                "signalStrength": "obvious",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-restaurant-2"
+                    ],
+                    "rationale": "The respondent said the table lost momentum while waiting for mains."
+                  }
+                ]
+              },
+              {
+                "kind": "tension",
+                "title": "Warm service versus slow kitchen timing",
+                "summary": "The interpersonal service felt strong, but the kitchen pace still weakened the overall experience.",
+                "priority": "medium",
+                "signalStrength": "subtle",
+                "evidence": [
+                  {
+                    "segmentIds": [
+                      "seg-feedback-restaurant-1",
+                      "seg-feedback-restaurant-2"
+                    ],
+                    "rationale": "The respondent praised service while also describing a major timing failure."
+                  }
+                ]
+              }
+            ],
+            "respondentProfile": {
+              "visit": "Saturday dinner"
+            },
+            "analysisWarnings": []
+          },
+          "narrative": {
+            "summary": "The respondent valued the warm service, but a long wait for mains disrupted the flow and weakened confidence about returning on busy nights.",
+            "projectImplications": [
+              "Protect the warm service style, but treat kitchen timing and delay communication as the most urgent improvement area."
+            ],
+            "recommendedActions": [
+              "Tighten the gap between courses and give tables a proactive update whenever the kitchen is running behind."
+            ],
+            "unresolvedQuestions": [],
+            "confidenceScore": 0.88
+          },
+          "expectations": {
+            "answered": 4,
+            "partial": 0,
+            "missing": 0,
+            "themeTitles": [
+              "Attentive front-of-house service"
+            ],
+            "tensionTitles": [
+              "Warm service versus slow kitchen timing"
+            ],
+            "minQuoteCount": 2,
+            "confidenceMin": 0.8
+          }
+        }
+      ]
     }
   ]
 }

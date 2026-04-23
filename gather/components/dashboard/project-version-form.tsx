@@ -31,23 +31,11 @@ export function ProjectVersionForm({
     <form action={saveProjectConfigVersionAction} className="space-y-4">
       <input type="hidden" name="projectId" value={project.id} />
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <label htmlFor="projectName" className="text-sm font-medium text-foreground">
-            Project name
-          </label>
-          <Input id="projectName" name="projectName" defaultValue={project.name} />
-        </div>
-        <div className="space-y-2">
-          <label htmlFor="clientName" className="text-sm font-medium text-foreground">
-            Client
-          </label>
-          <Input
-            id="clientName"
-            name="clientName"
-            defaultValue={project.clientName}
-          />
-        </div>
+      <div className="space-y-2">
+        <label htmlFor="projectName" className="text-sm font-medium text-foreground">
+          Project name
+        </label>
+        <Input id="projectName" name="projectName" defaultValue={project.name} />
       </div>
 
       <div className="space-y-2">

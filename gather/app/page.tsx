@@ -14,17 +14,18 @@ export default function Page() {
             <div className="space-y-6">
               <Badge variant="accent" className="gap-2">
                 <MicrophoneStage className="size-4" />
-                For workshop facilitators
+                For teams improving real experiences
               </Badge>
               <div className="space-y-4">
                 <h1 className="max-w-3xl text-5xl font-semibold leading-tight text-balance sm:text-6xl">
-                  Run 20 stakeholder conversations before your workshop — without running 20
-                  calls.
+                  Collect honest feedback after any experience without running
+                  every interview yourself.
                 </h1>
                 <p className="max-w-2xl text-lg leading-8 text-muted-foreground">
-                  Share one link. A thoughtful AI interviewer listens to each stakeholder for
-                  10–15 minutes and hands you back themes, contradictions, and an agenda — every
-                  line traceable to a real quote.
+                  Share one link. A thoughtful AI interviewer speaks with each
+                  respondent and hands you back themes, contradictions, and
+                  improvement priorities, with every line traceable to a real
+                  quote.
                 </p>
               </div>
 
@@ -36,7 +37,7 @@ export default function Page() {
                   </Link>
                 </Button>
                 <Button asChild variant="outline" size="lg">
-                  <Link href="/sign-in">See what stakeholders see</Link>
+                  <Link href="/sign-in">See what respondents see</Link>
                 </Button>
               </div>
             </div>
@@ -48,7 +49,7 @@ export default function Page() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm leading-6 text-primary-foreground/85">
-                    No app install. Stakeholders click a link and start talking.
+                    No app install. Respondents click a link and start talking.
                   </p>
                 </CardContent>
               </Card>
@@ -70,7 +71,7 @@ export default function Page() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm leading-6 text-muted-foreground">
-                    Same must-ask questions, same depth, across every stakeholder.
+                    Same must-ask questions, same depth, across every response.
                   </p>
                 </CardContent>
               </Card>
@@ -95,12 +96,12 @@ export default function Page() {
           <Card>
             <CardHeader>
               <MicrophoneStage className="size-6 text-primary" />
-              <CardTitle className="mt-3">Stakeholders just talk</CardTitle>
+              <CardTitle className="mt-3">Respondents just talk</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm leading-6 text-muted-foreground">
                 One tap to start. The AI interviewer asks one thing at a time and follows up
-                where it matters. Stakeholders can pause or end whenever.
+                where it matters. Respondents can pause or end whenever.
               </p>
             </CardContent>
           </Card>
@@ -112,8 +113,8 @@ export default function Page() {
             </CardHeader>
             <CardContent>
               <p className="text-sm leading-6 text-muted-foreground">
-                Themes, contradictions, and a suggested agenda — each bullet linked to the quote
-                it came from.
+                Themes, contradictions, and recommended improvements, each one
+                linked to the quote it came from.
               </p>
             </CardContent>
           </Card>
@@ -124,7 +125,7 @@ export default function Page() {
             <CardHeader>
               <CardTitle>Ready when you are</CardTitle>
               <CardDescription>
-                Sign in to create your first project, or preview the stakeholder experience.
+                Sign in to create your first project, or preview the respondent experience.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-3">
@@ -135,19 +136,20 @@ export default function Page() {
                 </Link>
               </Button>
               <Button asChild variant="outline" size="lg">
-                <Link href="/sign-in">See what stakeholders see</Link>
+                <Link href="/sign-in">See what respondents see</Link>
               </Button>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Built for pre-workshop discovery</CardTitle>
+              <CardTitle>Built for the improvement loop</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm leading-6 text-muted-foreground">
-                Most workshops start with guesswork. This one doesn&apos;t. Hear from every
-                stakeholder before you walk into the room.
+                Restaurants, courses, consultations, service visits, and live
+                events all need better signal. Capture it while the experience
+                is still fresh.
               </p>
             </CardContent>
           </Card>

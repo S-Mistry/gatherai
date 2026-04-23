@@ -67,10 +67,10 @@ import {
   buildParticipantIntro,
   getAnonymousRespondentLabel,
   getProjectTypePreset,
-  isProjectType,
   normalizeProjectType,
+  resolveCreateProjectType,
 } from "@/lib/project-types"
-import { openAiModels } from "@/lib/env"
+import { isDiscoveryProjectsEnabled, openAiModels } from "@/lib/env"
 import {
   createSecretSupabaseClient,
   createServerSupabaseClient,
@@ -95,7 +95,6 @@ interface ProjectRow {
   project_type: unknown
   name: string
   slug: string
-  client_name: string
   status: string
   created_at: string
   updated_at: string
@@ -258,7 +257,6 @@ interface NormalizedProjectCreateInput {
   projectType: ProjectType
   name: string
   slug: string
-  clientName: string
   objective: string
   areasOfInterest: string[]
   requiredQuestions: QuestionDefinition[]
@@ -601,7 +599,6 @@ function mapProject(
     projectType: normalizeProjectType(row.project_type),
     name: row.name,
     slug: row.slug,
-    clientName: row.client_name,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     status: (row.status || "draft") as ProjectRecord["status"],
@@ -939,7 +936,6 @@ function normalizeProjectCreateInput(
   input: {
     projectType: string
     name: string
-    clientName: string
     objective: string
     areasOfInterest: string
     requiredQuestions: string
@@ -948,9 +944,14 @@ function normalizeProjectCreateInput(
   },
   slug: string
 ): NormalizedProjectCreateInput {
-  const projectType = isProjectType(input.projectType)
-    ? input.projectType
-    : "discovery"
+  if (input.projectType === "discovery" && !isDiscoveryProjectsEnabled) {
+    fail("Discovery projects are disabled in this environment.")
+  }
+
+  const projectType = resolveCreateProjectType(
+    input.projectType,
+    isDiscoveryProjectsEnabled
+  )
   const preset = getProjectTypePreset(projectType)
   const areasOfInterest = input.areasOfInterest
     .split("\n")
@@ -970,7 +971,6 @@ function normalizeProjectCreateInput(
     projectType,
     name: input.name || "Untitled project",
     slug,
-    clientName: input.clientName || "Client",
     objective: input.objective || preset.objective,
     areasOfInterest:
       areasOfInterest.length > 0 ? areasOfInterest : preset.areasOfInterest,
@@ -1034,7 +1034,6 @@ async function createProjectGraphViaRpc(
       project_project_type: input.projectType,
       project_name: input.name,
       project_slug: input.slug,
-      project_client_name: input.clientName,
       project_objective: input.objective,
       project_areas_of_interest: input.areasOfInterest,
       project_required_questions: input.requiredQuestions,
@@ -1067,7 +1066,6 @@ async function createProjectGraphLegacy(
       project_type: input.projectType,
       name: input.name,
       slug: input.slug,
-      client_name: input.clientName,
       status: "draft",
     })
     .select("*")
@@ -3121,7 +3119,6 @@ export async function getSessionAnalysisTracePayload(sessionId: string) {
 export async function createProjectFromForm(input: {
   projectType: string
   name: string
-  clientName: string
   objective: string
   areasOfInterest: string
   requiredQuestions: string
@@ -3422,7 +3419,6 @@ export async function saveProjectSynthesisOverride(
 export async function createProjectConfigVersion(input: {
   projectId: string
   projectName: string
-  clientName: string
   objective: string
   areasOfInterest: string
   requiredQuestions: string
@@ -3515,7 +3511,6 @@ export async function createProjectConfigVersion(input: {
       .from("projects")
       .update({
         name: input.projectName.trim() || project.name,
-        client_name: input.clientName.trim() || project.client_name,
       })
       .eq("id", input.projectId),
     client

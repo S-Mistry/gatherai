@@ -44,7 +44,7 @@ export default async function ConsultantHomePage() {
           <MetricCard
             label="Projects"
             value={String(snapshot.projects.length)}
-            hint="Active discovery and feedback collection."
+            hint="Active feedback collection."
             href="/app/projects"
             ariaLabel={`Projects: ${snapshot.projects.length}. Open the projects list.`}
           />
@@ -134,7 +134,7 @@ export default async function ConsultantHomePage() {
             <EmptyState
               icon={FolderOpen}
               title="No projects yet."
-              description="Create one to share a link with stakeholders or participants."
+              description="Create one to share a link with respondents."
               action={
                 <Button asChild>
                   <Link href="/app/projects/new">New project</Link>

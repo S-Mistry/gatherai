@@ -472,13 +472,13 @@ function describeProjectType(projectType: ProjectType) {
   return projectType === "feedback"
     ? {
         context:
-          "This conversation happened after a completed workshop, course, or program.",
+          "This conversation happened after a completed experience, service, visit, event, purchase, consultation, or course.",
         narrativeRole:
-          "Project implications should explain what this means for improving future rounds, follow-up support, or program changes.",
+          "Project implications should explain what this means for improving the experience, follow-up support, or the next iteration.",
         synthesisRole:
-          "Keep the synthesis useful for an organizer deciding what to improve next time.",
+          "Keep the synthesis useful for an organizer deciding what to improve next.",
         usefulnessRole:
-          "Usefulness reflects how actionable the captured evidence is for improving future rounds of the program.",
+          "Usefulness reflects how actionable the captured evidence is for improving the experience or its next iteration.",
       }
     : {
         context:
@@ -2078,7 +2078,6 @@ export async function generateProjectSynthesisAnalysis({
     instructions: [PROJECT_SYNTHESIS_PROMPT_VERSION_TEXT, projectTypeCopy.synthesisRole].join(" "),
     input: [
       `Project name: ${project.name}`,
-      `Client: ${project.clientName}`,
       `Project type context: ${projectTypeCopy.context}`,
       `Session count included in synthesis: ${includedOutputs.length}`,
       `Per-session outputs:\n${JSON.stringify(

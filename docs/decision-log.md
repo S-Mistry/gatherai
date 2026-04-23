@@ -1,6 +1,6 @@
 # Decision Log
 
-Last updated: April 20, 2026
+Last updated: April 23, 2026
 
 ## Locked Decisions
 
@@ -81,8 +81,13 @@ Last updated: April 20, 2026
 
 ### D-016 Dual-mode project flow
 - Status: accepted
-- Decision: ship two first-class project types in v1, `discovery` and `feedback`, backed by one shared participant journey, one evidence model, and one consultant workspace model.
-- Consequence: `project_type` is immutable on project creation, project setup uses explicit choice cards instead of a hidden dropdown, participant framing and default runtime settings branch by project type before analysis, and analysis outputs use generic names such as `projectImplications`, `respondentProfile`, `recommendedFocusAreas`, and `decision_usefulness`.
+- Decision: keep `discovery` and `feedback` in the shared schema and runtime, but position the product around `feedback`; discovery creation stays behind a feature flag and is disabled by default.
+- Consequence: `project_type` remains immutable, existing discovery projects stay readable, normal project setup defaults to feedback, and participant framing plus runtime guidance must not assume workshop language for feedback projects.
+
+### D-017 Project shell identity
+- Status: accepted
+- Decision: remove `client_name` from the top-level project record and use `project.name` as the single required project identifier.
+- Consequence: project create/edit flows, repository types, prompts, and schema no longer depend on a separate client field.
 
 ## Reference Notes
 - OpenAI Realtime docs describe WebRTC as ideal for browser and client-side interactions and document server-side controls for realtime sessions.

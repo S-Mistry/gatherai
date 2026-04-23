@@ -48,6 +48,7 @@
 - Consultant data is authenticated through Supabase Auth and isolated with RLS.
 - Public participant traffic never talks directly to Supabase with elevated privileges; it goes through Next.js route handlers.
 - Browser and SSR clients use Supabase publishable keys; server-only workflows use the Supabase secret key.
+- `feedback` is the default creation path. `discovery` remains feature-flagged for legacy or experimental use.
 - Transcript storage is text-only. Do not introduce audio persistence in v1.
 - Generated outputs and consultant overrides remain separate records. Never overwrite raw generated artifacts.
 - The interview loop is hybrid: application state owns coverage, timing, and stop conditions; the realtime model owns phrasing and follow-up generation.

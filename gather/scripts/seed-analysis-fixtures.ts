@@ -318,7 +318,6 @@ async function main() {
       project_type: bundle.project.projectType,
       name: bundle.project.name,
       slug: bundle.project.slug,
-      client_name: bundle.project.clientName,
       status: "ready",
       created_at: bundle.project.createdAt,
       updated_at: bundle.project.updatedAt,

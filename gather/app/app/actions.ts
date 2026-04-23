@@ -17,9 +17,8 @@ import {
 
 export async function createProjectAction(formData: FormData) {
   const record = await createProjectFromForm({
-    projectType: String(formData.get("projectType") ?? "discovery"),
+    projectType: String(formData.get("projectType") ?? "feedback"),
     name: String(formData.get("name") ?? ""),
-    clientName: String(formData.get("clientName") ?? ""),
     objective: String(formData.get("objective") ?? ""),
     areasOfInterest: String(formData.get("areasOfInterest") ?? ""),
     requiredQuestions: String(formData.get("requiredQuestions") ?? ""),
@@ -102,7 +101,6 @@ export async function saveProjectConfigVersionAction(formData: FormData) {
   await createProjectConfigVersion({
     projectId,
     projectName: String(formData.get("projectName") ?? ""),
-    clientName: String(formData.get("clientName") ?? ""),
     objective: String(formData.get("objective") ?? ""),
     areasOfInterest: String(formData.get("areasOfInterest") ?? ""),
     requiredQuestions: String(formData.get("requiredQuestions") ?? ""),

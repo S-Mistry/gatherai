@@ -103,8 +103,8 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
               ) : null}
 
               <p className="text-xs leading-6 text-muted-foreground">
-                Your data stays yours. Each workspace is private, and stakeholder conversations
-                never leave it.
+                Your data stays yours. Each workspace is private, and respondent
+                conversations never leave it.
               </p>
               <p className="text-xs text-muted-foreground">
                 New here?{" "}

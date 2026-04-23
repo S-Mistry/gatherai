@@ -72,7 +72,6 @@ export interface ProjectRecord {
   projectType: ProjectType
   name: string
   slug: string
-  clientName: string
   createdAt: string
   updatedAt: string
   status: "draft" | "collecting" | "synthesizing" | "ready"

@@ -22,8 +22,9 @@ import { Textarea } from "@/components/ui/textarea"
 import type { AnonymityMode, ProjectType } from "@/lib/domain/types"
 import { getParticipantDurationCopy } from "@/lib/participant/time-copy"
 import {
+  DEFAULT_CREATE_PROJECT_TYPE,
+  getCreateProjectTypeOptions,
   getProjectTypePreset,
-  PROJECT_TYPE_ORDER,
 } from "@/lib/project-types"
 import { cn } from "@/lib/utils"
 
@@ -59,12 +60,18 @@ function SubmitButton() {
   )
 }
 
-export function NewProjectForm() {
-  const [projectType, setProjectType] = useState<ProjectType>("discovery")
+export function NewProjectForm({
+  discoveryEnabled,
+}: {
+  discoveryEnabled: boolean
+}) {
+  const availableProjectTypes = getCreateProjectTypeOptions(discoveryEnabled)
+  const [projectType, setProjectType] = useState<ProjectType>(
+    availableProjectTypes[0] ?? DEFAULT_CREATE_PROJECT_TYPE
+  )
   const preset = getProjectTypePreset(projectType)
 
   const [name, setName] = useState("")
-  const [clientName, setClientName] = useState("")
   const [objective, setObjective] = useState(preset.objective)
   const [areasOfInterest, setAreasOfInterest] = useState<string[]>(
     preset.areasOfInterest
@@ -116,8 +123,9 @@ export function NewProjectForm() {
                 Start a new project
               </h1>
               <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-                Pick a mode. We&apos;ll tune the questions, pacing, and
-                synthesis to match.
+                {availableProjectTypes.length > 1
+                  ? "Pick a mode. We'll tune the questions, pacing, and synthesis to match."
+                  : "Set up a post-experience feedback project. We'll tune the questions, pacing, and synthesis for you."}
               </p>
             </div>
             <Badge variant="accent">{preset.label}</Badge>
@@ -130,12 +138,19 @@ export function NewProjectForm() {
               <div className="stack gap-1">
                 <p className="eyebrow-sm">Mode</p>
                 <h2 className="text-lg font-semibold tracking-tight text-foreground">
-                  What are you trying to learn?
+                  {availableProjectTypes.length > 1
+                    ? "What are you trying to learn?"
+                    : "How should this collection run?"}
                 </h2>
               </div>
 
-              <div className="grid gap-3 lg:grid-cols-2">
-                {PROJECT_TYPE_ORDER.map((type) => {
+              <div
+                className={cn(
+                  "grid gap-3",
+                  availableProjectTypes.length > 1 ? "lg:grid-cols-2" : "max-w-xl"
+                )}
+              >
+                {availableProjectTypes.map((type) => {
                   const typePreset = getProjectTypePreset(type)
                   const typeDurationCopy = getParticipantDurationCopy(
                     type,
@@ -211,34 +226,20 @@ export function NewProjectForm() {
                 </h2>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Project name" htmlFor="name">
-                  <Input
-                    id="name"
-                    name="name"
-                    required
-                    placeholder={
-                      projectType === "discovery"
-                        ? "Operating model redesign"
-                        : "Leadership cohort retrospective"
-                    }
-                    value={name}
-                    onChange={(event) => setName(event.target.value)}
-                  />
-                </Field>
-                <Field label="Client or program owner" htmlFor="clientName">
-                  <Input
-                    id="clientName"
-                    name="clientName"
-                    required
-                    placeholder={
-                      projectType === "discovery" ? "Riverstone" : "Northlight Academy"
-                    }
-                    value={clientName}
-                    onChange={(event) => setClientName(event.target.value)}
-                  />
-                </Field>
-              </div>
+              <Field label="Project name" htmlFor="name">
+                <Input
+                  id="name"
+                  name="name"
+                  required
+                  placeholder={
+                    projectType === "discovery"
+                      ? "Operating model redesign"
+                      : "Saturday dinner feedback"
+                  }
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                />
+              </Field>
 
               <Field
                 label="Objective"
@@ -358,8 +359,8 @@ export function NewProjectForm() {
 
           <div className="flex flex-col gap-3 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
             <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-              Saving creates your project and a shareable participant link,
-              ready to send.
+              Saving creates your project and a shareable feedback link, ready
+              to send.
             </p>
             <SubmitButton />
           </div>
@@ -373,7 +374,7 @@ export function NewProjectForm() {
               <div className="stack gap-1">
                 <p className="eyebrow-sm">Preview</p>
                 <h2 className="text-lg font-semibold tracking-tight text-foreground">
-                  How participants see it
+                  How respondents see it
                 </h2>
               </div>
               <Badge variant={preset.badgeVariant}>{preset.label}</Badge>
@@ -385,7 +386,7 @@ export function NewProjectForm() {
           <div className="stack gap-5 px-5 py-5">
             <section className="rounded-[28px] border border-border/70 bg-background/75 p-5">
               <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
-                Participant intro
+                Respondent intro
               </p>
               <h3 className="mt-3 text-lg font-semibold tracking-tight text-foreground">
                 {preset.participantTitle}

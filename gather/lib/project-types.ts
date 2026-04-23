@@ -1,6 +1,7 @@
 import type { AnonymityMode, ProjectType } from "@/lib/domain/types"
 
 export const PROJECT_TYPE_ORDER: ProjectType[] = ["discovery", "feedback"]
+export const DEFAULT_CREATE_PROJECT_TYPE: ProjectType = "feedback"
 
 export interface ProjectTypePreset {
   label: string
@@ -71,31 +72,31 @@ const PROJECT_TYPE_PRESETS: Record<ProjectType, ProjectTypePreset> = {
   feedback: {
     label: "Feedback",
     description:
-      "Capture what landed, what missed, and what to improve after a completed workshop, course, or program.",
+      "Capture what landed, what missed, and what to improve after an experience, event, service, visit, or purchase.",
     badgeVariant: "success",
-    audiencePlural: "participants",
-    anonymousRespondentLabel: "Participant",
+    audiencePlural: "respondents",
+    anonymousRespondentLabel: "Respondent",
     objective:
-      "Capture what landed, what missed, and what should change after the workshop, course, or program.",
+      "Capture what landed, what missed, and what should change after the experience.",
     areasOfInterest: [
       "What worked well",
-      "What felt unclear or missing",
-      "What changed afterwards",
+      "What felt unclear, frustrating, or missing",
+      "What happened afterwards",
       "What to improve next time",
     ],
     requiredQuestions: [
-      "What part of the workshop or program was most useful to you?",
-      "What felt unclear, missing, or less useful?",
-      "What changed for you afterwards, if anything?",
-      "If we ran this again, what should we do differently?",
+      "What part of the experience felt most useful or positive to you?",
+      "What felt unclear, frustrating, or less useful?",
+      "What happened afterwards, if anything?",
+      "If we improved this experience, what should we change?",
     ],
     durationCapMinutes: 6,
     anonymityMode: "anonymous",
     toneStyle: "Warm, concise, reflective, researcher-like.",
     followUpLimit: 1,
-    participantTitle: "A short reflection after the program.",
+    participantTitle: "A short conversation about your experience.",
     participantIntro:
-      "The team behind this workshop or program would love to hear what landed, what missed, and what to improve next time. I'll ask a few short questions and listen.",
+      "The team behind this experience would love to hear what worked, what missed, and what to improve next time. I'll ask a few short questions and listen carefully.",
     disclosureLines: [
       "I'll listen and write down what you say.",
       "Your voice recording is not saved.",
@@ -103,10 +104,10 @@ const PROJECT_TYPE_PRESETS: Record<ProjectType, ProjectTypePreset> = {
     ],
     completionTitle: "Thanks. Your feedback is now part of the improvement loop.",
     completionDescription:
-      "Your voice isn't saved. The transcript helps improve the next round of the program.",
-    implicationsLabel: "Program implications",
+      "Your voice isn't saved. The transcript helps the team improve the experience.",
+    implicationsLabel: "Improvement implications",
     implicationsEmptyMessage:
-      "No program implications were grounded from this transcript yet.",
+      "No grounded improvement implications were captured from this transcript yet.",
     focusAreasLabel: "Recommended focus areas",
     shareHint:
       "Best shared the same day or within 24 hours, while the experience is still fresh.",
@@ -119,6 +120,23 @@ export function isProjectType(value: unknown): value is ProjectType {
 
 export function normalizeProjectType(value: unknown): ProjectType {
   return isProjectType(value) ? value : "discovery"
+}
+
+export function resolveCreateProjectType(
+  value: unknown,
+  discoveryEnabled: boolean
+): ProjectType {
+  if (value === "discovery" && discoveryEnabled) {
+    return "discovery"
+  }
+
+  return value === "feedback" ? "feedback" : DEFAULT_CREATE_PROJECT_TYPE
+}
+
+export function getCreateProjectTypeOptions(
+  discoveryEnabled: boolean
+): ProjectType[] {
+  return discoveryEnabled ? PROJECT_TYPE_ORDER : ["feedback"]
 }
 
 export function getProjectTypePreset(projectType: unknown): ProjectTypePreset {

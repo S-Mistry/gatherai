@@ -46,7 +46,7 @@ export default async function ProjectDetailPage({
   const projectTypePreset = getProjectTypePreset(detail.project.projectType)
   const respondentContext =
     detail.project.projectType === "feedback"
-      ? "participant feedback"
+      ? "respondent feedback"
       : "stakeholder inputs"
 
   return (
@@ -63,7 +63,6 @@ export default async function ProjectDetailPage({
         <header className="flex flex-col gap-4 px-6 py-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="stack max-w-3xl gap-2">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="accent">{detail.project.clientName}</Badge>
               <ProjectTypeBadge projectType={detail.project.projectType} />
               <span className="text-[10px] tracking-[0.22em] text-muted-foreground uppercase">
                 Version {detail.configVersion.versionNumber}

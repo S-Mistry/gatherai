@@ -13,8 +13,8 @@ import { getParticipantDurationCopy } from "../lib/participant/time-copy"
 const feedbackConfig: PublicInterviewConfig = {
   projectId: "project-feedback",
   projectType: "feedback",
-  projectName: "Leadership program feedback",
-  objective: "Capture what landed and what should improve next time.",
+  projectName: "Saturday dinner feedback",
+  objective: "Capture what worked, what missed, and what to improve after dinner service.",
   durationCapMinutes: 6,
   anonymityMode: "anonymous",
   toneStyle: "Warm, concise, reflective, researcher-like.",
@@ -25,22 +25,22 @@ const feedbackConfig: PublicInterviewConfig = {
   requiredQuestions: [
     {
       id: "q-useful",
-      prompt: "What part of the workshop or program was most useful to you?",
+      prompt: "What part of the dining experience felt most positive to you?",
       goal: "Capture what worked.",
     },
     {
       id: "q-unclear",
-      prompt: "What felt unclear, missing, or less useful?",
+      prompt: "What felt unclear, frustrating, or less useful?",
       goal: "Capture gaps.",
     },
     {
       id: "q-changed",
-      prompt: "What changed for you afterwards, if anything?",
+      prompt: "What happened afterwards, if anything?",
       goal: "Capture behavior change.",
     },
     {
       id: "q-different",
-      prompt: "If we ran this again, what should we do differently?",
+      prompt: "If we improved this experience, what should we change?",
       goal: "Capture improvements.",
     },
   ],
@@ -52,8 +52,9 @@ test("feedback realtime instructions include adaptive probing policy", () => {
 
   assert.match(instructions, /backbone, not a rigid survey script/)
   assert.match(instructions, /High-signal answers include/)
-  assert.match(instructions, /5-10 minute feedback conversation/)
+  assert.match(instructions, /5-10 minute post-experience feedback conversation/)
   assert.match(instructions, /about 1 focused follow-up/)
+  assert.match(instructions, /Do not assume this was a workshop, course, or program/)
 })
 
 test("feedback duration copy uses soft default and configured upper bounds", () => {
@@ -72,7 +73,6 @@ test("mock public interview config exposes follow-up policy", () => {
   const { project, configVersion } = createProjectFromForm({
     projectType: "feedback",
     name: "Feedback config test",
-    clientName: "Client",
     objective: "",
     areasOfInterest: "",
     requiredQuestions: "",
@@ -91,7 +91,7 @@ test("capture monitor detects high-signal feedback and likely asked questions", 
     {
       sourceItemId: "agent-1",
       speaker: "agent",
-      text: "What part of the workshop or program was most useful to you?",
+      text: "What part of the dining experience felt most positive to you?",
     },
     {
       sourceItemId: "participant-1",

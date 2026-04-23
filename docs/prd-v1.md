@@ -1,6 +1,6 @@
 # PRD v1
 
-Product name: AI Discovery and Feedback Interviewer
+Product name: Post-Experience Feedback Interviewer
 
 Status: Draft for implementation
 
@@ -8,14 +8,15 @@ Version: v1.0
 
 Primary audience: product, engineering, design
 
-MVP objective: create and deploy an AI voice interviewer that supports both pre-session discovery and post-program feedback collection, then returns transcript-backed structured insights and cross-session synthesis to help a consultant improve planning and delivery faster.
+MVP objective: create and deploy an AI voice interviewer focused on post-experience feedback collection, then return transcript-backed structured insights and cross-session synthesis to help a consultant or operator improve delivery faster.
 
 ## Executive summary
-- A consultant creates either a `discovery` or `feedback` project, configures what the interviewer needs to learn, and shares a public link with stakeholders or participants.
+- A consultant creates a `feedback` project, configures what the interviewer needs to learn, and shares a public link with respondents.
 - Participants complete a short voice conversation with the AI in the browser.
 - The system stores transcript-level data, generates structured outputs for each session, and synthesizes results across sessions to help the consultant plan the next intervention or improve the last one.
 - The MVP stays narrow:
-  - two first-class project modes only: discovery and feedback
+  - `feedback` is the default and only visible creation mode in normal operation
+  - legacy `discovery` remains feature-flagged for existing or experimental use
   - single consultant user per workspace
   - no participant login
   - transcript-only storage
@@ -23,13 +24,13 @@ MVP objective: create and deploy an AI voice interviewer that supports both pre-
   - evidence-backed planning and improvement support, not artifact generation
 
 ## Problem statement
-Consultants often need to collect evidence both before and after a workshop, course, or program. Manual interviews are slow, inconsistent, hard to scale, and harder to synthesize than a conversational system that is consistent and evidence-backed.
+Teams often need to collect evidence after a service, visit, event, course, consultation, or purchase. Manual interviews are slow, inconsistent, hard to scale, and harder to synthesize than a conversational system that is consistent and evidence-backed.
 
 ## Vision
-Enable any consultant to run structured, scalable voice collection before or after a program, with setup simple enough for solo use and outputs useful enough to shape planning and iteration.
+Enable any consultant to run structured, scalable post-experience voice collection, with setup simple enough for solo use and outputs useful enough to shape the next improvement decision.
 
 ## Goals
-- Let a consultant create either a discovery or feedback project.
+- Let a consultant create a feedback project quickly.
 - Let the consultant configure interview goals, required questions, and constraints.
 - Generate a public project interview link.
 - Let participants complete a voice interview in the browser without authentication.
@@ -60,7 +61,7 @@ Enable any consultant to run structured, scalable voice collection before or aft
 Needs:
 - fast setup
 - confidence that required questions are covered
-- rich responses from stakeholders
+- rich responses from respondents
 - visibility into interview progress
 - synthesis across interviews
 - transcript evidence inspection
@@ -75,7 +76,7 @@ Needs:
 - confidence that the conversation has a clear purpose and ending
 
 ## Core use case
-A consultant prepares a workshop or reviews a completed program, configures the AI interviewer, shares one public link with stakeholders or participants, collects a short voice session, monitors incoming sessions, reviews structured outputs, and uses synthesis to shape the next decision.
+A consultant or operator configures the AI interviewer, shares one public link with respondents after an experience, collects short voice sessions, monitors incoming responses, reviews structured outputs, and uses synthesis to shape the next improvement decision.
 
 ## Success metrics
 
@@ -88,9 +89,9 @@ A consultant prepares a workshop or reviews a completed program, configures the 
 - consultant repeat usage
 
 ### Outcome metrics
-- time saved versus manual discovery
+- time saved versus manual follow-up interviewing
 - consultant-rated usefulness of outputs
-- percentage of projects where synthesis shapes workshop design
+- percentage of projects where synthesis shapes an improvement decision
 
 ### Quality metrics
 - required-question coverage rate
@@ -158,6 +159,8 @@ Each project contains:
 
 Project configuration changes must be versioned.
 Project type does not change after creation.
+`feedback` is the default project type.
+`discovery` remains feature-flagged and is disabled by default in normal product flows.
 
 ### Interview configuration
 Required fields:
@@ -195,6 +198,7 @@ The public landing page shows:
 - Up to two follow-ups per core question by default for discovery, and one by default for feedback.
 - More follow-ups only if novelty remains high and time allows.
 - Feedback projects use required questions as a backbone, not a rigid survey script; the interviewer may probe high-signal answers immediately and then return to uncovered required questions.
+- Feedback wording must mirror the configured experience context instead of assuming workshop or program language.
 - Default feedback framing is a soft 5-10 minute conversation; near minute 8, the interviewer should start tying off open gaps and aim to finish around minute 10 unless a longer cap is configured.
 - Summarize what was heard and allow clarification.
 - Challenge vague answers when appropriate.
@@ -423,6 +427,7 @@ MVP policy:
 - single-user consultant workspace
 - one public project interview link
 - immutable project type with shared collection engine
+- no top-level client-name field on projects; `project.name` is the single required identifier
 - transcript-only storage
 - strict mode first
 - evidence-backed structured outputs

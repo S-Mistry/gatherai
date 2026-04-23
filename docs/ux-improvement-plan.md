@@ -14,9 +14,9 @@
 
 ## Context
 
-GatherAI is a voice-first discovery tool with **two very different users in one product**:
+GatherAI is a voice-first feedback tool with **two very different users in one product**:
 
-- A **consultant** running pre-workshop stakeholder interviews. They are an expert, time-pressured, switching clients, and need to trust the synthesis they're reading.
+- A **consultant** running post-experience respondent interviews. They are an expert, time-pressured, switching contexts, and need to trust the synthesis they're reading.
 - A **participant** who clicked a link, is probably on their phone, possibly nervous about being recorded by an AI, and has no login and no support.
 
 The current build has a coherent visual system (see `STYLE_GUIDE.md`) but three compounding problems:
@@ -48,11 +48,11 @@ These are the lenses every decision below is filtered through.
 
 | Surface | Voice | Do | Don't |
 |---|---|---|---|
-| **Consultant** | A trusted senior colleague. Confident, specific, numeric where possible. | "6 interviews completed. 2 flagged for review." | "Workshop discovery control room." |
+| **Consultant** | A trusted senior colleague. Confident, specific, numeric where possible. | "6 interviews completed. 2 flagged for review." | "Feedback operations room." |
 | **Participant** | A warm, curious human who's genuinely listening. | "When you're ready, press start. It's a 15-minute conversation — you can pause anytime." | "Review the disclosure, then start when you are ready." |
 | **Errors** | Plain English, blameless, one suggested next step. | "Your mic didn't connect. Check browser permissions and try again." | "Realtime credentials are not configured yet." |
 | **Success** | Short, specific, verb-led. | "Synthesis updated — 3 new themes." | "Interview completed. 2 analysis job(s) queued." |
-| **Empty states** | Set expectation + give one clear action. | "No projects yet. Create one to share a link with stakeholders." | (blank) |
+| **Empty states** | Set expectation + give one clear action. | "No projects yet. Create one to share a link with respondents." | (blank) |
 
 ### A.2 Banned words (anywhere a user can see them)
 
@@ -64,10 +64,10 @@ These are the lenses every decision below is filtered through.
 
 | Before | After |
 |---|---|
-| "Voice-first workshop discovery" (badge) | "For workshop facilitators" |
-| "Interview stakeholders at scale without losing transcript evidence." | "Run 20 stakeholder conversations before your workshop — without running 20 calls." |
-| "GatherAI turns pre-workshop discovery into a structured voice workflow…" | "Share one link. A thoughtful AI interviewer listens to each stakeholder for 10–15 minutes and hands you back themes, contradictions, and an agenda — every line traceable to a real quote." |
-| "Open consultant workspace" / "Preview participant link" | "Go to workspace" / "See what stakeholders see" |
+| "Voice-first workshop discovery" (badge) | "For teams improving real experiences" |
+| "Interview stakeholders at scale without losing transcript evidence." | "Collect honest feedback after any experience without running every interview yourself." |
+| "GatherAI turns pre-workshop discovery into a structured voice workflow…" | "Share one link. A thoughtful AI interviewer listens to each respondent and hands you back themes, contradictions, and improvement priorities — every line traceable to a real quote." |
+| "Open consultant workspace" / "Preview participant link" | "Go to workspace" / "See what respondents see" |
 | Card: "Realtime stance" — "WebRTC + server-minted secrets" | Card: "Runs in a browser" — "No app install. Stakeholders click a link and start talking." |
 | Card: "Governance stance" — "Generated AGENTS, frozen docs, explicit decisions" | Card: "Evidence, not vibes" — "Every theme links back to the transcript segment it came from." |
 | Card: "Current scaffold" | **Remove entirely.** Dev-team status, not user copy. |
@@ -78,7 +78,7 @@ These are the lenses every decision below is filtered through.
 |---|---|
 | "Magic-link access for the solo consultant workspace" | "Sign in to your workspace" |
 | "The MVP uses Supabase email authentication and one workspace per consultant." | "Continue with Google to open your private workspace. No password to remember." |
-| "Auth boundaries in this scaffold" card | **Remove.** Replace with a 3-line reassurance: "Your data stays yours — each workspace is private, and stakeholder conversations never leave it." |
+| "Auth boundaries in this scaffold" card | **Remove.** Replace with a 3-line reassurance: "Your data stays yours — each workspace is private, and respondent conversations never leave it." |
 
 #### Consultant home (`gather/app/app/page.tsx`)
 
@@ -95,12 +95,12 @@ These are the lenses every decision below is filtered through.
 
 | Before | After |
 |---|---|
-| H1: "Configure the next workshop interview project" | "New discovery project" |
+| H1: "Configure the next workshop interview project" | "New feedback project" |
 | "The MVP prioritizes configuration that drives coverage…" | "Set the objective, pick the topics, and draft the questions. You can edit everything after sharing the link." |
 | Label: "Areas of interest" / placeholder "One per line" | "Topics to cover" / "One topic per line — e.g., 'Approval bottlenecks'" |
 | Label: "Required questions" | "Must-ask questions" |
 | Label: "Duration cap (minutes)" | "How long? (minutes)" |
-| Label: "Anonymity mode" with options "Named / Pseudonymous / Anonymous" | "How stakeholders are identified" with options: **"By name"**, **"By role (e.g., 'Stakeholder A')"**, **"Fully anonymous"** + one-line helper under each. |
+| Label: "Anonymity mode" with options "Named / Pseudonymous / Anonymous" | "How respondents are identified" with options: **"By name"**, **"By role (e.g., 'Respondent A')"**, **"Fully anonymous"** + one-line helper under each. |
 | Submit: "Save project" | "Create project" |
 
 #### Project detail (`gather/app/app/projects/[projectId]/page.tsx`)
@@ -112,7 +112,7 @@ These are the lenses every decision below is filtered through.
 | Eyebrow: "Required questions" | "Must-ask questions" |
 | Card: "Project synthesis" | "What we're hearing" |
 | Eyebrow: "Top problems" | "Top pain points" |
-| Eyebrow: "Suggested workshop agenda" | "Suggested agenda" |
+| Eyebrow: "Suggested workshop agenda" | "Recommended focus areas" |
 | Card: "Cross-interview synthesis" | "Themes across interviews" |
 | Card: "Transcript-backed interviews" | "Sessions" |
 | "Refresh synthesis" button | "Re-run synthesis" + tooltip: "Includes all non-excluded interviews." |
@@ -125,8 +125,8 @@ These are the lenses every decision below is filtered through.
 | Before | After |
 |---|---|
 | Badge: "Public participant link" | "For you" |
-| H1: "Share perspective before the workshop" | "Before the workshop — a 15-minute chat." |
-| "This short AI interview helps the consultant understand pain points…" | "{consultantName} is running a workshop with your team. Before we meet, they'd love to hear what's working, what isn't, and what you'd change. I'm an AI that'll ask a few questions and listen — for about 15 minutes." |
+| H1: "Share perspective before the workshop" | "A short conversation about your experience." |
+| "This short AI interview helps the consultant understand pain points…" | "The team behind this experience would love to hear what worked, what missed, and what to improve next time. I'm an AI that'll ask a few questions and listen." |
 | Disclosure card: "Transcript-only MVP / Audio is not stored in this MVP" | **"What happens to my voice?"** with three plain lines: "• I'll listen and write down what you say. • Your voice recording is not saved. • Only {consultantName} sees the transcript." |
 
 #### Interview shell (`gather/components/participant/interview-shell.tsx`)
@@ -138,7 +138,7 @@ These are the lenses every decision below is filtered through.
 | "Realtime credentials are not configured yet. The participant flow is scaffolded and ready for env wiring." | "We can't start a live voice session right now. Try refreshing the page — if it keeps happening, let {consultantName} know." |
 | "Realtime voice transport is connected." | "I'm listening. Take your time." |
 | "Stored 2 transcript segment(s) for this session." | **Hide entirely.** Participant should never see "stored N segments." |
-| "Interview completed. 2 analysis job(s) queued for cleaning, extraction, scoring, and synthesis." | "Thanks — that was genuinely useful. Your conversation will shape the workshop. You can close this tab." |
+| "Interview completed. 2 analysis job(s) queued for cleaning, extraction, scoring, and synthesis." | "Thanks — that was genuinely useful. Your conversation will help improve the experience. You can close this tab." |
 | "Interview guideposts" card | "Before we start" card. Bullets: "• One question at a time. • Take as long as you want to answer. • You can pause or end early — nothing is lost." |
 | "Metadata prompts" | "A few quick questions first" |
 | "Session status" / session ID / recovery token shown | **Remove IDs entirely from the UI.** Persist recovery token in a cookie. |
@@ -149,7 +149,7 @@ These are the lenses every decision below is filtered through.
 |---|---|
 | Create a project | **"Create project"** (not "Save") |
 | Open any project | **"Open"** (row-level), **"Go to project"** (header-level) |
-| Share the stakeholder link | **"Copy link"** (primary) + **"Preview what they see"** (secondary) |
+| Share the respondent link | **"Copy link"** (primary) + **"Preview what they see"** (secondary) |
 | Re-run analysis | **"Re-run synthesis"** |
 | Exclude an interview | **"Exclude"** → confirm → toast: "Excluded. Undo" |
 | End an interview | **"I'm done"** (participant), **"End interview"** (consultant) |
@@ -237,7 +237,7 @@ Everything below **keeps** OKLCH tokens, Montserrat, terracotta primary, frosted
 
 #### Projects list (`/app/projects`)
 
-- Row layout: project name + client (left), session counts as horizontal chips (center), status + "Open" (right).
+- Row layout: project name (left), session counts as horizontal chips (center), status + "Open" (right).
 - Add **search** (`Cmd+K` focus) + **sort** dropdown (custom, per `ui-design.md`).
 - Empty state when zero projects.
 
@@ -251,7 +251,7 @@ Everything below **keeps** OKLCH tokens, Montserrat, terracotta primary, frosted
 #### New project (`/app/projects/new`)
 
 - Split into **3 visible steps** (progress dots at top), but on one scrollable page — not a multi-screen wizard.
-- Step 1: Project + client. Step 2: What to learn (objective, topics, questions). Step 3: Guardrails (duration, identification mode).
+- Step 1: Project. Step 2: What to learn (objective, topics, questions). Step 3: Guardrails (duration, identification mode).
 - Live preview panel on the right at `lg:` breakpoint: renders a compact mock of what the participant will see.
 
 #### Sign-in (`/sign-in`)
@@ -271,7 +271,7 @@ Everything below **keeps** OKLCH tokens, Montserrat, terracotta primary, frosted
   - Agent's current spoken text rendered above the indicator (last 1–2 sentences only, fades older lines).
   - Timer in the corner ("4 / ~15 min") that **only starts after the participant has said 'ready'** (or otherwise begun answering).
   - Two controls only: **Pause** and **I'm done**.
-- **End**: the same surface morphs into a warm completion panel — `ShieldCheck` + "Thanks — that was genuinely useful." + "Your voice isn't saved. Only the transcript helps shape the workshop." + "You can close this tab." No IDs, no recovery tokens, no "jobs queued" language.
+- **End**: the same surface morphs into a warm completion panel — `ShieldCheck` + "Thanks — that was genuinely useful." + "Your voice isn't saved. Only the transcript helps improve the experience." + "You can close this tab." No IDs, no recovery tokens, no "jobs queued" language.
 
 ### C.4 Accessibility pass
 

@@ -67,7 +67,6 @@ interface ProjectEvalFixture {
   id: string
   projectType?: ProjectType
   name: string
-  clientName: string
   objective: string
   areasOfInterest: string[]
   requiredQuestions: QuestionDefinition[]
@@ -140,7 +139,6 @@ function buildEvalProjectRecord(
     projectType: fixture.projectType ?? "discovery",
     name: fixture.name,
     slug: fixture.id,
-    clientName: fixture.clientName,
     createdAt: config.createdAt,
     updatedAt: config.createdAt,
     status: "ready",

@@ -53,8 +53,8 @@ export function SessionsTable({
   if (sessions.length === 0) {
     return (
       <p className="rounded-2xl border border-dashed border-border/70 bg-background/40 px-4 py-6 text-center text-sm leading-6 text-muted-foreground">
-        No participant sessions yet. Share the public link to start collecting
-        interviews.
+        No respondent sessions yet. Share the public link to start collecting
+        feedback.
       </p>
     )
   }
