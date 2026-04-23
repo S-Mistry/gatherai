@@ -22,6 +22,11 @@ import {
   buildRuntimePatchFromCaptureSnapshot,
   deriveCaptureMonitorSnapshot,
 } from "@/lib/participant/capture-monitor"
+import {
+  collectMicDiagnostics,
+  detectMicSupport,
+  type MicSupport,
+} from "@/lib/participant/mic-support"
 import { detectInterviewStartSignal } from "@/lib/participant/runtime"
 import { getParticipantDurationCopy } from "@/lib/participant/time-copy"
 import { getProjectTypePreset } from "@/lib/project-types"
@@ -268,6 +273,7 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [voiceState, setVoiceState] = useState<VoiceState>("idle")
   const [interviewStarted, setInterviewStarted] = useState(false)
+  const [micSupport, setMicSupport] = useState<MicSupport | null>(null)
   const realtimeSessionRef = useRef<RealtimeSessionHandle | null>(null)
   const realtimeTransportRef = useRef<RealtimeTransportHandle | null>(null)
   const micStreamRef = useRef<MediaStream | null>(null)
@@ -297,6 +303,33 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
         micStreamRef,
         agentAudioRef,
       })
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    collectMicDiagnostics()
+      .then((diag) => {
+        if (cancelled) return
+        console.info("[mic-diag]", diag)
+        setMicSupport(diag.support)
+      })
+      .catch(() => {
+        if (!cancelled) setMicSupport({ kind: "ready" })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const recheckMicSupport = useCallback(async () => {
+    setErrorMessage(null)
+    setStatus("ready")
+    try {
+      const support = await detectMicSupport()
+      setMicSupport(support)
+    } catch {
+      setMicSupport({ kind: "ready" })
+    }
   }, [])
 
   useEffect(() => {
@@ -708,6 +741,13 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
   }
 
   async function handleStart() {
+    const agentAudio = agentAudioRef.current
+    if (agentAudio) {
+      agentAudio.autoplay = true
+      agentAudio.muted = false
+      void agentAudio.play().catch(() => undefined)
+    }
+
     setErrorMessage(null)
     setStatus("requesting_mic")
     updateVoiceState("idle")
@@ -737,6 +777,7 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
     } catch (error) {
       console.error("Microphone acquisition failed.", error)
       const failure = describeMicFailure(error)
+      void detectMicSupport().then(setMicSupport).catch(() => undefined)
       setStatus("error")
       setErrorMessage(failure.message)
       return
@@ -803,20 +844,9 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
         )
       }
 
-      const agentAudio = agentAudioRef.current ?? undefined
-      if (agentAudio) {
-        agentAudio.autoplay = true
-        agentAudio.muted = false
-        try {
-          await agentAudio.play().catch(() => undefined)
-        } catch {
-          // Some browsers reject play() until srcObject is set. Safe to ignore.
-        }
-      }
-
       const transport = new realtime.OpenAIRealtimeWebRTC({
         mediaStream: micStream,
-        audioElement: agentAudio,
+        audioElement: agentAudioRef.current ?? undefined,
       })
       realtimeTransportRef.current = transport
       const session = new realtime.RealtimeSession(agent, { transport })
@@ -973,6 +1003,8 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
               status={status}
               errorMessage={errorMessage}
               onStart={handleStart}
+              micSupport={micSupport}
+              onRecheckMicSupport={recheckMicSupport}
             />
           )}
         </CardContent>
@@ -1034,11 +1066,60 @@ function PreStartSurface({
   status,
   errorMessage,
   onStart,
+  micSupport,
+  onRecheckMicSupport,
 }: {
   status: ShellStatus
   errorMessage: string | null
   onStart: () => void
+  micSupport: MicSupport | null
+  onRecheckMicSupport: () => void | Promise<void>
 }) {
+  const blocked =
+    micSupport && micSupport.kind !== "ready" ? micSupport : null
+
+  if (blocked) {
+    const headline =
+      blocked.kind === "insecure"
+        ? "This page isn't secure"
+        : blocked.kind === "denied"
+          ? "Microphone access is blocked"
+          : blocked.reason === "brave-shields"
+            ? "Brave Shields is blocking the microphone"
+            : blocked.reason === "webview"
+              ? "Open this link in Safari or Chrome"
+              : "Your browser can't access the microphone"
+
+    return (
+      <div className="space-y-4" aria-live="polite">
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
+          <div className="flex items-start gap-2">
+            <WarningCircle className="mt-0.5 size-4 text-destructive" />
+            <div className="space-y-2">
+              <p className="text-base font-semibold text-foreground">
+                {headline}
+              </p>
+              <p className="text-sm leading-6 text-muted-foreground">
+                {blocked.message}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <Button
+            size="lg"
+            variant="outline"
+            onClick={() => void onRecheckMicSupport()}
+            className="w-full sm:w-auto"
+          >
+            I fixed it — try again
+          </Button>
+          <CopyLinkButton />
+        </div>
+      </div>
+    )
+  }
+
   const helper =
     status === "requesting_mic"
       ? "Allow microphone access to begin."
@@ -1068,7 +1149,57 @@ function PreStartSurface({
           {showError ? errorMessage : helper}
         </p>
       </div>
+
+      {showError ? (
+        <Button
+          size="lg"
+          variant="outline"
+          onClick={onStart}
+          className="w-full sm:w-auto"
+        >
+          Try again
+        </Button>
+      ) : null}
     </div>
+  )
+}
+
+function CopyLinkButton() {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = useCallback(async () => {
+    if (typeof window === "undefined") return
+    const url = window.location.href
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url)
+      } else {
+        const textarea = document.createElement("textarea")
+        textarea.value = url
+        textarea.setAttribute("readonly", "")
+        textarea.style.position = "fixed"
+        textarea.style.opacity = "0"
+        document.body.appendChild(textarea)
+        textarea.select()
+        document.execCommand("copy")
+        document.body.removeChild(textarea)
+      }
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Clipboard can reject in some mobile contexts. Fall back silently.
+    }
+  }, [])
+
+  return (
+    <Button
+      size="lg"
+      variant="secondary"
+      onClick={() => void handleCopy()}
+      className="w-full sm:w-auto"
+    >
+      {copied ? "Link copied" : "Copy link"}
+    </Button>
   )
 }
 
