@@ -277,8 +277,14 @@ interface CreatedProjectGraph {
 interface SessionRuntimePatch {
   state?: SessionRuntimeState["state"]
   activeQuestionId?: string | null
+  askedQuestionIds?: string[]
+  remainingQuestionIds?: string[]
+  followUpCount?: number
   elapsedSeconds?: number
   questionElapsedSeconds?: number
+  noveltyScore?: number
+  repetitionScore?: number
+  coverageConfidence?: number
   introDeliveredAt?: string
   readinessDetectedAt?: string
   interviewStartedAt?: string
@@ -1351,6 +1357,7 @@ function buildPublicInterviewConfig(bundle: {
     durationCapMinutes: bundle.config.durationCapMinutes,
     anonymityMode: bundle.config.anonymityMode,
     toneStyle: bundle.config.toneStyle,
+    followUpLimit: bundle.config.followUpLimit,
     intro: buildParticipantIntro(projectType),
     disclosure: buildParticipantDisclosure(projectType),
     areasOfInterest: bundle.config.areasOfInterest,
@@ -1576,6 +1583,25 @@ function mergeRuntimeStatePatch(
     nextState.activeQuestionId = patch.activeQuestionId ?? undefined
   }
 
+  if (Array.isArray(patch.askedQuestionIds)) {
+    nextState.askedQuestionIds = patch.askedQuestionIds
+      .map((questionId) => questionId.trim())
+      .filter(Boolean)
+  }
+
+  if (Array.isArray(patch.remainingQuestionIds)) {
+    nextState.remainingQuestionIds = patch.remainingQuestionIds
+      .map((questionId) => questionId.trim())
+      .filter(Boolean)
+  }
+
+  if (
+    typeof patch.followUpCount === "number" &&
+    Number.isFinite(patch.followUpCount)
+  ) {
+    nextState.followUpCount = Math.max(0, Math.round(patch.followUpCount))
+  }
+
   if (typeof patch.elapsedSeconds === "number" && Number.isFinite(patch.elapsedSeconds)) {
     nextState.elapsedSeconds = Math.max(0, Math.round(patch.elapsedSeconds))
   }
@@ -1587,6 +1613,27 @@ function mergeRuntimeStatePatch(
     nextState.questionElapsedSeconds = Math.max(
       0,
       Math.round(patch.questionElapsedSeconds)
+    )
+  }
+
+  if (typeof patch.noveltyScore === "number" && Number.isFinite(patch.noveltyScore)) {
+    nextState.noveltyScore = Math.max(0, Math.min(1, patch.noveltyScore))
+  }
+
+  if (
+    typeof patch.repetitionScore === "number" &&
+    Number.isFinite(patch.repetitionScore)
+  ) {
+    nextState.repetitionScore = Math.max(0, Math.min(1, patch.repetitionScore))
+  }
+
+  if (
+    typeof patch.coverageConfidence === "number" &&
+    Number.isFinite(patch.coverageConfidence)
+  ) {
+    nextState.coverageConfidence = Math.max(
+      0,
+      Math.min(1, patch.coverageConfidence)
     )
   }
 

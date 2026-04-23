@@ -932,11 +932,13 @@ export function getPublicInterviewConfig(linkToken: string) {
 
   return {
     projectId: project.id,
+    projectType: project.projectType,
     projectName: project.name,
     objective: config.objective,
     durationCapMinutes: config.durationCapMinutes,
     anonymityMode: config.anonymityMode,
     toneStyle: config.toneStyle,
+    followUpLimit: config.followUpLimit,
     intro:
       "Thanks for taking part. This short interview helps shape a workshop agenda that reflects what stakeholders actually need.",
     disclosure:

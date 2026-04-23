@@ -88,6 +88,7 @@ export interface PublicInterviewConfig {
   durationCapMinutes: number
   anonymityMode: AnonymityMode
   toneStyle: string
+  followUpLimit: number
   intro: string
   disclosure: string
   areasOfInterest: string[]

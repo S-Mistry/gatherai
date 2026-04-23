@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import type { AnonymityMode, ProjectType } from "@/lib/domain/types"
+import { getParticipantDurationCopy } from "@/lib/participant/time-copy"
 import {
   getProjectTypePreset,
   PROJECT_TYPE_ORDER,
@@ -94,6 +95,13 @@ export function NewProjectForm() {
     "Recommended actions",
     preset.focusAreasLabel,
   ]
+  const previewDurationMinutes = Number(durationCapMinutes)
+  const previewDurationCopy = getParticipantDurationCopy(
+    projectType,
+    Number.isFinite(previewDurationMinutes)
+      ? previewDurationMinutes
+      : preset.durationCapMinutes
+  )
 
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_360px] xl:items-start">
@@ -129,6 +137,10 @@ export function NewProjectForm() {
               <div className="grid gap-3 lg:grid-cols-2">
                 {PROJECT_TYPE_ORDER.map((type) => {
                   const typePreset = getProjectTypePreset(type)
+                  const typeDurationCopy = getParticipantDurationCopy(
+                    type,
+                    typePreset.durationCapMinutes
+                  )
                   const selected = type === projectType
 
                   return (
@@ -172,7 +184,7 @@ export function NewProjectForm() {
                       <div className="mt-4 flex flex-wrap gap-1.5">
                         <span className="chip">
                           <Clock className="size-3" />
-                          ~{typePreset.durationCapMinutes} min
+                          {typeDurationCopy.timerTargetLabel}
                         </span>
                         <span className="chip">
                           <ChatCircleDots className="size-3" />
@@ -417,7 +429,7 @@ export function NewProjectForm() {
                 Defaults
               </p>
               <ul className="mt-4 space-y-2 text-sm leading-6 text-muted-foreground">
-                <li>~{preset.durationCapMinutes} minutes, one topic at a time.</li>
+                <li>{previewDurationCopy.shellLabel} One topic at a time.</li>
                 <li>
                   {preset.followUpLimit === 1
                     ? "Light follow-ups keep reflections easy to give."

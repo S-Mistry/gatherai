@@ -4,6 +4,7 @@ import { InterviewShell } from "@/components/participant/interview-shell"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getPublicInterviewConfig } from "@/lib/data/repository"
+import { getParticipantDurationCopy } from "@/lib/participant/time-copy"
 import { getProjectTypePreset } from "@/lib/project-types"
 
 interface ParticipantPageProps {
@@ -21,6 +22,10 @@ export default async function ParticipantPage({ params }: ParticipantPageProps) 
   }
 
   const preset = getProjectTypePreset(config.projectType)
+  const durationCopy = getParticipantDurationCopy(
+    config.projectType,
+    config.durationCapMinutes
+  )
   const disclosureLines = config.disclosure
     .split("\n")
     .map((line) => line.trim())
@@ -36,7 +41,7 @@ export default async function ParticipantPage({ params }: ParticipantPageProps) 
               {preset.participantTitle}
             </h1>
             <p className="max-w-3xl text-base leading-7 text-muted-foreground">
-              {config.intro} This takes about {config.durationCapMinutes} minutes.
+              {config.intro} {durationCopy.introSentence}
             </p>
           </div>
 

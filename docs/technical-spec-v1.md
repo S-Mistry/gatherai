@@ -47,6 +47,8 @@ Last updated: April 18, 2026
   - participant runtime persists intro, readiness, pause, resume, and completion state updates alongside transcript items
   - the timed interview starts only after a soft readiness signal or a substantive first answer
   - browser subscribes to realtime history updates and persists completed participant and agent transcript items back to public route handlers
+  - browser derives lightweight capture signals from transcript history during the session, including likely required-question coverage, answer thinness, novelty, repetition, and feedback wrap-up pressure
+  - for feedback projects, the participant shell can update the active realtime agent instructions with capture guidance through `RealtimeSession.updateAgent(...)`; it does not send hidden user messages or add coaching text to the transcript
   - transcript ingest uses stable realtime source item IDs so reconnects and retry flushes stay idempotent
   - transcript append and `order_index` assignment run through a server-only SQL helper so retries dedupe atomically and preserve transcript order
 - Consultant path:
@@ -110,7 +112,7 @@ Last updated: April 18, 2026
 - `POST /api/public/sessions/[sessionId]/client-secret`
   - mint an OpenAI realtime client secret after validating session eligibility
 - `POST /api/public/sessions/[sessionId]/events`
-  - ingest transcript segments plus runtime state changes such as intro delivered, readiness detected, and pause or resume, keyed by optional realtime source item IDs for idempotent persistence and persisted through an atomic SQL append helper
+  - ingest transcript segments plus runtime state changes such as intro delivered, readiness detected, pause or resume, and capture-monitor signals such as asked questions, remaining questions, follow-up count, novelty, repetition, and coverage confidence, keyed by optional realtime source item IDs for idempotent persistence and persisted through an atomic SQL append helper
 - `POST /api/public/sessions/[sessionId]/complete`
   - finalize the session, persist final elapsed interview timing, enqueue downstream session analysis jobs, and trigger immediate session-scoped dispatch
 
@@ -148,7 +150,7 @@ Last updated: April 18, 2026
 - `ProjectConfigVersion`
   - immutable configuration snapshot used by one or more sessions
 - `PublicInterviewConfig`
-  - safe participant-facing subset of project configuration, including `projectType` plus mode-aware intro and disclosure copy
+  - safe participant-facing subset of project configuration, including `projectType`, `followUpLimit`, plus mode-aware intro and disclosure copy
 - `ParticipantSession`
   - public session record pinned to one `project_config_version_id`
 - `SessionRuntimeState`
@@ -216,6 +218,7 @@ Last updated: April 18, 2026
 - per-question elapsed time
 - interview elapsed time
 - repetition and novelty counters
+- feedback capture monitor that derives thin-answer, high-signal answer, likely coverage, and wrap-up-pressure signals from transcript history
 - summary-confirm checkpoint
 - hard-stop enforcement at duration cap
 - resume eligibility window
@@ -232,10 +235,11 @@ Last updated: April 18, 2026
 - ask one core question at a time
 - allow two follow-ups by default for discovery and one follow-up by default for feedback
 - exceed two follow-ups only if novelty remains high and there is time budget remaining
+- in feedback projects, treat required questions as a backbone rather than a rigid survey script; probe high-signal answers as they appear, then return to uncovered must-ask topics
 - move on when the participant signals completion, novelty drops, time threshold is hit, or coverage confidence is high enough
 - end the session at the configured duration cap even if some questions remain
 - discovery defaults target roughly 15 minutes and pseudonymous collection
-- feedback defaults target roughly 6 minutes and anonymous collection
+- feedback participant framing defaults to a soft 5-10 minute conversation and anonymous collection; around minute 8, Mia should begin tying off open gaps and aim to finish around minute 10 unless the consultant configured a longer cap
 
 ## 7. Supabase schema
 

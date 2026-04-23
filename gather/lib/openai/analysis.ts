@@ -77,7 +77,6 @@ const rawGroundedSessionSchema = z.object({
   questionReviews: z.array(rawGroundedQuestionReviewSchema),
   quoteLibrary: z.array(rawGroundedQuoteSchema),
   insightCards: z.array(rawGroundedInsightCardSchema),
-  respondentProfile: z.record(z.string(), z.string()),
   analysisWarnings: z.array(z.string().min(1)),
 })
 
@@ -249,10 +248,6 @@ const groundedSessionJsonSchema = {
       type: "array",
       items: groundedInsightCardJsonSchema,
     },
-    respondentProfile: {
-      type: "object",
-      additionalProperties: { type: "string" },
-    },
     analysisWarnings: {
       type: "array",
       items: { type: "string" },
@@ -262,7 +257,6 @@ const groundedSessionJsonSchema = {
     "questionReviews",
     "quoteLibrary",
     "insightCards",
-    "respondentProfile",
     "analysisWarnings",
   ],
 } satisfies JsonSchema
@@ -1578,6 +1572,17 @@ function buildNoMeaningfulEvidenceSessionAnalysis({
   }
 }
 
+function normalizeRespondentProfile(metadata: ParticipantSession["metadata"]) {
+  return Object.fromEntries(
+    Object.entries(metadata).flatMap(([key, value]) => {
+      const label = key.trim()
+      const text = value.trim()
+
+      return label && text ? [[label, text]] : []
+    })
+  )
+}
+
 function buildGroundedSessionArtifacts({
   sessionId,
   config,
@@ -1721,11 +1726,7 @@ export function materializeSessionOutputAnalysis({
     confidenceScore: roundScore(
       thinEvidence ? narrative.confidenceScore * 0.82 : narrative.confidenceScore
     ),
-    respondentProfile: Object.fromEntries(
-      Object.entries(grounded.respondentProfile).flatMap(([key, value]) =>
-        value.trim().length > 0 ? [[key, value.trim()]] : []
-      )
-    ),
+    respondentProfile: normalizeRespondentProfile(session.metadata),
   }
 }
 

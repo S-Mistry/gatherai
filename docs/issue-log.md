@@ -1,6 +1,6 @@
 # Issue Log
 
-Last updated: April 21, 2026
+Last updated: April 22, 2026
 
 Use this file for confirmed repo-specific issues only. Keep entries short and practical.
 
@@ -108,3 +108,17 @@ Use this file for confirmed repo-specific issues only. Keep entries short and pr
 - Cause: `gather/vercel.json` scheduled `/api/internal/cron/analysis-recovery` every 15 minutes.
 - Avoid: Keep Vercel cron schedules Hobby-compatible unless the target project is confirmed to be on Pro.
 - Fix/Check: Use a daily recovery cron, then redeploy with `vercel --prod`.
+
+## I-016 Strict OpenAI schema rejected free-form respondent profile
+
+- Problem: Completed sessions could stay pending because `session_extraction` failed before analysis generation.
+- Cause: The OpenAI structured-output schema asked for a free-form `respondentProfile` object, which strict schema validation rejected.
+- Avoid: Do not request dynamic-key objects from strict structured-output calls; derive respondent metadata from saved session records instead.
+- Fix/Check: Keep model-returned grounding fields explicit, then retry a failed `session_extraction` job and confirm project synthesis is enqueued afterward.
+
+## I-017 Feedback capture stayed too survey-like
+
+- Problem: Feedback interviews could move through must-ask questions without using remaining time to probe high-signal or thin answers.
+- Cause: `followUpLimit` was stored in project config but omitted from public realtime config, and the participant shell did not derive live coverage, novelty, or wrap-up signals to guide the realtime agent.
+- Avoid: Keep participant-facing config aligned with stored capture policy, and steer live feedback sessions with app-owned capture signals instead of relying on prompt-only behavior.
+- Fix/Check: Verify feedback public config exposes `followUpLimit`, realtime instructions include adaptive feedback probing, and capture-monitor tests cover high-signal, thin-answer, and wrap-up guidance.

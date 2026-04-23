@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, useTransition } from "react"
+import { useCallback, useEffect, useRef, useState, useTransition } from "react"
 import {
   Microphone,
   PauseCircle,
@@ -17,7 +17,12 @@ import {
   PARTICIPANT_INTERVIEWER_NAME,
   buildRealtimeInstructions,
 } from "@/lib/openai/realtime-config"
+import {
+  buildRuntimePatchFromCaptureSnapshot,
+  deriveCaptureMonitorSnapshot,
+} from "@/lib/participant/capture-monitor"
 import { detectInterviewStartSignal } from "@/lib/participant/runtime"
+import { getParticipantDurationCopy } from "@/lib/participant/time-copy"
 import { getProjectTypePreset } from "@/lib/project-types"
 
 type RealtimeHistoryItem = import("@openai/agents/realtime").RealtimeItem
@@ -142,6 +147,10 @@ function extractTranscriptSegments(
 
 export function InterviewShell({ linkToken, config }: InterviewShellProps) {
   const preset = getProjectTypePreset(config.projectType)
+  const durationCopy = getParticipantDurationCopy(
+    config.projectType,
+    config.durationCapMinutes
+  )
   const [status, setStatus] = useState<ShellStatus>("ready")
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
@@ -156,7 +165,11 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
   const sessionIdRef = useRef<string | null>(null)
   const statusRef = useRef<ShellStatus>("ready")
   const interviewStartedRef = useRef(false)
+  const elapsedSecondsRef = useRef(0)
   const introDeliveredRef = useRef(false)
+  const latestHistoryRef = useRef<RealtimeHistoryItem[]>([])
+  const lastCoachingKeyRef = useRef<string | null>(null)
+  const lastRuntimeSignatureRef = useRef<string | null>(null)
   const persistedItemIdsRef = useRef<Set<string>>(new Set())
   const inflightItemIdsRef = useRef<Set<string>>(new Set())
   const flushPromiseRef = useRef<Promise<void>>(Promise.resolve())
@@ -184,7 +197,11 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
     interviewStartedRef.current = interviewStarted
   }, [interviewStarted])
 
-  async function postRuntimeEvent(runtime: Record<string, unknown>) {
+  useEffect(() => {
+    elapsedSecondsRef.current = elapsedSeconds
+  }, [elapsedSeconds])
+
+  const postRuntimeEvent = useCallback(async (runtime: Record<string, unknown>) => {
     const activeSessionId = sessionIdRef.current
 
     if (!activeSessionId) {
@@ -203,7 +220,98 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
         payload.error ?? "We couldn't save the latest interview state update."
       )
     }
-  }
+  }, [])
+
+  const updateRealtimeGuidance = useCallback(async ({
+    coachingKey,
+    coachingInstructions,
+  }: {
+    coachingKey?: string
+    coachingInstructions?: string
+  }) => {
+    const handle = realtimeSessionRef.current
+
+    if (!handle || !coachingKey || !coachingInstructions) {
+      return
+    }
+
+    if (lastCoachingKeyRef.current === coachingKey) {
+      return
+    }
+
+    lastCoachingKeyRef.current = coachingKey
+
+    try {
+      const realtime = await import("@openai/agents/realtime")
+      await handle.updateAgent(
+        new realtime.RealtimeAgent({
+          name: PARTICIPANT_INTERVIEWER_NAME,
+          instructions: buildRealtimeInstructions(config, coachingInstructions),
+        })
+      )
+    } catch (error) {
+      console.error("Unable to update feedback capture guidance.", error)
+    }
+  }, [config])
+
+  const buildCaptureRuntimePatch = useCallback((history: RealtimeHistoryItem[]) => {
+    if (!interviewStartedRef.current || statusRef.current === "paused") {
+      return null
+    }
+
+    const snapshot = deriveCaptureMonitorSnapshot({
+      config,
+      turns: extractTranscriptSegments(history),
+      elapsedSeconds: elapsedSecondsRef.current,
+      interviewStarted: interviewStartedRef.current,
+    })
+
+    if (snapshot.shouldCoach) {
+      void updateRealtimeGuidance(snapshot)
+    }
+
+    const runtime = {
+      ...buildRuntimePatchFromCaptureSnapshot(snapshot),
+      elapsedSeconds: elapsedSecondsRef.current,
+    }
+    const signature = JSON.stringify(runtime)
+
+    if (lastRuntimeSignatureRef.current === signature) {
+      return null
+    }
+
+    lastRuntimeSignatureRef.current = signature
+    return runtime
+  }, [config, updateRealtimeGuidance])
+
+  useEffect(() => {
+    if (
+      status !== "live" ||
+      !interviewStarted ||
+      config.projectType !== "feedback" ||
+      elapsedSeconds === 0 ||
+      elapsedSeconds % 30 !== 0
+    ) {
+      return
+    }
+
+    const runtime = buildCaptureRuntimePatch(latestHistoryRef.current)
+
+    if (!runtime) {
+      return
+    }
+
+    void postRuntimeEvent(runtime).catch((error) => {
+      console.error("Unable to persist feedback capture state.", error)
+    })
+  }, [
+    buildCaptureRuntimePatch,
+    config.projectType,
+    elapsedSeconds,
+    interviewStarted,
+    postRuntimeEvent,
+    status,
+  ])
 
   function maybeStartInterview(history: RealtimeHistoryItem[]) {
     if (interviewStartedRef.current) {
@@ -259,6 +367,7 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
   }
 
   function queueTranscriptFlush(history: RealtimeHistoryItem[]) {
+    latestHistoryRef.current = history
     maybeStartInterview(history)
     const activeSessionId = sessionIdRef.current
 
@@ -266,6 +375,7 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
       return
     }
 
+    const runtime = buildCaptureRuntimePatch(history)
     const segments = extractTranscriptSegments(history).filter((segment) => {
       return (
         !persistedItemIdsRef.current.has(segment.sourceItemId) &&
@@ -274,6 +384,11 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
     })
 
     if (segments.length === 0) {
+      if (runtime) {
+        void postRuntimeEvent(runtime).catch((error) => {
+          console.error("Unable to persist feedback capture state.", error)
+        })
+      }
       return
     }
 
@@ -289,7 +404,7 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ segments }),
+            body: JSON.stringify(runtime ? { segments, runtime } : { segments }),
           }
         )
 
@@ -321,7 +436,11 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
     setElapsedSeconds(0)
     setInterviewStarted(false)
     interviewStartedRef.current = false
+    elapsedSecondsRef.current = 0
     introDeliveredRef.current = false
+    latestHistoryRef.current = []
+    lastCoachingKeyRef.current = null
+    lastRuntimeSignatureRef.current = null
     teardownRealtime({ realtimeSessionRef, realtimeTransportRef, micStreamRef })
     sessionIdRef.current = null
     persistedItemIdsRef.current.clear()
@@ -533,7 +652,7 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
         <CardHeader>
           <CardTitle className="text-3xl">{config.projectName}</CardTitle>
           <p className="text-sm leading-6 text-muted-foreground">
-            About {config.durationCapMinutes} minutes. One question at a time.
+            {durationCopy.shellLabel} One question at a time.
           </p>
         </CardHeader>
         <CardContent>
@@ -552,7 +671,8 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
             <LiveSurface
               voiceState={voiceState}
               elapsedSeconds={elapsedSeconds}
-              durationCapMinutes={config.durationCapMinutes}
+              durationTargetLabel={durationCopy.timerTargetLabel}
+              durationAriaDescription={durationCopy.timerAriaDescription}
               interviewStarted={interviewStarted}
               paused={status === "paused"}
               onTogglePause={handleTogglePause}
@@ -666,7 +786,8 @@ function PreStartSurface({
 function LiveSurface({
   voiceState,
   elapsedSeconds,
-  durationCapMinutes,
+  durationTargetLabel,
+  durationAriaDescription,
   interviewStarted,
   paused,
   onTogglePause,
@@ -675,7 +796,8 @@ function LiveSurface({
 }: {
   voiceState: VoiceState
   elapsedSeconds: number
-  durationCapMinutes: number
+  durationTargetLabel: string
+  durationAriaDescription: string
   interviewStarted: boolean
   paused: boolean
   onTogglePause: () => void
@@ -696,9 +818,9 @@ function LiveSurface({
         <VoiceStatus state={voiceState} label={statusLabel} />
         <span
           className="text-sm text-muted-foreground tabular-nums"
-          aria-label={`${formatMinutes(elapsedSeconds)} of roughly ${durationCapMinutes} minutes`}
+          aria-label={`${formatMinutes(elapsedSeconds)} minutes elapsed; ${durationAriaDescription}`}
         >
-          {formatMinutes(elapsedSeconds)} / ~{durationCapMinutes} min
+          {formatMinutes(elapsedSeconds)} / {durationTargetLabel}
         </span>
       </div>
 
