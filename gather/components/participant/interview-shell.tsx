@@ -62,10 +62,12 @@ function teardownRealtime({
   realtimeSessionRef,
   realtimeTransportRef,
   micStreamRef,
+  agentAudioRef,
 }: {
   realtimeSessionRef: { current: RealtimeSessionHandle | null }
   realtimeTransportRef: { current: RealtimeTransportHandle | null }
   micStreamRef: { current: MediaStream | null }
+  agentAudioRef?: { current: HTMLAudioElement | null }
 }) {
   realtimeSessionRef.current?.close()
   realtimeSessionRef.current = null
@@ -73,6 +75,113 @@ function teardownRealtime({
 
   micStreamRef.current?.getTracks().forEach((track) => track.stop())
   micStreamRef.current = null
+
+  const audio = agentAudioRef?.current
+  if (audio) {
+    audio.pause()
+    audio.srcObject = null
+  }
+}
+
+type MicErrorCode =
+  | "insecure"
+  | "unsupported"
+  | "denied"
+  | "not-found"
+  | "in-use"
+  | "unknown"
+
+class MicError extends Error {
+  readonly code: MicErrorCode
+
+  constructor(code: MicErrorCode, message: string) {
+    super(message)
+    this.code = code
+    this.name = "MicError"
+  }
+}
+
+function describeMicFailure(error: unknown): MicError {
+  if (error instanceof MicError) {
+    return error
+  }
+
+  const isIos =
+    typeof navigator !== "undefined" &&
+    /iPad|iPhone|iPod/.test(navigator.userAgent)
+
+  const permissionHint = isIos
+    ? "On iPhone, open Settings → Safari → Microphone and allow this site, then reload."
+    : "Tap the lock icon in the address bar, enable Microphone, then reload."
+
+  const name = error instanceof DOMException ? error.name : ""
+
+  if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+    return new MicError(
+      "denied",
+      `Microphone access was blocked. ${permissionHint}`
+    )
+  }
+
+  if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+    return new MicError(
+      "not-found",
+      "No microphone was detected on this device."
+    )
+  }
+
+  if (name === "NotReadableError" || name === "TrackStartError") {
+    return new MicError(
+      "in-use",
+      "Another app is using your microphone. Close any calls or recorders and try again."
+    )
+  }
+
+  if (name === "SecurityError") {
+    return new MicError(
+      "insecure",
+      "Your browser blocked microphone access because this page isn't loaded securely. Open it over HTTPS."
+    )
+  }
+
+  const message =
+    error instanceof Error && error.message
+      ? error.message
+      : "We couldn't turn on the microphone. Try again in a moment."
+  return new MicError("unknown", message)
+}
+
+async function acquireMicrophoneStream(): Promise<MediaStream> {
+  if (typeof window === "undefined") {
+    throw new MicError(
+      "unsupported",
+      "Voice interviews aren't available in this environment."
+    )
+  }
+
+  if (window.isSecureContext === false) {
+    throw new MicError(
+      "insecure",
+      "Open this link over HTTPS. Mobile browsers block microphone access on insecure pages."
+    )
+  }
+
+  if (
+    typeof navigator === "undefined" ||
+    !navigator.mediaDevices ||
+    typeof navigator.mediaDevices.getUserMedia !== "function"
+  ) {
+    throw new MicError(
+      "unsupported",
+      "This browser can't access the microphone. Try the latest Safari on iPhone or Chrome on Android."
+    )
+  }
+
+  try {
+    return await navigator.mediaDevices.getUserMedia({ audio: true })
+  } catch (error) {
+    throw describeMicFailure(error)
+  }
 }
 
 function extractClientSecretValue(payload: unknown) {
@@ -162,6 +271,7 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
   const realtimeSessionRef = useRef<RealtimeSessionHandle | null>(null)
   const realtimeTransportRef = useRef<RealtimeTransportHandle | null>(null)
   const micStreamRef = useRef<MediaStream | null>(null)
+  const agentAudioRef = useRef<HTMLAudioElement | null>(null)
   const sessionIdRef = useRef<string | null>(null)
   const statusRef = useRef<ShellStatus>("ready")
   const voiceStateRef = useRef<VoiceState>("idle")
@@ -185,6 +295,7 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
         realtimeSessionRef,
         realtimeTransportRef,
         micStreamRef,
+        agentAudioRef,
       })
   }, [])
 
@@ -513,6 +624,7 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
         realtimeSessionRef,
         realtimeTransportRef,
         micStreamRef,
+        agentAudioRef,
       })
 
       const completionElapsedSeconds = elapsedSecondsRef.current
@@ -609,21 +721,24 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
     pendingAssistantCompletionHistoryRef.current = null
     lastCoachingKeyRef.current = null
     lastRuntimeSignatureRef.current = null
-    teardownRealtime({ realtimeSessionRef, realtimeTransportRef, micStreamRef })
+    teardownRealtime({
+      realtimeSessionRef,
+      realtimeTransportRef,
+      micStreamRef,
+      agentAudioRef,
+    })
     sessionIdRef.current = null
     persistedItemIdsRef.current.clear()
     inflightItemIdsRef.current.clear()
     flushPromiseRef.current = Promise.resolve()
 
     try {
-      micStreamRef.current = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-      })
-    } catch {
+      micStreamRef.current = await acquireMicrophoneStream()
+    } catch (error) {
+      console.error("Microphone acquisition failed.", error)
+      const failure = describeMicFailure(error)
       setStatus("error")
-      setErrorMessage(
-        "We need microphone access to talk. Open your browser settings to allow it, then try again."
-      )
+      setErrorMessage(failure.message)
       return
     }
 
@@ -665,6 +780,7 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
           realtimeSessionRef,
           realtimeTransportRef,
           micStreamRef,
+          agentAudioRef,
         })
         setStatus("fallback")
         setErrorMessage(
@@ -687,8 +803,20 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
         )
       }
 
+      const agentAudio = agentAudioRef.current ?? undefined
+      if (agentAudio) {
+        agentAudio.autoplay = true
+        agentAudio.muted = false
+        try {
+          await agentAudio.play().catch(() => undefined)
+        } catch {
+          // Some browsers reject play() until srcObject is set. Safe to ignore.
+        }
+      }
+
       const transport = new realtime.OpenAIRealtimeWebRTC({
         mediaStream: micStream,
+        audioElement: agentAudio,
       })
       realtimeTransportRef.current = transport
       const session = new realtime.RealtimeSession(agent, { transport })
@@ -744,10 +872,12 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
       updateVoiceState("thinking")
       transport.requestResponse()
     } catch (error) {
+      console.error("Realtime session setup failed.", error)
       teardownRealtime({
         realtimeSessionRef,
         realtimeTransportRef,
         micStreamRef,
+        agentAudioRef,
       })
       setStatus("error")
       setErrorMessage(
@@ -802,6 +932,12 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
   const isLive = status === "live" || status === "paused"
   return (
     <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+      <audio
+        ref={agentAudioRef}
+        autoPlay
+        className="sr-only"
+        aria-hidden="true"
+      />
       <Card className="space-y-6">
         <CardHeader>
           <CardTitle className="text-3xl">{config.projectName}</CardTitle>
