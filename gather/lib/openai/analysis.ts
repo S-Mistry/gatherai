@@ -34,6 +34,7 @@ import type {
   TranscriptSegment,
 } from "@/lib/domain/types"
 import { env, openAiModels } from "@/lib/env"
+import { resolveProjectSynthesisWarning } from "@/lib/project-synthesis-warning"
 
 type JsonSchema = Record<string, unknown>
 
@@ -457,6 +458,8 @@ export const PROJECT_SYNTHESIS_PROMPT_VERSION_TEXT = [
   "A contradiction requires materially different positions from at least two distinct included sessions.",
   "Do not turn a single noisy session into a project-level theme when multiple sessions are available.",
   "Every theme, contradiction, and quote must cite the session IDs and transcript segment IDs already attached to the per-session outputs.",
+  "If a warning is needed, return one short plain-English sentence. Return an empty string when no warning is needed.",
+  "Never include session IDs, UUIDs, or parenthetical identifiers in warning text.",
   "Keep the synthesis sharp, specific, and useful for the next planning or improvement decision.",
 ].join(" ")
 
@@ -2015,14 +2018,8 @@ export function materializeProjectSynthesisAnalysis({
     ]
   })
 
-  const weakThemeWarning =
+  const themesNeedMoreEvidence =
     normalizedThemeClusters.length > 0 && crossInterviewThemes.length === 0
-      ? "Potential themes were detected in session analysis, but none met the project-level evidence threshold yet."
-      : ""
-  const earlySignalWarning =
-    includedOutputs.length < 2
-      ? "Project synthesis is still early because only one completed interview is included."
-      : ""
 
   return {
     includedSessionIds,
@@ -2034,9 +2031,11 @@ export function materializeProjectSynthesisAnalysis({
     topProblems: dedupeStrings(raw.topProblems).slice(0, 6),
     recommendedFocusAreas: dedupeStrings(raw.recommendedFocusAreas).slice(0, 6),
     notableQuotesByTheme,
-    warning:
-      dedupeStrings([raw.warning.trim(), weakThemeWarning, earlySignalWarning]).join(" ") ||
-      undefined,
+    warning: resolveProjectSynthesisWarning({
+      rawWarning: raw.warning.trim(),
+      includedSessionCount: includedOutputs.length,
+      themesNeedMoreEvidence,
+    }),
   }
 }
 

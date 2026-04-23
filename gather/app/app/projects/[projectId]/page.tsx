@@ -15,6 +15,7 @@ import { CopyLink } from "@/components/ui/copy-link"
 import { RelativeTime } from "@/components/ui/relative-time"
 import { getProjectDetail } from "@/lib/data/repository"
 import { getProjectTypePreset } from "@/lib/project-types"
+import { formatProjectSynthesisWarning } from "@/lib/project-synthesis-warning"
 
 interface ProjectDetailPageProps {
   params: Promise<{
@@ -48,6 +49,7 @@ export default async function ProjectDetailPage({
     detail.project.projectType === "feedback"
       ? "respondent feedback"
       : "stakeholder inputs"
+  const synthesisWarning = formatProjectSynthesisWarning(detail.synthesis.warning)
 
   return (
     <div className="stack gap-5">
@@ -114,28 +116,35 @@ export default async function ProjectDetailPage({
         <div className="divider" />
 
         <section className="stack gap-5 px-6 py-5">
-          <div className="flex items-center justify-between gap-3">
-            <div className="stack gap-1">
-              <h2 className="eyebrow-sm">Synthesis readout</h2>
-              <p className="text-sm leading-6 text-muted-foreground">
-                This is the consultant-facing synthesis view, grounded in the
-                latest effective {respondentContext}.
-              </p>
-            </div>
-            {detail.synthesis.warning ? (
-              <Badge variant="warning">{detail.synthesis.warning}</Badge>
-            ) : null}
+          <div className="stack gap-1">
+            <h2 className="eyebrow-sm">Synthesis readout</h2>
+            <p className="text-sm leading-6 text-muted-foreground">
+              This is the consultant-facing synthesis view, grounded in the latest
+              effective {respondentContext}.
+            </p>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
-            <section className="rounded-3xl border border-border/70 bg-background/60 p-5">
-              <h3 className="text-base font-semibold tracking-tight text-foreground">
-                Executive narrative
-              </h3>
-              <p className="mt-3 text-sm leading-6 text-muted-foreground">
+          <div className="grid items-start gap-4 lg:grid-cols-[minmax(18rem,0.82fr)_minmax(0,1.18fr)]">
+            <section className="stack gap-4 rounded-3xl border border-border/70 bg-background/60 p-5 lg:self-start">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-base font-semibold tracking-tight text-foreground">
+                  Overview
+                </h3>
+                <span className="chip">
+                  {detail.synthesis.includedSessionIds.length} session
+                  {detail.synthesis.includedSessionIds.length === 1 ? "" : "s"} in
+                  synthesis
+                </span>
+              </div>
+              <p className="max-w-[54ch] text-sm leading-6 text-foreground">
                 {detail.synthesis.executiveSummary ||
                   "Synthesis will strengthen after the first completed sessions with usable evidence arrive."}
               </p>
+              {synthesisWarning ? (
+                <p className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-800 dark:text-amber-200">
+                  {synthesisWarning}
+                </p>
+              ) : null}
             </section>
 
             <div className="grid gap-4 sm:grid-cols-2">

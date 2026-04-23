@@ -17,6 +17,7 @@ import type {
   ProjectEvidenceDrawerPayload,
   ThemeSummary,
 } from "@/lib/domain/types"
+import { cn } from "@/lib/utils"
 
 import type { ProjectEvidenceClaimPreview } from "./project-evidence-drawer"
 
@@ -33,6 +34,8 @@ export function ProjectEvidenceSurface({
   notableQuotes,
   themes,
 }: ProjectEvidenceSurfaceProps) {
+  const showSplitTopRow =
+    contradictions.length > 0 && notableQuotes.length > 0
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [selectedClaim, setSelectedClaim] =
     useState<ProjectEvidenceClaimPreview | null>(null)
@@ -130,7 +133,13 @@ export function ProjectEvidenceSurface({
   return (
     <>
       <section className="stack gap-5 px-6 py-5">
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div
+          className={cn(
+            "grid items-start gap-6",
+            showSplitTopRow &&
+              "xl:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)]"
+          )}
+        >
           <section className="stack gap-3">
             <div className="flex items-baseline justify-between gap-3">
               <h2 className="eyebrow-sm">Contradictions</h2>
@@ -139,7 +148,10 @@ export function ProjectEvidenceSurface({
               </span>
             </div>
             {contradictions.length === 0 ? (
-              <EmptyPanel message="No cross-session contradictions were grounded yet." />
+              <EmptyPanel
+                message="No cross-session contradictions were grounded yet."
+                compact
+              />
             ) : (
               <div className="stack gap-3">
                 {contradictions.map((item) => (
@@ -178,12 +190,18 @@ export function ProjectEvidenceSurface({
             {notableQuotes.length === 0 ? (
               <EmptyPanel message="No notable cross-interview quotes were captured yet." />
             ) : (
-              <div className="stack gap-3">
+              <div
+                className={cn(
+                  "grid gap-3",
+                  showSplitTopRow ? "2xl:grid-cols-2" : "xl:grid-cols-2"
+                )}
+              >
                 {notableQuotes.map((quote) => (
                   <ClaimButton
                     key={quote.id}
                     claim={toNotableQuoteClaim(quote)}
                     onClick={openClaim}
+                    className="h-full"
                   >
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="accent">{quote.label}</Badge>
@@ -217,12 +235,13 @@ export function ProjectEvidenceSurface({
             Themes appear here once enough sessions are complete.
           </p>
         ) : (
-          <div className="stack gap-3">
+          <div className="grid gap-3 xl:grid-cols-2">
             {themes.map((theme) => (
               <ClaimButton
                 key={theme.id}
                 claim={toThemeClaim(theme)}
                 onClick={openClaim}
+                className="h-full"
               >
                 <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                   <h3 className="text-sm font-semibold text-foreground">
@@ -287,9 +306,20 @@ function ClaimButton({
   )
 }
 
-function EmptyPanel({ message }: { message: string }) {
+function EmptyPanel({
+  message,
+  compact = false,
+}: {
+  message: string
+  compact?: boolean
+}) {
   return (
-    <p className="rounded-3xl border border-dashed border-border/70 bg-background/40 px-4 py-6 text-sm leading-6 text-muted-foreground">
+    <p
+      className={cn(
+        "rounded-3xl border border-dashed border-border/70 bg-background/40 text-sm leading-6 text-muted-foreground",
+        compact ? "px-4 py-3" : "px-4 py-6"
+      )}
+    >
       {message}
     </p>
   )
