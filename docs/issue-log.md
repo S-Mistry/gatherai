@@ -136,3 +136,10 @@ Use this file for confirmed repo-specific issues only. Keep entries short and pr
 - Cause: Browser-aware copy existed only in `detectMicSupport()` preflight. The click-time `navigator.mediaDevices.getUserMedia(...)` catch path kept its own Safari-specific iOS fallback, so runtime failures were not reclassified with the active browser family or a fresh support probe.
 - Avoid: Keep preflight and runtime microphone failures on the same browser-aware classifier. Distinguish `ios-safari`, `ios-chrome`, `ios-brave`, Brave Shields, in-app WebViews, insecure contexts, and generic fallbacks before showing recovery instructions, and prefer `Try again` over reloads when permissions changed in app settings.
 - Fix/Check: On iPhone Safari, Chrome, and Brave, open the participant link and tap Start. Safari should still use Safari-specific recovery copy when denied. Chrome and Brave should prompt on first access when allowed and, on deny or no-prompt failure, show Chrome/Brave-specific settings guidance instead of Safari. Keep the Brave Shields preflight warning intact and run `npm --prefix gather run test:fixtures`.
+
+## I-020 Participant voice capture overreacted to ambient noise
+
+- Problem: Light room noise or keyboard sounds could make Mia react as if the participant had started speaking.
+- Cause: The participant shell used default browser microphone capture plus the realtime SDK defaults, which meant no explicit near-field noise reduction and a permissive VAD profile.
+- Avoid: Treat participant capture as tuned voice input, not generic raw microphone input. Prefer browser-side echo cancellation and noise suppression, avoid aggressive auto gain, and set explicit realtime input noise reduction plus conservative VAD thresholds for participant sessions.
+- Fix/Check: Start a participant interview with mild background hum or keyboard noise. Mia should finish her opener without getting cut off, and brief ambient sounds should not create an early participant turn.

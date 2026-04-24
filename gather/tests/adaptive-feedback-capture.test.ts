@@ -8,6 +8,8 @@ import {
 } from "../lib/data/mock"
 import {
   PARTICIPANT_INTERVIEWER_FINAL_LINE,
+  PARTICIPANT_MIC_AUDIO_CONSTRAINTS,
+  buildParticipantRealtimeAudioConfig,
   buildRealtimeInstructions,
   isParticipantInterviewerFinalLine,
 } from "../lib/openai/realtime-config"
@@ -74,6 +76,34 @@ test("feedback realtime instructions include adaptive probing policy", () => {
     instructions,
     /final spoken line must be exactly: Thanks for sharing that\. We're finished now\./
   )
+})
+
+test("participant audio config uses stricter noise handling", () => {
+  const audioConfig = buildParticipantRealtimeAudioConfig({
+    voice: "alloy",
+  })
+
+  assert.deepEqual(audioConfig.output, { voice: "alloy" })
+  assert.deepEqual(audioConfig.input?.noiseReduction, {
+    type: "near_field",
+  })
+  assert.deepEqual(audioConfig.input?.transcription, {
+    model: "gpt-4o-mini-transcribe",
+  })
+  assert.deepEqual(audioConfig.input?.turnDetection, {
+    type: "server_vad",
+    createResponse: true,
+    interruptResponse: true,
+    prefixPaddingMs: 300,
+    silenceDurationMs: 850,
+    threshold: 0.72,
+  })
+  assert.deepEqual(PARTICIPANT_MIC_AUDIO_CONSTRAINTS, {
+    channelCount: { ideal: 1 },
+    echoCancellation: { ideal: true },
+    noiseSuppression: { ideal: true },
+    autoGainControl: { ideal: false },
+  })
 })
 
 test("participant interviewer final line matcher tolerates casing and punctuation", () => {

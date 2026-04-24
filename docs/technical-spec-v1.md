@@ -44,7 +44,7 @@ Last updated: April 23, 2026
   - page creates or resumes a participant session through a public route handler
   - the session-start route resolves the public link and current config once, creates the session, and returns a signed recovery token plus session metadata
   - browser requests an OpenAI realtime client secret from a server route that validates the session and resolves the current public config without loading transcript history
-  - browser connects to OpenAI Realtime over WebRTC
+  - browser connects to OpenAI Realtime over WebRTC with participant-tuned input audio settings: browser mic constraints prefer echo cancellation and noise suppression, realtime input uses near-field noise reduction, and server VAD thresholds are set conservatively enough that brief ambient sounds do not derail turn-taking
   - the realtime session explicitly triggers Mia's opening response so the participant does not need to speak first
   - participant runtime persists intro, readiness, pause, resume, and completion state updates alongside transcript items
   - the timed interview starts only after a soft readiness signal or a substantive first answer
