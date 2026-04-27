@@ -33,6 +33,43 @@ export function buildParticipantRealtimeAudioConfig(options?: {
   }
 }
 
+export function buildParticipantRealtimeAudioSessionPayload(options?: {
+  voice?: string
+}) {
+  const audioConfig = buildParticipantRealtimeAudioConfig(options)
+  const input = audioConfig.input
+  const turnDetection = input?.turnDetection
+
+  return {
+    input: input
+      ? {
+          format: input.format,
+          transcription: input.transcription,
+          noise_reduction: input.noiseReduction ?? null,
+          turn_detection: turnDetection
+            ? {
+                type: turnDetection.type,
+                create_response:
+                  turnDetection.createResponse ??
+                  turnDetection.create_response,
+                interrupt_response:
+                  turnDetection.interruptResponse ??
+                  turnDetection.interrupt_response,
+                prefix_padding_ms:
+                  turnDetection.prefixPaddingMs ??
+                  turnDetection.prefix_padding_ms,
+                silence_duration_ms:
+                  turnDetection.silenceDurationMs ??
+                  turnDetection.silence_duration_ms,
+                threshold: turnDetection.threshold,
+              }
+            : turnDetection,
+        }
+      : undefined,
+    output: audioConfig.output,
+  }
+}
+
 function normalizeRealtimeLine(text: string) {
   return text
     .toLowerCase()

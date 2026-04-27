@@ -1,6 +1,6 @@
 # Issue Log
 
-Last updated: April 23, 2026
+Last updated: April 27, 2026
 
 Use this file for confirmed repo-specific issues only. Keep entries short and practical.
 
@@ -143,3 +143,10 @@ Use this file for confirmed repo-specific issues only. Keep entries short and pr
 - Cause: The participant shell used default browser microphone capture plus the realtime SDK defaults, which meant no explicit near-field noise reduction and a permissive VAD profile.
 - Avoid: Treat participant capture as tuned voice input, not generic raw microphone input. Prefer browser-side echo cancellation and noise suppression, avoid aggressive auto gain, and set explicit realtime input noise reduction plus conservative VAD thresholds for participant sessions.
 - Fix/Check: Start a participant interview with mild background hum or keyboard noise. Mia should finish her opener without getting cut off, and brief ambient sounds should not create an early participant turn.
+
+## I-021 Realtime client-secret mint rejected SDK-style audio config
+
+- Problem: Starting an interview failed while minting the realtime client secret with `Unknown parameter: session.audio.input.noiseReduction`.
+- Cause: The server route sent the browser Agents SDK audio config directly to the Realtime REST client-secret endpoint. The SDK accepts camelCase fields and converts them internally, but the REST session payload expects snake_case fields such as `noise_reduction` and `turn_detection`.
+- Avoid: Keep SDK-facing config and REST session payload builders separate. Any config serialized to `/v1/realtime/client_secrets` must use API field names, not SDK convenience field names.
+- Fix/Check: Assert the client-secret audio payload contains `noise_reduction`, `turn_detection`, and snake_case VAD keys, then start a participant interview and confirm the realtime client secret is minted.

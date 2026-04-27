@@ -10,6 +10,7 @@ import {
   PARTICIPANT_INTERVIEWER_FINAL_LINE,
   PARTICIPANT_MIC_AUDIO_CONSTRAINTS,
   buildParticipantRealtimeAudioConfig,
+  buildParticipantRealtimeAudioSessionPayload,
   buildRealtimeInstructions,
   isParticipantInterviewerFinalLine,
 } from "../lib/openai/realtime-config"
@@ -104,6 +105,35 @@ test("participant audio config uses stricter noise handling", () => {
     noiseSuppression: { ideal: true },
     autoGainControl: { ideal: false },
   })
+})
+
+test("participant realtime session payload uses REST field names", () => {
+  const audioPayload = buildParticipantRealtimeAudioSessionPayload({
+    voice: "alloy",
+  })
+  const input = audioPayload.input
+
+  assert.ok(input)
+  const turnDetection = input.turn_detection
+  assert.ok(turnDetection)
+  assert.equal("noiseReduction" in input, false)
+  assert.equal("turnDetection" in input, false)
+  assert.deepEqual(audioPayload.output, { voice: "alloy" })
+  assert.deepEqual(input.noise_reduction, {
+    type: "near_field",
+  })
+  assert.deepEqual(input.turn_detection, {
+    type: "server_vad",
+    create_response: true,
+    interrupt_response: true,
+    prefix_padding_ms: 300,
+    silence_duration_ms: 850,
+    threshold: 0.72,
+  })
+  assert.equal("createResponse" in turnDetection, false)
+  assert.equal("interruptResponse" in turnDetection, false)
+  assert.equal("prefixPaddingMs" in turnDetection, false)
+  assert.equal("silenceDurationMs" in turnDetection, false)
 })
 
 test("participant interviewer final line matcher tolerates casing and punctuation", () => {
