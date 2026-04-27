@@ -2,7 +2,9 @@ export type InterviewMode = "strict" | "adaptive"
 
 export type AnonymityMode = "named" | "pseudonymous" | "anonymous"
 
-export type ProjectType = "discovery" | "feedback"
+export type ProjectType = "discovery" | "feedback" | "testimonial"
+
+export type TestimonialReviewStatus = "pending" | "approved" | "rejected"
 
 export type InterviewState =
   | "pre_start"
@@ -81,7 +83,7 @@ export interface ProjectRecord {
 
 export interface PublicInterviewConfig {
   projectId: string
-  projectType: ProjectType
+  projectType: Exclude<ProjectType, "testimonial">
   projectName: string
   objective: string
   durationCapMinutes: number
@@ -93,6 +95,44 @@ export interface PublicInterviewConfig {
   areasOfInterest: string[]
   requiredQuestions: QuestionDefinition[]
   metadataPrompts: MetadataPrompt[]
+}
+
+export interface TestimonialLink {
+  id: string
+  projectId: string
+  linkToken: string
+  businessName: string
+  websiteUrl: string
+  brandColor: string
+  headline: string
+  prompt: string
+  createdAt: string
+  updatedAt: string
+  revokedAt?: string
+}
+
+export interface TestimonialReview {
+  id: string
+  projectId: string
+  testimonialLinkId: string
+  transcript: string
+  reviewerName?: string
+  suggestedRating?: number
+  rating: number
+  status: TestimonialReviewStatus
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PublicTestimonialConfig {
+  projectId: string
+  linkId: string
+  linkToken: string
+  businessName: string
+  websiteUrl: string
+  brandColor: string
+  headline: string
+  prompt: string
 }
 
 export interface ParticipantSession {

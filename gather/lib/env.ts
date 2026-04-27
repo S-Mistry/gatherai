@@ -8,6 +8,12 @@ const envSchema = z.object({
   SUPABASE_ACCESS_TOKEN: z.string().min(1).optional(),
   CONSULTANT_AUTH_MODE: z.string().optional(),
   SUPABASE_OAUTH_PROVIDER: z.string().optional(),
+  DEV_ADMIN_LOGIN_ENABLED: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+  DEV_ADMIN_EMAIL: z.string().email().optional(),
+  DEV_ADMIN_PASSWORD: z.string().min(8).optional(),
   ENABLE_DISCOVERY_PROJECTS: z
     .enum(["true", "false"])
     .default("false")
@@ -21,6 +27,11 @@ const envSchema = z.object({
   OPENAI_SESSION_GRADER_MODEL: z.string().min(1).optional(),
   OPENAI_SESSION_ESCALATION_MODEL: z.string().min(1).optional(),
   OPENAI_PROJECT_SYNTHESIS_MODEL: z.string().min(1).default("gpt-5.4"),
+  OPENAI_TESTIMONIAL_TRANSCRIPTION_MODEL: z
+    .string()
+    .min(1)
+    .default("gpt-4o-mini-transcribe"),
+  OPENAI_TESTIMONIAL_RATING_MODEL: z.string().min(1).optional(),
   BRAINTRUST_API_KEY: z.string().min(1).optional(),
   BRAINTRUST_PROJECT: z.string().min(1).default("gatherai-mvp"),
   RECOVERY_TOKEN_SECRET: z.string().min(1).optional(),
@@ -33,8 +44,8 @@ export const appUrl = env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
 
 export const isSupabaseConfigured = Boolean(
   env.NEXT_PUBLIC_SUPABASE_URL &&
-    env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY &&
-    env.SUPABASE_SECRET_KEY
+  env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY &&
+  env.SUPABASE_SECRET_KEY
 )
 
 export const isDiscoveryProjectsEnabled = env.ENABLE_DISCOVERY_PROJECTS
@@ -45,6 +56,14 @@ export const isBraintrustConfigured = Boolean(env.BRAINTRUST_API_KEY)
 
 export const hasCronSecret = Boolean(env.CRON_SECRET)
 
+export const isDevAdminLoginEnabled = Boolean(
+  env.DEV_ADMIN_LOGIN_ENABLED &&
+  process.env.NODE_ENV !== "production" &&
+  appUrl.startsWith("http://localhost") &&
+  env.DEV_ADMIN_EMAIL &&
+  env.DEV_ADMIN_PASSWORD
+)
+
 export const openAiModels = {
   sessionGrounding:
     env.OPENAI_SESSION_GROUNDING_MODEL ?? env.OPENAI_SESSION_ANALYSIS_MODEL,
@@ -54,4 +73,9 @@ export const openAiModels = {
   sessionEscalation:
     env.OPENAI_SESSION_ESCALATION_MODEL ?? env.OPENAI_PROJECT_SYNTHESIS_MODEL,
   projectSynthesis: env.OPENAI_PROJECT_SYNTHESIS_MODEL,
+  testimonialTranscription: env.OPENAI_TESTIMONIAL_TRANSCRIPTION_MODEL,
+  testimonialRating:
+    env.OPENAI_TESTIMONIAL_RATING_MODEL ??
+    env.OPENAI_SESSION_GRADER_MODEL ??
+    "gpt-5.4-nano",
 } as const

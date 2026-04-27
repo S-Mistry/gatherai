@@ -60,11 +60,11 @@ function aggregateStatus(statuses: StatusPill[]): StatusState {
 function statusVariant(status: StatusState): BadgeProps["variant"] {
   switch (status) {
     case "ready":
-      return "success"
+      return "sage"
     case "pending":
-      return "warning"
+      return "gold"
     case "failed":
-      return "danger"
+      return "rose"
     default:
       return "neutral"
   }
@@ -85,6 +85,11 @@ function statusLabel(status: StatusState): string {
   }
 }
 
+const POPOVER_CLASS =
+  "z-50 min-w-[220px] rounded-md p-1 shadow-[var(--shadow-pop)] " +
+  "data-[state=open]:animate-in data-[state=open]:fade-in-0 " +
+  "data-[state=closed]:animate-out data-[state=closed]:fade-out-0"
+
 export function ReviewActionBar({
   projectId,
   projectName,
@@ -99,29 +104,41 @@ export function ReviewActionBar({
   const selection = useOptionalReviewSelectionActions()
 
   return (
-    <div className="sticky top-14 z-20 -mx-4 flex flex-col gap-3 border-b border-border/60 bg-background/82 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+    <div
+      className="sticky top-14 z-20 -mx-6 flex flex-col gap-3 px-6 py-3 sm:-mx-8 sm:px-8 lg:-mx-10 lg:flex-row lg:items-center lg:justify-between lg:px-10"
+      style={{
+        background: "var(--cream)",
+        borderBottom: "1px dashed var(--line)",
+      }}
+    >
       <div className="flex min-w-0 items-center gap-3">
         <Link
           href={`/app/projects/${projectId}`}
-          className="focus-ring inline-flex items-center gap-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground"
+          className="font-sans inline-flex items-center gap-1.5 text-xs text-[var(--ink-3)] hover:text-[var(--ink)]"
         >
           <ArrowLeft className="size-3.5" />
           <span className="truncate">{projectName}</span>
         </Link>
-        <span aria-hidden className="text-muted-foreground/50">
+        <span aria-hidden className="text-[var(--ink-4)]">
           /
         </span>
-        <h1 className="min-w-0 truncate text-base font-semibold tracking-tight">
+        <h1
+          className="font-serif min-w-0 truncate"
+          style={{
+            fontSize: 22,
+            fontWeight: 400,
+            margin: 0,
+            letterSpacing: "-0.005em",
+          }}
+        >
           {respondentLabel}
         </h1>
-        {overrideActive ? (
-          <Badge variant="accent">Override</Badge>
-        ) : null}
+        {overrideActive ? <Badge variant="clay">Override</Badge> : null}
         {qualityOverrideActive ? (
-          <Badge variant="warning">Manual quality</Badge>
+          <Badge variant="gold">Manual quality</Badge>
         ) : null}
         {excludedFromSynthesis ? (
-          <Badge variant="warning">Excluded</Badge>
+          <Badge variant="rose">Excluded</Badge>
         ) : null}
       </div>
 
@@ -130,7 +147,7 @@ export function ReviewActionBar({
         <button
           type="button"
           onClick={() => selection?.toggleDrawer("transcript")}
-          className="focus-ring chip gap-1.5 hover:border-primary/40 hover:text-foreground xl:hidden"
+          className="chip xl:hidden"
         >
           <FileText className="size-3.5" />
           Transcript
@@ -153,24 +170,16 @@ function StatusPopover({
   statuses: StatusPill[]
 }) {
   const variant = statusVariant(aggregate)
-  const dotColor =
-    variant === "success"
-      ? "bg-emerald-500"
-      : variant === "warning"
-        ? "bg-amber-500"
-        : variant === "danger"
-          ? "bg-rose-500"
-          : "bg-muted-foreground"
 
   return (
     <RadixPopover.Root>
       <RadixPopover.Trigger asChild>
         <button
           type="button"
-          className="focus-ring chip gap-2 hover:border-primary/40"
+          className={cn("chip", variant)}
           aria-label={`Pipeline status ${statusLabel(aggregate)}`}
         >
-          <span className={cn("size-1.5 rounded-full", dotColor)} />
+          <span className="dot" />
           <span>{statusLabel(aggregate)}</span>
         </button>
       </RadixPopover.Trigger>
@@ -178,43 +187,38 @@ function StatusPopover({
         <RadixPopover.Content
           sideOffset={8}
           align="end"
-          className={cn(
-            "z-50 min-w-[220px] rounded-2xl border border-border/70 bg-popover/95 p-1 shadow-[0_18px_50px_-28px_rgba(23,30,55,0.4)] backdrop-blur",
-            "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
-            "data-[state=closed]:animate-out data-[state=closed]:fade-out-0"
-          )}
+          className={POPOVER_CLASS}
+          style={{ background: "var(--card)", border: "1px solid var(--line)" }}
         >
-          <p className="px-3 pt-2 pb-1 text-[10px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
-            Pipeline
-          </p>
+          <p className="eyebrow px-3 pt-2 pb-1">Pipeline</p>
           <ul className="space-y-0.5">
             {statuses.map((status) => {
               const subVariant = statusVariant(status.status)
-              const subDot =
-                subVariant === "success"
-                  ? "bg-emerald-500"
-                  : subVariant === "warning"
-                    ? "bg-amber-500"
-                    : subVariant === "danger"
-                      ? "bg-rose-500"
-                      : "bg-muted-foreground"
               return (
                 <li
                   key={status.label}
-                  className="flex items-center justify-between gap-4 rounded-xl px-3 py-2 text-sm"
+                  className="font-sans flex items-center justify-between gap-4 rounded-md px-3 py-2 text-sm"
                 >
-                  <span className="flex items-center gap-2 text-foreground">
-                    <span className={cn("size-1.5 rounded-full", subDot)} />
+                  <span className="flex items-center gap-2 text-[var(--ink)]">
+                    <span
+                      className={cn("chip", subVariant)}
+                      style={{ padding: "0 6px", fontSize: 0 }}
+                    >
+                      <span
+                        className="dot"
+                        style={{ width: 6, height: 6, margin: 0 }}
+                      />
+                    </span>
                     {status.label}
                   </span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-[var(--ink-3)]">
                     {statusLabel(status.status)}
                   </span>
                 </li>
               )
             })}
           </ul>
-          <RadixPopover.Arrow className="fill-popover/95" />
+          <RadixPopover.Arrow style={{ fill: "var(--card)" }} />
         </RadixPopover.Content>
       </RadixPopover.Portal>
     </RadixPopover.Root>
@@ -236,7 +240,11 @@ function OverflowMenu({
         <button
           type="button"
           aria-label="Session actions"
-          className="focus-ring inline-flex size-8 items-center justify-center rounded-full border border-border/70 bg-background/70 text-muted-foreground hover:border-primary/40 hover:text-foreground"
+          className="inline-flex size-8 items-center justify-center rounded-full text-[var(--ink-3)] hover:text-[var(--ink)]"
+          style={{
+            border: "1px solid var(--line)",
+            background: "var(--card)",
+          }}
         >
           <DotsThree className="size-4" weight="bold" />
         </button>
@@ -245,10 +253,8 @@ function OverflowMenu({
         <RadixDropdownMenu.Content
           sideOffset={8}
           align="end"
-          className={cn(
-            "z-50 min-w-[220px] rounded-2xl border border-border/70 bg-popover/95 p-1 shadow-[0_18px_50px_-28px_rgba(23,30,55,0.4)] backdrop-blur",
-            "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
-          )}
+          className={POPOVER_CLASS}
+          style={{ background: "var(--card)", border: "1px solid var(--line)" }}
         >
           <ExclusionItem
             projectId={projectId}
@@ -279,11 +285,11 @@ function ExclusionItem({
         <RadixDropdownMenu.Item asChild>
           <button
             type="submit"
-            className="focus-ring flex w-full cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-foreground outline-none data-[highlighted]:bg-muted"
+            className="font-sans flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-[var(--ink)] data-[highlighted]:bg-[var(--cream-2)]"
           >
-            <Eye className="size-4 text-muted-foreground" />
+            <Eye className="size-4 text-[var(--ink-3)]" />
             Include in synthesis
-            <Check className="ml-auto size-3.5 text-primary" />
+            <Check className="ml-auto size-3.5 text-[var(--clay)]" />
           </button>
         </RadixDropdownMenu.Item>
       </form>
@@ -295,35 +301,42 @@ function ExclusionItem({
       <RadixAlertDialog.Trigger asChild>
         <RadixDropdownMenu.Item
           onSelect={(event) => event.preventDefault()}
-          className="focus-ring flex w-full cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-foreground outline-none data-[highlighted]:bg-muted"
+          className="font-sans flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-[var(--ink)] data-[highlighted]:bg-[var(--cream-2)]"
         >
-          <EyeSlash className="size-4 text-muted-foreground" />
+          <EyeSlash className="size-4 text-[var(--ink-3)]" />
           Exclude from synthesis…
         </RadixDropdownMenu.Item>
       </RadixAlertDialog.Trigger>
       <RadixAlertDialog.Portal>
         <RadixAlertDialog.Overlay
           className={cn(
-            "fixed inset-0 z-50 bg-foreground/30 backdrop-blur-sm",
+            "drawer-backdrop",
             "data-[state=open]:animate-in data-[state=open]:fade-in-0",
             "data-[state=closed]:animate-out data-[state=closed]:fade-out-0"
           )}
         />
         <RadixAlertDialog.Content
           className={cn(
-            "fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2",
-            "rounded-3xl border border-border/70 bg-background/95 p-6 shadow-[0_30px_60px_-30px_rgba(23,30,55,0.45)] backdrop-blur",
-            "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
-            "data-[state=closed]:animate-out data-[state=closed]:fade-out-0"
+            "fixed left-1/2 top-1/2 z-[101] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 p-6",
+            "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
           )}
+          style={{
+            background: "var(--card)",
+            borderRadius: 8,
+            border: "1px solid var(--line)",
+            boxShadow: "var(--shadow-pop)",
+          }}
         >
-          <RadixAlertDialog.Title className="text-base font-semibold tracking-tight text-foreground">
+          <RadixAlertDialog.Title
+            className="font-serif"
+            style={{ fontSize: 22, fontWeight: 400, margin: 0 }}
+          >
             Exclude from synthesis?
           </RadixAlertDialog.Title>
-          <RadixAlertDialog.Description className="mt-2 text-sm leading-6 text-muted-foreground">
+          <RadixAlertDialog.Description className="font-sans mt-2 text-sm leading-6 text-[var(--ink-2)]">
             This respondent will be hidden from project-level themes and
-            recommendations. The transcript and analysis stay intact and you
-            can include them again later.
+            recommendations. The transcript and analysis stay intact and you can
+            include them again later.
           </RadixAlertDialog.Description>
           <form
             action={toggleSessionExclusionAction}
@@ -333,7 +346,7 @@ function ExclusionItem({
             <input type="hidden" name="sessionId" value={sessionId} />
             <input type="hidden" name="excluded" value="true" />
             <RadixAlertDialog.Cancel asChild>
-              <Button type="button" variant="outline" size="sm">
+              <Button type="button" variant="ghost" size="sm">
                 Cancel
               </Button>
             </RadixAlertDialog.Cancel>

@@ -1,6 +1,6 @@
 # PRD v1
 
-Product name: Post-Experience Feedback Interviewer
+Product name: Post-Experience Feedback and Testimonials
 
 Status: Draft for implementation
 
@@ -8,14 +8,16 @@ Version: v1.0
 
 Primary audience: product, engineering, design
 
-MVP objective: create and deploy an AI voice interviewer focused on post-experience feedback collection, then return transcript-backed structured insights and cross-session synthesis to help a consultant or operator improve delivery faster.
+MVP objective: create and deploy AI-assisted voice collection for post-experience feedback and lightweight voice testimonials, then help a consultant or operator improve delivery or publish approved reviews faster.
 
 ## Executive summary
 - A consultant creates a `feedback` project, configures what the interviewer needs to learn, and shares a public link with respondents.
+- A consultant can instead create a `testimonial` project, configure a short review prompt, and share a public voice-review link.
 - Participants complete a short voice conversation with the AI in the browser.
 - The system stores transcript-level data, generates structured outputs for each session, and synthesizes results across sessions to help the consultant plan the next intervention or improve the last one.
 - The MVP stays narrow:
-  - `feedback` is the default and only visible creation mode in normal operation
+  - `feedback` is the default visible creation mode in normal operation
+  - `testimonial` is a visible creation mode for simple voice-to-text reviews and website embeds
   - legacy `discovery` remains feature-flagged for existing or experimental use
   - single consultant user per workspace
   - no participant login
@@ -34,8 +36,10 @@ Enable any consultant to run structured, scalable post-experience voice collecti
 - Let the consultant configure interview goals, required questions, and constraints.
 - Generate a public project interview link.
 - Let participants complete a voice interview in the browser without authentication.
+- Let reviewers leave a short voice testimonial in the browser without authentication.
 - Produce transcript-backed structured outputs per interview.
 - Produce cross-interview synthesis for the project.
+- Let consultants approve testimonial reviews before they appear in an embed.
 - Help the consultant save time compared with manual interviewing.
 - Preserve evidence traceability so the consultant can trust the outputs.
 
@@ -48,6 +52,7 @@ Enable any consultant to run structured, scalable post-experience voice collecti
 - sentiment scoring
 - CRM sync
 - custom branding
+- advanced branding beyond a testimonial brand color
 - native mobile app
 - outbound email or reminders
 - collaborator accounts
@@ -77,6 +82,8 @@ Needs:
 
 ## Core use case
 A consultant or operator configures the AI interviewer, shares one public link with respondents after an experience, collects short voice sessions, monitors incoming responses, reviews structured outputs, and uses synthesis to shape the next improvement decision.
+
+For testimonials, a consultant configures a review link, collects short voice reviews, approves or rejects submitted text reviews, and embeds approved testimonials on their website.
 
 ## Success metrics
 
@@ -113,13 +120,16 @@ A consultant or operator configures the AI interviewer, shares one public link w
 - consultant login
 - one workspace per consultant
 - project creation
+- testimonial project creation
 - interviewer configuration
 - public project link
+- public testimonial review link
 - participant landing page
 - realtime voice interview
 - transcript capture
 - structured per-session outputs
 - project-level synthesis
+- testimonial moderation and embed
 - live monitoring
 - session quality scoring
 - consultant editing and exclusion controls
@@ -143,7 +153,7 @@ A consultant or operator configures the AI interviewer, shares one public link w
 - Participants do not authenticate.
 
 ### Project creation
-Each project contains:
+Each feedback or discovery project contains:
 - immutable project type: `discovery` or `feedback`
 - project name
 - objective
@@ -161,6 +171,15 @@ Project configuration changes must be versioned.
 Project type does not change after creation.
 `feedback` is the default project type.
 `discovery` remains feature-flagged and is disabled by default in normal product flows.
+
+Each testimonial project contains:
+- immutable project type: `testimonial`
+- project name
+- business name
+- website URL
+- optional brand color
+- optional headline
+- optional review prompt
 
 ### Interview configuration
 Required fields:

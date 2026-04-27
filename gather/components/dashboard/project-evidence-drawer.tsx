@@ -102,7 +102,7 @@ export function ProjectEvidenceDrawer({
               <button
                 type="button"
                 aria-label="Close drawer"
-                className="focus-ring -mr-1 inline-flex size-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                className=" -mr-1 inline-flex size-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 <X className="size-4" />
               </button>

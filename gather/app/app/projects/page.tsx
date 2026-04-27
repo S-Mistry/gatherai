@@ -1,12 +1,11 @@
 import Link from "next/link"
-import { ArrowRight, FolderOpen } from "@phosphor-icons/react/dist/ssr"
 
-import { ProjectTypeBadge } from "@/components/dashboard/project-type-badge"
-import { Badge } from "@/components/ui/badge"
+import { ProjectTile } from "@/components/dashboard/project-tile"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
 import { cn } from "@/lib/utils"
 import { listProjects } from "@/lib/data/repository"
+import { getProjectTypePreset } from "@/lib/project-types"
 
 type SearchParams = Record<string, string | string[] | undefined>
 
@@ -28,28 +27,27 @@ const filterConfig: Record<
   }
 > = {
   live: {
-    label: "Live now",
-    description: "Showing projects with sessions currently in progress.",
-    emptyTitle: "No live sessions right now.",
+    label: "Live",
+    description: "Projects with sessions currently in progress.",
+    emptyTitle: "Nothing live right now.",
     emptyDescription:
-      "Projects will appear here when people are in an active session.",
+      "Projects show up here when respondents are mid-session.",
     predicate: (project) => project.sessionCounts.inProgress > 0,
   },
   completed: {
     label: "Completed",
-    description: "Showing projects with completed sessions ready for review.",
+    description: "Projects with finished sessions ready for review.",
     emptyTitle: "No completed sessions yet.",
     emptyDescription:
-      "Projects will appear here after at least one session finishes.",
+      "Projects appear here after at least one session finishes.",
     predicate: (project) => project.sessionCounts.completed > 0,
   },
   "needs-review": {
     label: "Needs review",
-    description:
-      "Showing projects with flagged sessions that need consultant review.",
+    description: "Projects with flagged sessions waiting on you.",
     emptyTitle: "Nothing needs review right now.",
     emptyDescription:
-      "Projects with flagged sessions will appear here when quality checks find issues.",
+      "Flagged sessions land here when quality checks find issues.",
     predicate: (project) => project.sessionCounts.flagged > 0,
   },
 }
@@ -58,7 +56,6 @@ function normalizeFilter(
   value: string | string[] | undefined
 ): ProjectFilter | null {
   const candidate = Array.isArray(value) ? value[0] : value
-
   if (
     candidate === "live" ||
     candidate === "completed" ||
@@ -66,7 +63,6 @@ function normalizeFilter(
   ) {
     return candidate
   }
-
   return null
 }
 
@@ -84,124 +80,82 @@ export default async function ProjectsPage({
   const activeFilterConfig = activeFilter ? filterConfig[activeFilter] : null
 
   return (
-    <div className="stack gap-5">
-      <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-baseline gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
-          <span className="text-xs tabular-nums text-muted-foreground">
-            {allProjects.length}
-          </span>
+    <div className="space-y-10">
+      <section>
+        <div className="font-hand text-[24px] text-[var(--clay)]">
+          your bookshelf —
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <FilterChips activeFilter={activeFilter} />
-          <Button asChild size="sm">
-            <Link href="/app/projects/new">New project</Link>
-          </Button>
+        <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex items-baseline gap-3.5">
+            <h1
+              className="font-serif"
+              style={{
+                fontSize: 44,
+                fontWeight: 400,
+                letterSpacing: "-0.012em",
+                margin: 0,
+              }}
+            >
+              Projects
+            </h1>
+            <span className="font-mono text-[12px] text-[var(--ink-3)]">
+              {allProjects.length}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <FilterChips activeFilter={activeFilter} />
+            <Button asChild variant="clay" size="sm">
+              <Link href="/app/projects/new">+ New project</Link>
+            </Button>
+          </div>
         </div>
+        {activeFilterConfig ? (
+          <p className="font-sans mt-3 text-[13px] text-[var(--ink-3)]">
+            {activeFilterConfig.description}
+          </p>
+        ) : null}
       </section>
 
       {allProjects.length === 0 ? (
         <EmptyState
-          icon={FolderOpen}
           title="No projects yet."
           description="Create one to share a link with respondents."
           action={
-            <Button asChild>
+            <Button asChild variant="clay">
               <Link href="/app/projects/new">New project</Link>
             </Button>
           }
         />
       ) : projects.length === 0 ? (
         <EmptyState
-          icon={FolderOpen}
           title={activeFilterConfig?.emptyTitle ?? "No matching projects."}
           description={
             activeFilterConfig?.emptyDescription ??
             "Adjust the current filter to see more projects."
           }
           action={
-            <Button asChild variant="outline">
+            <Button asChild variant="ghost">
               <Link href="/app/projects">Show all projects</Link>
             </Button>
           }
         />
       ) : (
-        <section className="overflow-hidden rounded-2xl border border-border/70 bg-background/60">
-          <ul>
-            {projects.map((project, idx) => (
-              <li
-                key={project.id}
-                className={cn(
-                  "grid grid-cols-1 gap-2 px-4 py-3 transition-colors hover:bg-primary/5",
-                  "md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1.4fr)_auto] md:items-center md:gap-4",
-                  idx > 0 && "border-t border-border/60"
-                )}
-              >
-                <div className="min-w-0 space-y-0.5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Link
-                      href={`/app/projects/${project.id}`}
-                      className="block truncate text-sm font-semibold text-foreground hover:text-primary"
-                    >
-                      {project.name}
-                    </Link>
-                    <ProjectTypeBadge projectType={project.projectType} />
-                  </div>
-                </div>
-
-                <div>
-                  <Badge
-                    variant={
-                      project.sessionCounts.flagged > 0
-                        ? "warning"
-                        : project.status === "ready"
-                          ? "success"
-                          : "neutral"
-                    }
-                  >
-                    {project.status}
-                  </Badge>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground tabular-nums">
-                  <span>
-                    <span className="font-semibold text-foreground">
-                      {project.sessionCounts.completed}
-                    </span>{" "}
-                    done
-                  </span>
-                  <span>
-                    <span className="font-semibold text-foreground">
-                      {project.sessionCounts.inProgress}
-                    </span>{" "}
-                    live
-                  </span>
-                  <span>
-                    <span className="font-semibold text-foreground">
-                      {project.sessionCounts.flagged}
-                    </span>{" "}
-                    flagged
-                  </span>
-                  <span>
-                    <span className="font-semibold text-foreground">
-                      {project.includedSessions}
-                    </span>{" "}
-                    in synthesis
-                  </span>
-                </div>
-
-                <div className="flex justify-end">
-                  <Link
-                    href={`/app/projects/${project.id}`}
-                    className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/70 px-2.5 py-1 text-[11px] font-semibold text-foreground transition-colors hover:border-primary/40 hover:bg-primary/8 hover:text-primary"
-                  >
-                    Open
-                    <ArrowRight className="size-3" />
-                  </Link>
-                </div>
-              </li>
-            ))}
-          </ul>
+        <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {projects.map((project) => (
+            <ProjectTile
+              key={project.id}
+              project={{
+                id: project.id,
+                name: project.name,
+                projectType: project.projectType,
+                status: project.status,
+                sessionCounts: project.sessionCounts,
+                includedSessions: project.includedSessions,
+                updatedAt: project.updatedAt,
+                tagline: getProjectTypePreset(project.projectType).audiencePlural,
+              }}
+            />
+          ))}
         </section>
       )}
     </div>
@@ -219,7 +173,7 @@ function FilterChips({ activeFilter }: { activeFilter: ProjectFilter | null }) {
     <div
       role="tablist"
       aria-label="Filter projects"
-      className="flex flex-wrap items-center gap-1"
+      className="flex flex-wrap items-center gap-2"
     >
       {filters.map((filter) => {
         const isActive = filter.key === activeFilter
@@ -232,12 +186,7 @@ function FilterChips({ activeFilter }: { activeFilter: ProjectFilter | null }) {
             href={href}
             role="tab"
             aria-selected={isActive}
-            className={cn(
-              "focus-ring chip transition-colors",
-              isActive
-                ? "border-primary/40 bg-primary/12 text-primary"
-                : "text-muted-foreground hover:border-primary/40 hover:text-foreground"
-            )}
+            className={cn("chip", isActive && "clay")}
           >
             {filter.label}
           </Link>

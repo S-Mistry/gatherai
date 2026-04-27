@@ -1,28 +1,18 @@
 "use client"
 
-import type { KeyboardEvent, ReactNode } from "react"
+import type { KeyboardEvent } from "react"
 import { useEffect, useRef, useState } from "react"
 import { useFormStatus } from "react-dom"
-import {
-  ArrowRight,
-  ChatCircleDots,
-  Clock,
-  Detective,
-  NotePencil,
-  Plus,
-  Sparkle,
-  X,
-} from "@phosphor-icons/react"
 
 import { createProjectAction } from "@/app/app/actions"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Field } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { Tape } from "@/components/ui/ornaments"
 import { Textarea } from "@/components/ui/textarea"
 import type { AnonymityMode, ProjectType } from "@/lib/domain/types"
 import { getParticipantDurationCopy } from "@/lib/participant/time-copy"
 import {
-  DEFAULT_CREATE_PROJECT_TYPE,
   getCreateProjectTypeOptions,
   getProjectTypePreset,
 } from "@/lib/project-types"
@@ -36,12 +26,12 @@ const ANONYMITY_OPTIONS: Array<{
   {
     value: "named",
     label: "Named",
-    description: "Responses stay tied to each participant's name.",
+    description: "Responses stay tied to each respondent's name.",
   },
   {
     value: "pseudonymous",
     label: "Pseudonymous",
-    description: "Labels preserve context while names stay private.",
+    description: "Labels keep context. Names stay private.",
   },
   {
     value: "anonymous",
@@ -50,12 +40,12 @@ const ANONYMITY_OPTIONS: Array<{
   },
 ]
 
-function SubmitButton() {
+function SubmitButton({ label }: { label: string }) {
   const { pending } = useFormStatus()
 
   return (
-    <Button type="submit" size="lg" disabled={pending} className="min-w-[180px]">
-      {pending ? "Creating project…" : "Create project"}
+    <Button type="submit" variant="clay" size="lg" disabled={pending}>
+      {pending ? "Creating…" : label}
     </Button>
   )
 }
@@ -66,11 +56,178 @@ export function NewProjectForm({
   discoveryEnabled: boolean
 }) {
   const availableProjectTypes = getCreateProjectTypeOptions(discoveryEnabled)
-  const [projectType, setProjectType] = useState<ProjectType>(
-    availableProjectTypes[0] ?? DEFAULT_CREATE_PROJECT_TYPE
+  const [pickedType, setPickedType] = useState<ProjectType | null>(
+    availableProjectTypes.length === 1 ? availableProjectTypes[0] : null
   )
-  const preset = getProjectTypePreset(projectType)
 
+  return (
+    <div className="mx-auto w-full max-w-[980px]">
+      {pickedType === null ? (
+        <TypePicker
+          options={availableProjectTypes}
+          onPick={setPickedType}
+        />
+      ) : (
+        <SetupForm
+          projectType={pickedType}
+          onBack={
+            availableProjectTypes.length === 1
+              ? undefined
+              : () => setPickedType(null)
+          }
+        />
+      )}
+    </div>
+  )
+}
+
+function TypePicker({
+  options,
+  onPick,
+}: {
+  options: ProjectType[]
+  onPick: (type: ProjectType) => void
+}) {
+  return (
+    <>
+      <div className="font-hand mb-2 text-[24px] text-[var(--clay)]">
+        what kind of conversation —
+      </div>
+      <h1
+        className="font-serif"
+        style={{
+          fontSize: 52,
+          fontWeight: 400,
+          lineHeight: 1.05,
+          letterSpacing: "-0.015em",
+          margin: "0 0 40px",
+        }}
+      >
+        Two ways to listen.{" "}
+        <span style={{ fontStyle: "italic", color: "var(--ink-3)" }}>
+          Pick one.
+        </span>
+      </h1>
+
+      <div className="grid gap-7 lg:grid-cols-2">
+        {options.map((type, idx) => {
+          const preset = getProjectTypePreset(type)
+          const accent = type === "feedback"
+            ? "var(--sage)"
+            : type === "testimonial"
+              ? "var(--ink-2)"
+              : "var(--clay)"
+          const tape = type === "feedback" ? "green" : "yellow"
+          const tilt = idx === 0 ? -0.5 : 0.5
+          const tapePos = idx === 0 ? { left: 32 } : { right: 32 }
+          const tapeRotate = idx === 0 ? -3 : 3
+          const flavor = type === "feedback"
+            ? "✶ feedback pulse"
+            : type === "testimonial"
+              ? "☉ testimonial collection"
+              : "☞ stakeholder interviews"
+
+          return (
+            <button
+              key={type}
+              type="button"
+              onClick={() => onPick(type)}
+              className="text-left"
+              style={{
+                background: "transparent",
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+                transform: `rotate(${tilt}deg)`,
+              }}
+            >
+              <div
+                className="card flat relative"
+                style={{
+                  padding: "30px 32px 28px",
+                  minHeight: 280,
+                  background: type === "feedback" ? "var(--card-2)" : "var(--card)",
+                }}
+              >
+                <Tape
+                  tint={tape}
+                  style={{
+                    top: -11,
+                    transform: `rotate(${tapeRotate}deg)`,
+                    ...tapePos,
+                  }}
+                />
+                <div
+                  className="font-hand"
+                  style={{ fontSize: 30, color: accent, marginBottom: 6 }}
+                >
+                  {flavor}
+                </div>
+                <h3
+                  className="font-serif"
+                  style={{
+                    fontSize: 28,
+                    fontWeight: 400,
+                    margin: "12px 0 16px",
+                    lineHeight: 1.18,
+                    letterSpacing: "-0.005em",
+                  }}
+                >
+                  {preset.createTitle}
+                </h3>
+                <p
+                  className="font-sans"
+                  style={{
+                    fontSize: 14,
+                    color: "var(--ink-2)",
+                    lineHeight: 1.55,
+                    margin: 0,
+                  }}
+                >
+                  {preset.description}
+                </p>
+                <div className="mt-6 flex flex-wrap gap-2.5">
+                  {chipsForType(type, preset).map((chip) => (
+                    <span key={chip} className="chip">
+                      {chip}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </button>
+          )
+        })}
+      </div>
+    </>
+  )
+}
+
+function chipsForType(
+  type: ProjectType,
+  preset: ReturnType<typeof getProjectTypePreset>
+) {
+  if (type === "testimonial") {
+    return ["10 sec", "Voice → text", "Embeddable"]
+  }
+  if (type === "feedback") {
+    return ["Unlimited responses", "No live transcript", "Theme rollup"]
+  }
+  const duration = getParticipantDurationCopy(type, preset.durationCapMinutes)
+  return [
+    duration.timerTargetLabel,
+    preset.followUpLimit === 1 ? "1 probe" : `${preset.followUpLimit} probes`,
+    preset.anonymityMode,
+  ]
+}
+
+function SetupForm({
+  projectType,
+  onBack,
+}: {
+  projectType: ProjectType
+  onBack?: () => void
+}) {
+  const preset = getProjectTypePreset(projectType)
   const [name, setName] = useState("")
   const [objective, setObjective] = useState(preset.objective)
   const [areasOfInterest, setAreasOfInterest] = useState<string[]>(
@@ -85,405 +242,492 @@ export function NewProjectForm({
   const [anonymityMode, setAnonymityMode] = useState<AnonymityMode>(
     preset.anonymityMode
   )
-
-  function applyProjectType(type: ProjectType) {
-    const nextPreset = getProjectTypePreset(type)
-    setProjectType(type)
-    setObjective(nextPreset.objective)
-    setAreasOfInterest(nextPreset.areasOfInterest)
-    setRequiredQuestions(nextPreset.requiredQuestions)
-    setDurationCapMinutes(String(nextPreset.durationCapMinutes))
-    setAnonymityMode(nextPreset.anonymityMode)
-  }
-
-  const previewAnalysisHeadings = [
-    "Executive narrative",
-    preset.implicationsLabel,
-    "Recommended actions",
-    preset.focusAreasLabel,
-  ]
-  const previewDurationMinutes = Number(durationCapMinutes)
-  const previewDurationCopy = getParticipantDurationCopy(
-    projectType,
-    Number.isFinite(previewDurationMinutes)
-      ? previewDurationMinutes
-      : preset.durationCapMinutes
+  const [businessName, setBusinessName] = useState("")
+  const [businessNameTouched, setBusinessNameTouched] = useState(false)
+  const [websiteUrl, setWebsiteUrl] = useState("")
+  const [brandColor, setBrandColor] = useState("#b45f3a")
+  const [headline, setHeadline] = useState("Leave a review")
+  const [testimonialPrompt, setTestimonialPrompt] = useState(
+    "Tell us about your experience."
   )
 
+  function handleNameChange(value: string) {
+    setName(value)
+    if (projectType === "testimonial" && !businessNameTouched) {
+      setBusinessName(value)
+    }
+  }
+
+  const testimonialMode = projectType === "testimonial"
+  const feedbackMode = projectType === "feedback"
+  const stakeholderLike = !testimonialMode && !feedbackMode
+
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_360px] xl:items-start">
-      <form action={createProjectAction} className="stack gap-6">
-        <input type="hidden" name="projectType" value={projectType} />
+    <form action={createProjectAction} className="space-y-7">
+      <input type="hidden" name="projectType" value={projectType} />
 
-        <section className="panel-flush overflow-hidden">
-          <header className="flex flex-col justify-between gap-3 px-6 py-5 lg:flex-row lg:items-end">
-            <div className="stack gap-1">
-              <p className="eyebrow-sm">New project</p>
-              <h1 className="text-2xl font-semibold tracking-tight text-balance">
-                Start a new project
-              </h1>
-              <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-                {availableProjectTypes.length > 1
-                  ? "Pick a mode. We'll tune the questions, pacing, and synthesis to match."
-                  : "Set up a post-experience feedback project. We'll tune the questions, pacing, and synthesis for you."}
-              </p>
-            </div>
-            <Badge variant="accent">{preset.label}</Badge>
-          </header>
+      {onBack ? (
+        <button
+          type="button"
+          onClick={onBack}
+          className="font-hand"
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            fontSize: 18,
+            color: "var(--ink-3)",
+            padding: 0,
+          }}
+        >
+          ← back
+        </button>
+      ) : null}
 
-          <div className="divider" />
+      <div>
+        <h1
+          className="font-serif"
+          style={{
+            fontSize: 44,
+            fontWeight: 400,
+            margin: "0 0 6px",
+            letterSpacing: "-0.012em",
+          }}
+        >
+          {testimonialMode
+            ? "One link. One review."
+            : feedbackMode
+              ? "One question, sent wide."
+              : "Set up the interviews."}
+        </h1>
+        <div
+          className="font-hand"
+          style={{
+            fontSize: 22,
+            color: feedbackMode || testimonialMode ? "var(--sage)" : "var(--clay)",
+            marginBottom: 8,
+          }}
+        >
+          {testimonialMode
+            ? "keep it simple — they're saying yes already."
+            : feedbackMode
+              ? "keep it open enough to surprise you —"
+              : "you can edit any of this later —"}
+        </div>
+      </div>
 
-          <div className="stack gap-6 px-6 py-6">
-            <section className="stack gap-4">
-              <div className="stack gap-1">
-                <p className="eyebrow-sm">Mode</p>
-                <h2 className="text-lg font-semibold tracking-tight text-foreground">
-                  {availableProjectTypes.length > 1
-                    ? "What are you trying to learn?"
-                    : "How should this collection run?"}
-                </h2>
-              </div>
+      <div
+        className={cn(
+          "card",
+          stakeholderLike && "lined red-line",
+          (testimonialMode || feedbackMode) && "flat"
+        )}
+        style={{
+          padding: stakeholderLike ? "30px 36px 36px 70px" : "30px 36px 36px",
+          background:
+            testimonialMode || feedbackMode ? "var(--card-2)" : undefined,
+        }}
+      >
+        {(testimonialMode || feedbackMode) && (
+          <Tape
+            tint={testimonialMode ? "yellow" : "green"}
+            style={{ top: -11, left: 60, transform: "rotate(-2deg)" }}
+          />
+        )}
 
-              <div
-                className={cn(
-                  "grid gap-3",
-                  availableProjectTypes.length > 1 ? "lg:grid-cols-2" : "max-w-xl"
-                )}
-              >
-                {availableProjectTypes.map((type) => {
-                  const typePreset = getProjectTypePreset(type)
-                  const typeDurationCopy = getParticipantDurationCopy(
-                    type,
-                    typePreset.durationCapMinutes
-                  )
-                  const selected = type === projectType
+        {testimonialMode ? (
+          <TestimonialFields
+            name={name}
+            onName={handleNameChange}
+            businessName={businessName}
+            onBusinessName={(value) => {
+              setBusinessNameTouched(true)
+              setBusinessName(value)
+            }}
+            websiteUrl={websiteUrl}
+            onWebsiteUrl={setWebsiteUrl}
+            brandColor={brandColor}
+            onBrandColor={setBrandColor}
+            headline={headline}
+            onHeadline={setHeadline}
+            prompt={testimonialPrompt}
+            onPrompt={setTestimonialPrompt}
+          />
+        ) : feedbackMode ? (
+          <FeedbackFields
+            name={name}
+            onName={handleNameChange}
+            requiredQuestions={requiredQuestions}
+            onRequiredQuestions={setRequiredQuestions}
+            objective={objective}
+            onObjective={setObjective}
+          />
+        ) : (
+          <StakeholderFields
+            name={name}
+            onName={handleNameChange}
+            objective={objective}
+            onObjective={setObjective}
+            areasOfInterest={areasOfInterest}
+            onAreasOfInterest={setAreasOfInterest}
+            requiredQuestions={requiredQuestions}
+            onRequiredQuestions={setRequiredQuestions}
+            durationCapMinutes={durationCapMinutes}
+            onDurationCapMinutes={setDurationCapMinutes}
+            anonymityMode={anonymityMode}
+            onAnonymityMode={setAnonymityMode}
+          />
+        )}
+      </div>
 
-                  return (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => applyProjectType(type)}
-                      className={cn(
-                        "focus-ring group rounded-[28px] border p-5 text-left transition-all",
-                        selected
-                          ? "border-primary/50 bg-primary/[0.08]"
-                          : "border-border/70 bg-background/75 hover:border-primary/30 hover:bg-primary/[0.04]"
-                      )}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Badge variant={typePreset.badgeVariant}>
-                              {typePreset.label}
-                            </Badge>
-                            {type === "discovery" ? (
-                              <Detective className="size-4 text-muted-foreground" />
-                            ) : (
-                              <Sparkle className="size-4 text-muted-foreground" />
-                            )}
-                          </div>
-                          <p className="text-sm leading-6 text-foreground">
-                            {typePreset.description}
-                          </p>
-                        </div>
-                        <div
-                          className={cn(
-                            "mt-0.5 size-3 shrink-0 rounded-full border transition-colors",
-                            selected
-                              ? "border-primary bg-primary"
-                              : "border-border bg-transparent"
-                          )}
-                        />
-                      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <SubmitButton
+          label={
+            testimonialMode
+              ? "Create review link →"
+              : feedbackMode
+                ? "Preview & send →"
+                : "Save & invite stakeholders →"
+          }
+        />
+        <Button type="button" variant="ghost">
+          Save as draft
+        </Button>
+        <div className="flex-1" />
+        <span
+          className="font-hand"
+          style={{ fontSize: 20, color: "var(--ink-3)" }}
+        >
+          {testimonialMode
+            ? "you'll get a link to embed on your site"
+            : feedbackMode
+              ? "you'll get a link to share with your team"
+              : "you'll get a link to share with each person"}
+        </span>
+      </div>
+    </form>
+  )
+}
 
-                      <div className="mt-4 flex flex-wrap gap-1.5">
-                        <span className="chip">
-                          <Clock className="size-3" />
-                          {typeDurationCopy.timerTargetLabel}
-                        </span>
-                        <span className="chip">
-                          <ChatCircleDots className="size-3" />
-                          {typePreset.followUpLimit === 1
-                            ? "1 probe"
-                            : `${typePreset.followUpLimit} probes`}
-                        </span>
-                        <span className="chip">
-                          <NotePencil className="size-3" />
-                          {typePreset.anonymityMode}
-                        </span>
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-            </section>
+function StakeholderFields({
+  name,
+  onName,
+  objective,
+  onObjective,
+  areasOfInterest,
+  onAreasOfInterest,
+  requiredQuestions,
+  onRequiredQuestions,
+  durationCapMinutes,
+  onDurationCapMinutes,
+  anonymityMode,
+  onAnonymityMode,
+}: {
+  name: string
+  onName: (v: string) => void
+  objective: string
+  onObjective: (v: string) => void
+  areasOfInterest: string[]
+  onAreasOfInterest: (v: string[]) => void
+  requiredQuestions: string[]
+  onRequiredQuestions: (v: string[]) => void
+  durationCapMinutes: string
+  onDurationCapMinutes: (v: string) => void
+  anonymityMode: AnonymityMode
+  onAnonymityMode: (v: AnonymityMode) => void
+}) {
+  return (
+    <div className="grid gap-7">
+      <Field label="project name" htmlFor="name">
+        <Input
+          id="name"
+          name="name"
+          required
+          placeholder="Operating model redesign"
+          value={name}
+          onChange={(event) => onName(event.target.value)}
+        />
+      </Field>
 
-            <section className="stack gap-4">
-              <div className="stack gap-1">
-                <p className="eyebrow-sm">Essentials</p>
-                <h2 className="text-lg font-semibold tracking-tight text-foreground">
-                  Name it and set the brief
-                </h2>
-              </div>
+      <div className="grid gap-7 md:grid-cols-2">
+        <Field label="session cap" htmlFor="durationCapMinutes">
+          <Input
+            id="durationCapMinutes"
+            name="durationCapMinutes"
+            type="number"
+            min={4}
+            max={30}
+            value={durationCapMinutes}
+            onChange={(event) => onDurationCapMinutes(event.target.value)}
+          />
+        </Field>
+        <Field label="identity" htmlFor="anonymityMode">
+          <select
+            id="anonymityMode"
+            name="anonymityMode"
+            value={anonymityMode}
+            onChange={(event) =>
+              onAnonymityMode(event.target.value as AnonymityMode)
+            }
+          >
+            {ANONYMITY_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label} — {option.description}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </div>
 
-              <Field label="Project name" htmlFor="name">
-                <Input
-                  id="name"
-                  name="name"
-                  required
-                  placeholder={
-                    projectType === "discovery"
-                      ? "Operating model redesign"
-                      : "Saturday dinner feedback"
-                  }
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                />
-              </Field>
+      <Field label="what you want to learn" htmlFor="objective">
+        <Textarea
+          id="objective"
+          name="objective"
+          rows={2}
+          required
+          value={objective}
+          onChange={(event) => onObjective(event.target.value)}
+        />
+      </Field>
 
-              <Field
-                label="Objective"
-                htmlFor="objective"
-                hint="Pre-filled to match your mode. Edit freely."
-              >
-                <Textarea
-                  id="objective"
-                  name="objective"
-                  required
-                  rows={4}
-                  value={objective}
-                  onChange={(event) => setObjective(event.target.value)}
-                />
-              </Field>
+      <NotebookList
+        eyebrow="topics to cover —"
+        name="areasOfInterest"
+        items={areasOfInterest}
+        onChange={onAreasOfInterest}
+        addLabel="+ add a topic"
+        placeholder="e.g. handoff friction"
+      />
 
-              <div className="grid gap-4 xl:grid-cols-2">
-                <BulletListField
-                  label="Topics to cover"
-                  name="areasOfInterest"
-                  items={areasOfInterest}
-                  onChange={setAreasOfInterest}
-                  addLabel="Add topic"
-                  placeholder="e.g. Current blockers"
-                />
-                <BulletListField
-                  label="Must-ask questions"
-                  name="requiredQuestions"
-                  items={requiredQuestions}
-                  onChange={setRequiredQuestions}
-                  addLabel="Add question"
-                  placeholder="e.g. What would make this useful?"
-                  hint="These anchor every conversation."
-                />
-              </div>
-            </section>
-
-            <section className="stack gap-4">
-              <div className="stack gap-1">
-                <p className="eyebrow-sm">Conversation</p>
-                <h2 className="text-lg font-semibold tracking-tight text-foreground">
-                  How it runs
-                </h2>
-              </div>
-
-              <div className="grid gap-4 lg:grid-cols-[180px_minmax(0,1fr)]">
-                <Field label="Duration" htmlFor="durationCapMinutes">
-                  <Input
-                    id="durationCapMinutes"
-                    name="durationCapMinutes"
-                    type="number"
-                    min={4}
-                    max={30}
-                    value={durationCapMinutes}
-                    onChange={(event) => setDurationCapMinutes(event.target.value)}
-                  />
-                </Field>
-
-                <div className="stack gap-2">
-                  <span className="text-sm font-medium text-foreground">
-                    Identity
-                  </span>
-                  <div className="grid gap-3 md:grid-cols-3">
-                    {ANONYMITY_OPTIONS.map((option) => {
-                      const selected = option.value === anonymityMode
-
-                      return (
-                        <label
-                          key={option.value}
-                          className={cn(
-                            "focus-ring block cursor-pointer rounded-3xl border px-4 py-4 text-left transition-colors",
-                            selected
-                              ? "border-primary/50 bg-primary/[0.08]"
-                              : "border-border/70 bg-background/70 hover:border-primary/30 hover:bg-primary/[0.04]"
-                          )}
-                        >
-                          <input
-                            type="radio"
-                            name="anonymityMode"
-                            value={option.value}
-                            checked={selected}
-                            onChange={() => setAnonymityMode(option.value)}
-                            className="sr-only"
-                          />
-                          <p className="text-sm font-semibold text-foreground">
-                            {option.label}
-                          </p>
-                          <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                            {option.description}
-                          </p>
-                        </label>
-                      )
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                <RuntimeNote
-                  label="Follow-up depth"
-                  value={
-                    preset.followUpLimit === 1
-                      ? "One focused probe when it matters."
-                      : `Up to ${preset.followUpLimit} probes before moving on.`
-                  }
-                />
-                <RuntimeNote label="Tone" value={preset.toneStyle} />
-                <RuntimeNote
-                  label="Session model"
-                  value="One topic at a time. Transcripts only, no audio stored."
-                />
-              </div>
-            </section>
-          </div>
-
-          <div className="divider" />
-
-          <div className="flex flex-col gap-3 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-              Saving creates your project and a shareable feedback link, ready
-              to send.
-            </p>
-            <SubmitButton />
-          </div>
-        </section>
-      </form>
-
-      <aside className="xl:sticky xl:top-28">
-        <section className="panel-flush overflow-hidden">
-          <div className="px-5 py-5">
-            <div className="flex items-center justify-between gap-3">
-              <div className="stack gap-1">
-                <p className="eyebrow-sm">Preview</p>
-                <h2 className="text-lg font-semibold tracking-tight text-foreground">
-                  How respondents see it
-                </h2>
-              </div>
-              <Badge variant={preset.badgeVariant}>{preset.label}</Badge>
-            </div>
-          </div>
-
-          <div className="divider" />
-
-          <div className="stack gap-5 px-5 py-5">
-            <section className="rounded-[28px] border border-border/70 bg-background/75 p-5">
-              <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
-                Respondent intro
-              </p>
-              <h3 className="mt-3 text-lg font-semibold tracking-tight text-foreground">
-                {preset.participantTitle}
-              </h3>
-              <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                {preset.participantIntro}
-              </p>
-              <div className="mt-4 rounded-2xl border border-primary/15 bg-primary/[0.07] px-4 py-3">
-                <p className="text-[10px] font-semibold tracking-[0.18em] text-primary uppercase">
-                  Disclosure
-                </p>
-                <ul className="mt-2 space-y-1.5 text-sm leading-6 text-foreground">
-                  {preset.disclosureLines.map((line) => (
-                    <li key={line}>{line}</li>
-                  ))}
-                </ul>
-              </div>
-            </section>
-
-            <section className="rounded-[28px] border border-border/70 bg-background/75 p-5">
-              <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
-                Synthesis
-              </p>
-              <div className="mt-4 stack gap-3">
-                {previewAnalysisHeadings.map((heading) => (
-                  <div
-                    key={heading}
-                    className="flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-background/80 px-4 py-3"
-                  >
-                    <span className="text-sm font-medium text-foreground">
-                      {heading}
-                    </span>
-                    <ArrowRight className="size-3.5 text-muted-foreground" />
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <section className="rounded-[28px] border border-border/70 bg-background/75 p-5">
-              <p className="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
-                Defaults
-              </p>
-              <ul className="mt-4 space-y-2 text-sm leading-6 text-muted-foreground">
-                <li>{previewDurationCopy.shellLabel} One topic at a time.</li>
-                <li>
-                  {preset.followUpLimit === 1
-                    ? "Light follow-ups keep reflections easy to give."
-                    : "Deeper probing gives enough context to frame a decision."}
-                </li>
-                <li>Built for {preset.audiencePlural}, not generic survey takers.</li>
-              </ul>
-            </section>
-          </div>
-        </section>
-      </aside>
+      <NotebookList
+        eyebrow="must-ask questions —"
+        name="requiredQuestions"
+        items={requiredQuestions}
+        onChange={onRequiredQuestions}
+        addLabel="+ add a question"
+        placeholder="e.g. what would make this useful?"
+        numbered
+      />
     </div>
   )
 }
 
-function Field({
-  label,
-  htmlFor,
-  hint,
-  children,
+function FeedbackFields({
+  name,
+  onName,
+  requiredQuestions,
+  onRequiredQuestions,
+  objective,
+  onObjective,
 }: {
-  label: string
-  htmlFor: string
-  hint?: string
-  children: ReactNode
+  name: string
+  onName: (v: string) => void
+  requiredQuestions: string[]
+  onRequiredQuestions: (v: string[]) => void
+  objective: string
+  onObjective: (v: string) => void
 }) {
+  const oneQuestion = requiredQuestions[0] ?? ""
+
+  function handleQuestion(value: string) {
+    onRequiredQuestions([value])
+  }
+
   return (
-    <label htmlFor={htmlFor} className="stack gap-2">
-      <span className="text-sm font-medium text-foreground">{label}</span>
-      {children}
-      {hint ? (
-        <span className="text-xs leading-5 text-muted-foreground">{hint}</span>
-      ) : null}
-    </label>
+    <div className="grid gap-7">
+      <Field label="project name" htmlFor="name">
+        <Input
+          id="name"
+          name="name"
+          required
+          placeholder="Northwind launch retrospective"
+          value={name}
+          onChange={(event) => onName(event.target.value)}
+        />
+      </Field>
+
+      <Field label="the one question" htmlFor="requiredQuestions">
+        <Textarea
+          id="requiredQuestions"
+          name="requiredQuestions"
+          rows={2}
+          required
+          value={oneQuestion}
+          onChange={(event) => handleQuestion(event.target.value)}
+          style={{ fontSize: 24, lineHeight: 1.35 }}
+        />
+      </Field>
+
+      <Field label="what you want to learn" htmlFor="objective">
+        <Textarea
+          id="objective"
+          name="objective"
+          rows={2}
+          value={objective}
+          onChange={(event) => onObjective(event.target.value)}
+        />
+      </Field>
+
+      <div
+        className="flex items-center gap-3.5 rounded-md"
+        style={{
+          padding: "14px 18px",
+          background: "rgba(255,255,255,0.5)",
+        }}
+      >
+        <span
+          className="grid place-items-center"
+          style={{
+            width: 24,
+            height: 24,
+            borderRadius: "50%",
+            border: "2px solid var(--sage)",
+            background: "var(--sage)",
+          }}
+        >
+          <span style={{ color: "var(--card)", fontSize: 12 }}>✓</span>
+        </span>
+        <div>
+          <div className="font-sans" style={{ fontSize: 13, fontWeight: 600 }}>
+            Hide the live transcript from participants
+          </div>
+          <div
+            className="font-sans"
+            style={{ fontSize: 12, color: "var(--ink-2)", marginTop: 2 }}
+          >
+            They speak; we listen. They see a thank-you. Themes roll up once
+            enough have answered.
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
-function BulletListField({
-  label,
+function TestimonialFields({
   name,
-  hint,
+  onName,
+  businessName,
+  onBusinessName,
+  websiteUrl,
+  onWebsiteUrl,
+  brandColor,
+  onBrandColor,
+  headline,
+  onHeadline,
+  prompt,
+  onPrompt,
+}: {
+  name: string
+  onName: (v: string) => void
+  businessName: string
+  onBusinessName: (v: string) => void
+  websiteUrl: string
+  onWebsiteUrl: (v: string) => void
+  brandColor: string
+  onBrandColor: (v: string) => void
+  headline: string
+  onHeadline: (v: string) => void
+  prompt: string
+  onPrompt: (v: string) => void
+}) {
+  return (
+    <div className="grid gap-7">
+      <Field label="project name" htmlFor="name">
+        <Input
+          id="name"
+          name="name"
+          required
+          placeholder="Website testimonials"
+          value={name}
+          onChange={(event) => onName(event.target.value)}
+        />
+      </Field>
+
+      <div className="grid gap-7 md:grid-cols-2">
+        <Field label="business name" htmlFor="testimonialBusinessName">
+          <Input
+            id="testimonialBusinessName"
+            name="testimonialBusinessName"
+            required
+            placeholder="Your business"
+            value={businessName}
+            onChange={(event) => onBusinessName(event.target.value)}
+          />
+        </Field>
+        <Field label="website URL" htmlFor="testimonialWebsiteUrl">
+          <Input
+            id="testimonialWebsiteUrl"
+            name="testimonialWebsiteUrl"
+            required
+            placeholder="https://example.com"
+            value={websiteUrl}
+            onChange={(event) => onWebsiteUrl(event.target.value)}
+          />
+        </Field>
+      </div>
+
+      <div className="grid gap-7 md:grid-cols-[180px_minmax(0,1fr)]">
+        <Field label="brand colour" htmlFor="testimonialBrandColor">
+          <div className="flex items-center gap-3">
+            <input
+              id="testimonialBrandColor"
+              name="testimonialBrandColor"
+              type="color"
+              value={brandColor}
+              onChange={(event) => onBrandColor(event.target.value)}
+              className="size-9 rounded-full border border-[var(--line)] bg-transparent"
+            />
+            <span className="font-sans text-sm text-[var(--ink-3)]">
+              optional
+            </span>
+          </div>
+        </Field>
+        <Field label="headline" htmlFor="testimonialHeadline" hint="optional">
+          <Input
+            id="testimonialHeadline"
+            name="testimonialHeadline"
+            placeholder="Leave a review"
+            value={headline}
+            onChange={(event) => onHeadline(event.target.value)}
+          />
+        </Field>
+      </div>
+
+      <Field
+        label="prompt question"
+        htmlFor="testimonialPrompt"
+        hint="shown above the record button"
+      >
+        <Textarea
+          id="testimonialPrompt"
+          name="testimonialPrompt"
+          rows={3}
+          placeholder="Tell us about your experience."
+          value={prompt}
+          onChange={(event) => onPrompt(event.target.value)}
+        />
+      </Field>
+    </div>
+  )
+}
+
+function NotebookList({
+  eyebrow,
+  name,
   items,
   onChange,
   addLabel,
   placeholder,
+  numbered = false,
 }: {
-  label: string
+  eyebrow: string
   name: string
-  hint?: string
   items: string[]
   onChange: (items: string[]) => void
   addLabel: string
   placeholder?: string
+  numbered?: boolean
 }) {
   const itemRefs = useRef<(HTMLTextAreaElement | null)[]>([])
   const pendingFocusRef = useRef<number | null>(null)
@@ -542,70 +786,83 @@ function BulletListField({
   }
 
   return (
-    <div className="stack gap-3">
-      <span className="text-sm font-medium text-foreground">{label}</span>
+    <div>
+      <div
+        className="font-hand"
+        style={{ fontSize: 22, color: "var(--clay)", marginBottom: 10 }}
+      >
+        {eyebrow}
+      </div>
       <input type="hidden" name={name} value={serialized} />
-      <div className="max-h-64 overflow-y-auto pr-1">
-        <ul className="stack gap-2">
-          {visibleItems.map((item, idx) => (
-            <li key={idx} className="flex items-start gap-2">
+      <div className="grid gap-3">
+        {visibleItems.map((item, idx) => (
+          <div
+            key={idx}
+            className="grid items-center"
+            style={{
+              gridTemplateColumns: numbered ? "32px 1fr 24px" : "16px 1fr 24px",
+              gap: 12,
+            }}
+          >
+            {numbered ? (
+              <span
+                className="font-hand"
+                style={{ fontSize: 24, color: "var(--clay)" }}
+              >
+                {idx + 1}.
+              </span>
+            ) : (
               <span
                 aria-hidden
-                className="mt-[1.1rem] size-1.5 shrink-0 rounded-full bg-muted-foreground/50"
+                className="size-1.5 shrink-0 rounded-full"
+                style={{ background: "var(--ink-4)" }}
               />
-              <textarea
-                ref={(el) => {
-                  itemRefs.current[idx] = el
+            )}
+            <textarea
+              ref={(el) => {
+                itemRefs.current[idx] = el
+              }}
+              rows={1}
+              value={item}
+              onChange={(event) => updateItem(idx, event.target.value)}
+              onKeyDown={(event) => handleKeyDown(event, idx)}
+              placeholder={placeholder}
+              className="font-serif resize-none bg-transparent border-0 border-b-[1.5px] border-dashed border-[var(--line)] px-1 py-2 text-[18px] leading-snug text-[var(--ink)] outline-none placeholder:text-[var(--ink-4)] focus:border-solid focus:border-[var(--clay)] [field-sizing:content]"
+            />
+            {visibleItems.length > 1 ? (
+              <button
+                type="button"
+                onClick={() => removeItem(idx)}
+                aria-label="Remove item"
+                className="font-mono text-[16px] text-[var(--ink-4)] hover:text-[var(--rose)]"
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 0,
                 }}
-                rows={1}
-                value={item}
-                onChange={(event) => updateItem(idx, event.target.value)}
-                onKeyDown={(event) => handleKeyDown(event, idx)}
-                placeholder={placeholder}
-                className="w-full resize-none rounded-2xl border border-border/70 bg-white/80 px-4 py-3 text-sm leading-6 text-foreground shadow-sm outline-none transition [field-sizing:content] placeholder:text-muted-foreground focus:border-primary/50 focus:ring-4 focus:ring-primary/10 dark:bg-card/70"
-              />
-              {visibleItems.length > 1 ? (
-                <button
-                  type="button"
-                  onClick={() => removeItem(idx)}
-                  aria-label="Remove item"
-                  className="focus-ring mt-2 inline-flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                >
-                  <X className="size-3.5" />
-                </button>
-              ) : null}
-            </li>
-          ))}
-        </ul>
+              >
+                ×
+              </button>
+            ) : null}
+          </div>
+        ))}
       </div>
       <button
         type="button"
         onClick={addItem}
-        className="focus-ring inline-flex items-center gap-1.5 self-start rounded-full border border-dashed border-border/70 px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+        className="font-hand mt-2"
+        style={{
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          fontSize: 22,
+          color: "var(--clay)",
+          padding: "6px 0",
+        }}
       >
-        <Plus className="size-3" weight="bold" />
         {addLabel}
       </button>
-      {hint ? (
-        <span className="text-xs leading-5 text-muted-foreground">{hint}</span>
-      ) : null}
     </div>
-  )
-}
-
-function RuntimeNote({
-  label,
-  value,
-}: {
-  label: string
-  value: string
-}) {
-  return (
-    <section className="rounded-3xl border border-border/70 bg-background/70 p-4">
-      <p className="text-[10px] font-semibold tracking-[0.2em] text-muted-foreground uppercase">
-        {label}
-      </p>
-      <p className="mt-2 text-sm leading-6 text-foreground">{value}</p>
-    </section>
   )
 }

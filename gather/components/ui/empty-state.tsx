@@ -20,19 +20,34 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-border/70 bg-background/60 px-6 py-12 text-center",
+        "flex flex-col items-center justify-center gap-3 px-8 py-14 text-center",
         className
       )}
+      style={{ border: "1.5px dashed var(--line)", borderRadius: 8 }}
     >
       {Icon ? (
-        <div className="rounded-2xl border border-border/70 bg-card/80 p-3 text-muted-foreground">
+        <div
+          className="grid place-items-center"
+          style={{
+            width: 44,
+            height: 44,
+            background: "var(--card)",
+            border: "1px solid var(--line)",
+            borderRadius: 8,
+            color: "var(--ink-3)",
+          }}
+        >
           <Icon className="size-5" />
         </div>
       ) : null}
-      <div className="space-y-1">
-        <h3 className="text-base font-semibold text-foreground">{title}</h3>
+      <div className="space-y-1.5">
+        <h3 className="font-serif text-2xl font-normal text-[var(--ink)]">
+          {title}
+        </h3>
         {description ? (
-          <p className="max-w-md text-sm leading-6 text-muted-foreground">{description}</p>
+          <p className="font-sans max-w-md text-sm leading-6 text-[var(--ink-2)]">
+            {description}
+          </p>
         ) : null}
       </div>
       {action ? <div className="pt-1">{action}</div> : null}

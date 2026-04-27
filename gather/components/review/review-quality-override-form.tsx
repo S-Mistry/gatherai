@@ -47,7 +47,7 @@ export function ReviewQualityOverrideForm({
           id="setting"
           name="setting"
           defaultValue={defaultSetting}
-          className="focus-ring w-full rounded-2xl border border-border/70 bg-background/80 px-4 py-3 text-sm text-foreground outline-none"
+          className=" w-full rounded-2xl border border-border/70 bg-background/80 px-4 py-3 text-sm text-foreground outline-none"
         >
           <option value="generated">Use generated quality score</option>
           <option value="manual-low">Manually mark low quality</option>

@@ -143,7 +143,7 @@ function CompactRail({
       aria-label="Other sessions in this project"
       className="flex flex-col items-center gap-3"
     >
-      <span className="eyebrow-sm text-[9px] tracking-[0.22em]">People</span>
+      <span className="eyebrow text-[9px] tracking-[0.22em]">People</span>
       <ul className="flex max-h-[calc(100vh-12rem)] flex-col gap-2 overflow-y-auto px-0.5">
         {sessions.map((session, idx) => {
           const isActive = session.id === currentSessionId
@@ -166,7 +166,7 @@ function CompactRail({
                 aria-current={isActive ? "page" : undefined}
                 title={tooltip}
                 className={cn(
-                  "focus-ring relative flex size-9 items-center justify-center rounded-full border text-[11px] font-semibold transition-all",
+                  " relative flex size-9 items-center justify-center rounded-full border text-[11px] font-semibold transition-all",
                   isActive
                     ? "border-primary bg-primary/12 text-primary ring-2 ring-primary/25"
                     : "border-border/70 bg-background/70 text-muted-foreground hover:border-primary/40 hover:text-foreground",
@@ -220,7 +220,7 @@ function ExpandedRail({
       className="flex max-h-[calc(100vh-7rem)] flex-col gap-2 overflow-y-auto pr-1"
     >
       <div className="flex items-center justify-between px-1">
-        <span className="eyebrow-sm">Sessions</span>
+        <span className="eyebrow">Sessions</span>
         <span className="text-[10px] tracking-[0.18em] text-muted-foreground/80 uppercase">
           j / k
         </span>
@@ -236,7 +236,7 @@ function ExpandedRail({
                 href={`/app/projects/${projectId}/sessions/${session.id}`}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
-                  "focus-ring block rounded-2xl border border-border/70 bg-background/70 px-3 py-2.5 transition-colors",
+                  " block rounded-2xl border border-border/70 bg-background/70 px-3 py-2.5 transition-colors",
                   "hover:border-primary/40 hover:bg-primary/8",
                   isActive &&
                     "border-primary/40 bg-primary/12 ring-2 ring-primary/20"

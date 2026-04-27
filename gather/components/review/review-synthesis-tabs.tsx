@@ -98,7 +98,7 @@ export function ReviewSynthesisTabs({
         <TabsTrigger value="transcript">Transcript</TabsTrigger>
       </TabsList>
 
-      <TabsContent value="overview" className="stack gap-6">
+      <TabsContent value="overview" className="flex flex-col gap-6">
         <SummarySection
           effectiveSummary={effectiveOutput.summary}
           overrideActive={overrideActive}
@@ -163,7 +163,7 @@ export function ReviewSynthesisTabs({
         </Disclosure>
       </TabsContent>
 
-      <TabsContent value="questions" className="stack gap-3">
+      <TabsContent value="questions" className="flex flex-col gap-3">
         {generatedOutput.questionReviews.length === 0 ? (
           <EmptyHint message="No question-level review was generated for this session." />
         ) : (
@@ -173,7 +173,7 @@ export function ReviewSynthesisTabs({
         )}
       </TabsContent>
 
-      <TabsContent value="themes" className="stack gap-3">
+      <TabsContent value="themes" className="flex flex-col gap-3">
         {themeCards.length === 0 ? (
           <EmptyHint message="No grounded themes were extracted for this respondent yet." />
         ) : (
@@ -189,7 +189,7 @@ export function ReviewSynthesisTabs({
         )}
       </TabsContent>
 
-      <TabsContent value="quotes" className="stack gap-3">
+      <TabsContent value="quotes" className="flex flex-col gap-3">
         {generatedOutput.quoteLibrary.length === 0 ? (
           <EmptyHint message="No verbatim quote library was extracted for this respondent." />
         ) : (
@@ -205,7 +205,7 @@ export function ReviewSynthesisTabs({
         )}
       </TabsContent>
 
-      <TabsContent value="signals" className="stack gap-4">
+      <TabsContent value="signals" className="flex flex-col gap-4">
         <SignalGroup
           title="Pain points"
           cards={signalCards.filter((card) => card.kind === "pain_point")}
@@ -432,7 +432,7 @@ function QualityChip({
       <RadixPopover.Trigger asChild>
         <button
           type="button"
-          className="focus-ring chip gap-2 hover:border-primary/40"
+          className=" chip gap-2 hover:border-primary/40"
           aria-label={`Quality ${label}`}
         >
           <span className={cn("size-1.5 rounded-full", dotColor)} />
@@ -449,7 +449,7 @@ function QualityChip({
           )}
         >
           {ready && qualityScore ? (
-            <div className="stack gap-3">
+            <div className="flex flex-col gap-3">
               <div className="flex items-baseline justify-between gap-3">
                 <p className="text-3xl font-semibold tabular-nums">
                   {overall}
@@ -717,7 +717,7 @@ function SignalGroup({
       {cards.length === 0 ? (
         <p className="mt-3 text-sm leading-6 text-muted-foreground">{emptyMessage}</p>
       ) : (
-        <div className="mt-4 stack gap-3">
+        <div className="mt-4 flex flex-col gap-3">
           {cards.map((card) => (
             <InsightCardPanel
               key={card.id}
@@ -854,7 +854,7 @@ function Disclosure({
 }) {
   return (
     <details className="group [&_summary::-webkit-details-marker]:hidden" open={defaultOpen}>
-      <summary className="focus-ring flex cursor-pointer list-none items-center justify-between gap-3 rounded-md py-1 text-sm font-semibold text-foreground outline-none">
+      <summary className=" flex cursor-pointer list-none items-center justify-between gap-3 rounded-md py-1 text-sm font-semibold text-foreground outline-none">
         <span className="flex items-center gap-2">
           <CaretRight
             className="size-3.5 text-muted-foreground transition-transform group-open:rotate-90"

@@ -3,6 +3,7 @@
 Next.js application for the AI Workshop Discovery Interviewer MVP.
 
 ## Scripts
+
 - `npm run dev`
 - `npm run typecheck`
 - `npm run lint`
@@ -10,9 +11,11 @@ Next.js application for the AI Workshop Discovery Interviewer MVP.
 - `npm run supabase:bootstrap`
 
 ## Environment
+
 Copy `.env.example` and fill in the runtime Supabase, OpenAI, Braintrust, recovery-token, and cron variables.
 
 If consultant auth stays on the default Google OAuth mode:
+
 - create a Web OAuth client in Google Auth Platform
 - add your app origin to Authorized JavaScript origins, including `http://localhost:3000` for local development
 - add `${NEXT_PUBLIC_SUPABASE_URL}/auth/v1/callback` as the Google OAuth redirect URI
@@ -20,7 +23,10 @@ If consultant auth stays on the default Google OAuth mode:
 
 `npm run supabase:bootstrap` updates the Supabase `site_url` and redirect allow-list to include your app callback URLs such as `${NEXT_PUBLIC_APP_URL}/auth/callback`.
 
+For local browser testing, set `DEV_ADMIN_LOGIN_ENABLED=true` plus `DEV_ADMIN_EMAIL` and `DEV_ADMIN_PASSWORD` in `.env.local`. The shortcut is only available outside production and only when `NEXT_PUBLIC_APP_URL` starts with `http://localhost`.
+
 ## Architecture
+
 - Consultant app routes live under `app/app`
 - Participant routes live under `app/i/[linkToken]`
 - Public participant APIs live under `app/api/public`

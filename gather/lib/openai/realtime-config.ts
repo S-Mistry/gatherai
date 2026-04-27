@@ -1,9 +1,37 @@
 import type { PublicInterviewConfig } from "@/lib/domain/types"
+import type { RealtimeSessionConfig } from "@openai/agents/realtime"
 import { getProjectTypePreset } from "@/lib/project-types"
 
 export const PARTICIPANT_INTERVIEWER_NAME = "Mia"
 export const PARTICIPANT_INTERVIEWER_FINAL_LINE =
   "Thanks for sharing that. We're finished now."
+export const PARTICIPANT_MIC_AUDIO_CONSTRAINTS = {
+  channelCount: { ideal: 1 },
+  echoCancellation: { ideal: true },
+  noiseSuppression: { ideal: true },
+  autoGainControl: { ideal: false },
+} satisfies MediaTrackConstraints
+
+export function buildParticipantRealtimeAudioConfig(options?: {
+  voice?: string
+}): NonNullable<Extract<RealtimeSessionConfig, { audio?: unknown }>["audio"]> {
+  return {
+    input: {
+      format: { type: "audio/pcm", rate: 24_000 },
+      transcription: { model: "gpt-4o-mini-transcribe" },
+      noiseReduction: { type: "near_field" },
+      turnDetection: {
+        type: "server_vad",
+        createResponse: true,
+        interruptResponse: true,
+        prefixPaddingMs: 300,
+        silenceDurationMs: 850,
+        threshold: 0.72,
+      },
+    },
+    output: options?.voice ? { voice: options.voice } : undefined,
+  }
+}
 
 function normalizeRealtimeLine(text: string) {
   return text

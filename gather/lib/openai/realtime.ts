@@ -1,6 +1,9 @@
 import { env, isRealtimeConfigured } from "@/lib/env"
 import type { PublicInterviewConfig } from "@/lib/domain/types"
-import { buildRealtimeInstructions } from "@/lib/openai/realtime-config"
+import {
+  buildParticipantRealtimeAudioConfig,
+  buildRealtimeInstructions,
+} from "@/lib/openai/realtime-config"
 
 export async function mintRealtimeClientSecret(config: PublicInterviewConfig) {
   if (!isRealtimeConfigured) {
@@ -18,11 +21,9 @@ export async function mintRealtimeClientSecret(config: PublicInterviewConfig) {
         type: "realtime",
         model: env.OPENAI_REALTIME_MODEL,
         instructions: buildRealtimeInstructions(config),
-        audio: {
-          output: {
-            voice: env.OPENAI_VOICE_NAME,
-          },
-        },
+        audio: buildParticipantRealtimeAudioConfig({
+          voice: env.OPENAI_VOICE_NAME,
+        }),
       },
     }),
   })

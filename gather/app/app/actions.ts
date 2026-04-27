@@ -7,13 +7,16 @@ import { createServerSupabaseClient } from "@/lib/supabase/server"
 import {
   createProjectConfigVersion,
   createProjectFromForm,
+  createTestimonialLink,
   enqueueSynthesisRefresh,
   saveProjectSynthesisOverride,
   saveSessionClaimSuppression,
   saveSessionOverride,
   saveSessionQualityOverride,
   setSessionExcludedFromSynthesis,
+  updateTestimonialReviewStatus,
 } from "@/lib/data/repository"
+import { isTestimonialReviewStatus } from "@/lib/testimonials"
 
 export async function createProjectAction(formData: FormData) {
   const record = await createProjectFromForm({
@@ -24,11 +27,46 @@ export async function createProjectAction(formData: FormData) {
     requiredQuestions: String(formData.get("requiredQuestions") ?? ""),
     durationCapMinutes: Number(formData.get("durationCapMinutes") ?? 15),
     anonymityMode: String(formData.get("anonymityMode") ?? "pseudonymous"),
+    testimonialBusinessName: String(
+      formData.get("testimonialBusinessName") ?? ""
+    ),
+    testimonialWebsiteUrl: String(formData.get("testimonialWebsiteUrl") ?? ""),
+    testimonialBrandColor: String(formData.get("testimonialBrandColor") ?? ""),
+    testimonialHeadline: String(formData.get("testimonialHeadline") ?? ""),
+    testimonialPrompt: String(formData.get("testimonialPrompt") ?? ""),
   })
 
   revalidatePath("/app")
   revalidatePath("/app/projects")
   redirect(`/app/projects/${record.project.id}`)
+}
+
+export async function updateTestimonialReviewStatusAction(formData: FormData) {
+  const projectId = String(formData.get("projectId") ?? "")
+  const reviewId = String(formData.get("reviewId") ?? "")
+  const status = String(formData.get("status") ?? "")
+
+  if (!isTestimonialReviewStatus(status)) {
+    throw new Error("Invalid testimonial review status.")
+  }
+
+  await updateTestimonialReviewStatus({ projectId, reviewId, status })
+  revalidatePath(`/app/projects/${projectId}`)
+}
+
+export async function createTestimonialLinkAction(formData: FormData) {
+  const projectId = String(formData.get("projectId") ?? "")
+
+  await createTestimonialLink({
+    projectId,
+    businessName: String(formData.get("businessName") ?? ""),
+    websiteUrl: String(formData.get("websiteUrl") ?? ""),
+    brandColor: String(formData.get("brandColor") ?? ""),
+    headline: String(formData.get("headline") ?? ""),
+    prompt: String(formData.get("prompt") ?? ""),
+  })
+
+  revalidatePath(`/app/projects/${projectId}`)
 }
 
 export async function refreshSynthesisAction(formData: FormData) {
@@ -78,7 +116,11 @@ export async function saveSessionQualityOverrideAction(formData: FormData) {
     sessionId,
     mode: setting === "generated" ? "generated" : "manual",
     lowQuality:
-      setting === "manual-low" ? true : setting === "manual-healthy" ? false : undefined,
+      setting === "manual-low"
+        ? true
+        : setting === "manual-healthy"
+          ? false
+          : undefined,
     note,
   })
   revalidatePath("/app")
@@ -91,7 +133,11 @@ export async function saveProjectSynthesisOverrideAction(formData: FormData) {
   const editedNarrative = String(formData.get("editedNarrative") ?? "")
   const consultantNotes = String(formData.get("consultantNotes") ?? "")
 
-  await saveProjectSynthesisOverride(projectId, editedNarrative, consultantNotes)
+  await saveProjectSynthesisOverride(
+    projectId,
+    editedNarrative,
+    consultantNotes
+  )
   revalidatePath(`/app/projects/${projectId}`)
 }
 

@@ -12,7 +12,7 @@ const HOUR = MINUTE * 60
 const DAY = HOUR * 24
 const WEEK = DAY * 7
 
-let currentNow = Date.now()
+let currentNow = 0
 const subscribers = new Set<() => void>()
 let ticker: number | null = null
 
@@ -54,6 +54,10 @@ function subscribe(listener: () => void) {
 }
 
 function format(target: Date, now: number): string {
+  if (now <= 0) {
+    return target.toISOString().slice(0, 10)
+  }
+
   const diff = Math.round((now - target.getTime()) / 1000)
   const abs = Math.abs(diff)
   const future = diff < 0
@@ -69,22 +73,28 @@ function format(target: Date, now: number): string {
   }
   if (abs < WEEK) {
     const days = Math.round(abs / DAY)
-    return future ? `in ${days} day${days === 1 ? "" : "s"}` : `${days} day${days === 1 ? "" : "s"} ago`
+    return future
+      ? `in ${days} day${days === 1 ? "" : "s"}`
+      : `${days} day${days === 1 ? "" : "s"} ago`
   }
   return target.toLocaleDateString()
 }
 
 export function RelativeTime({ date, className }: RelativeTimeProps) {
   const target = typeof date === "string" ? new Date(date) : date
-  const now = useSyncExternalStore(subscribe, () => currentNow, () => currentNow)
+  const now = useSyncExternalStore(
+    subscribe,
+    () => currentNow,
+    () => currentNow
+  )
   const label = format(target, now)
+  const title = target
+    .toISOString()
+    .replace("T", " ")
+    .replace(/\.\d{3}Z$/, " UTC")
 
   return (
-    <time
-      dateTime={target.toISOString()}
-      title={target.toLocaleString()}
-      className={className}
-    >
+    <time dateTime={target.toISOString()} title={title} className={className}>
       {label}
     </time>
   )

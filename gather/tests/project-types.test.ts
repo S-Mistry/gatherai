@@ -29,6 +29,17 @@ test("project type helpers return feedback metadata", () => {
   assert.equal(badge.variant, "success")
 })
 
+test("project type helpers return testimonial metadata", () => {
+  const preset = getProjectTypePreset("testimonial")
+  const badge = getProjectTypeBadge("testimonial")
+
+  assert.equal(normalizeProjectType("testimonial"), "testimonial")
+  assert.equal(preset.label, "Testimonials")
+  assert.equal(preset.createTitle, "Gather testimonials")
+  assert.equal(badge.label, "Testimonials")
+  assert.equal(badge.variant, "neutral")
+})
+
 test("project type helpers default untrusted values to discovery", () => {
   for (const value of [undefined, null, "", "retrospective"]) {
     const preset = getProjectTypePreset(value)
@@ -44,11 +55,19 @@ test("project type helpers default untrusted values to discovery", () => {
 test("create-time project type resolution defaults to feedback", () => {
   assert.equal(resolveCreateProjectType(undefined, false), "feedback")
   assert.equal(resolveCreateProjectType("feedback", false), "feedback")
+  assert.equal(resolveCreateProjectType("testimonial", false), "testimonial")
   assert.equal(resolveCreateProjectType("discovery", true), "discovery")
   assert.equal(resolveCreateProjectType("discovery", false), "feedback")
 })
 
 test("create-time project type options hide discovery when disabled", () => {
-  assert.deepEqual(getCreateProjectTypeOptions(false), ["feedback"])
-  assert.deepEqual(getCreateProjectTypeOptions(true), ["discovery", "feedback"])
+  assert.deepEqual(getCreateProjectTypeOptions(false), [
+    "feedback",
+    "testimonial",
+  ])
+  assert.deepEqual(getCreateProjectTypeOptions(true), [
+    "discovery",
+    "feedback",
+    "testimonial",
+  ])
 })

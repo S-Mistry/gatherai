@@ -1,18 +1,31 @@
-import { Geist_Mono, Montserrat } from "next/font/google"
+import { Caveat, Instrument_Serif, Inter_Tight, JetBrains_Mono } from "next/font/google"
 
 import "./globals.css"
-import { ThemeBootstrap } from "@/components/theme-bootstrap"
-import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toast"
 import { cn } from "@/lib/utils"
 
-const montserrat = Montserrat({
+const fontSerif = Instrument_Serif({
   subsets: ["latin"],
+  weight: ["400"],
+  style: ["normal", "italic"],
+  variable: "--font-serif",
+})
+
+const fontHand = Caveat({
+  subsets: ["latin"],
+  weight: ["400", "600", "700"],
+  variable: "--font-hand",
+})
+
+const fontSans = Inter_Tight({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-sans",
 })
 
-const fontMono = Geist_Mono({
+const fontMono = JetBrains_Mono({
   subsets: ["latin"],
+  weight: ["400", "500"],
   variable: "--font-mono",
 })
 
@@ -24,18 +37,16 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      suppressHydrationWarning
       className={cn(
-        "font-sans antialiased",
-        fontMono.variable,
-        montserrat.variable
+        "antialiased",
+        fontSerif.variable,
+        fontHand.variable,
+        fontSans.variable,
+        fontMono.variable
       )}
     >
       <body>
-        <ThemeBootstrap />
-        <ThemeProvider>
-          <Toaster>{children}</Toaster>
-        </ThemeProvider>
+        <Toaster>{children}</Toaster>
       </body>
     </html>
   )

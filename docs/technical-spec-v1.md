@@ -1,13 +1,13 @@
 # Technical Spec v1
 
-Last updated: April 23, 2026
+Last updated: April 27, 2026
 
 ## 1. Scope
 
-- This spec implements the post-experience feedback interviewer MVP.
+- This spec implements the post-experience feedback interviewer MVP plus the testimonial capture workflow.
 - The repository root owns governance, docs, and repo automation.
 - The `gather/` Next.js app owns all product code.
-- `feedback` is the default project type and the only visible creation path when `ENABLE_DISCOVERY_PROJECTS=false`.
+- `feedback` and `testimonial` are visible creation paths when `ENABLE_DISCOVERY_PROJECTS=false`.
 - `discovery` remains supported for legacy data and feature-flagged creation paths.
 
 ## 2. Verified platform assumptions
@@ -44,7 +44,7 @@ Last updated: April 23, 2026
   - page creates or resumes a participant session through a public route handler
   - the session-start route resolves the public link and current config once, creates the session, and returns a signed recovery token plus session metadata
   - browser requests an OpenAI realtime client secret from a server route that validates the session and resolves the current public config without loading transcript history
-  - browser connects to OpenAI Realtime over WebRTC
+  - browser connects to OpenAI Realtime over WebRTC with participant-tuned input audio settings: browser mic constraints prefer echo cancellation and noise suppression, realtime input uses near-field noise reduction, and server VAD thresholds are set conservatively enough that brief ambient sounds do not derail turn-taking
   - the realtime session explicitly triggers Mia's opening response so the participant does not need to speak first
   - participant runtime persists intro, readiness, pause, resume, and completion state updates alongside transcript items
   - the timed interview starts only after a soft readiness signal or a substantive first answer
@@ -54,9 +54,18 @@ Last updated: April 23, 2026
   - participant completion is local-first: when the respondent clicks done or Mia delivers her explicit final line, the browser snapshots any completed transcript items already in memory, tears down the realtime session and microphone immediately, renders the completion surface, and finishes the final `/events` flush plus `/complete` request in the background
   - transcript ingest uses stable realtime source item IDs so reconnects and retry flushes stay idempotent
   - transcript append and `order_index` assignment run through a server-only SQL helper so retries dedupe atomically and preserve transcript order
+- Testimonial path:
+  - consultant creates a `testimonial` project with business name, website URL, brand color, headline, and prompt
+  - browser loads `/t/[linkToken]` for a short voice review, with no agent and no realtime conversation
+  - browser records temporary audio with `MediaRecorder`, posts it to a public route handler for transcription, and never persists audio
+  - the server transcribes the recording with OpenAI speech-to-text, then performs a best-effort 1-5 star suggestion through a small structured model call
+  - reviewer edits the transcript, adjusts the star rating, optionally leaves a name, and submits a pending review
+  - consultant approves or rejects pending reviews before they can appear in the public embed
+  - `/embed/testimonials/[projectId]` renders approved reviews only, plus a leave-review CTA and Gather attribution
 - Consultant path:
   - browser loads `/sign-in`
   - page starts Supabase Google OAuth by default or exposes the magic-link fallback when the deploy-time auth flag enables it
+  - local development can expose a one-click dev admin sign-in only when `DEV_ADMIN_LOGIN_ENABLED=true`, `NODE_ENV` is not production, `NEXT_PUBLIC_APP_URL` starts with `http://localhost`, and dev admin credentials are configured
   - Supabase redirects back through `/auth/callback`, which exchanges the auth code and establishes the consultant session
   - browser loads `/app/...`
   - server components and server actions fetch consultant-scoped data from Supabase through route-specific repository loaders rather than one broad workspace snapshot path
@@ -85,13 +94,17 @@ Last updated: April 23, 2026
 - `/`
   - marketing overview and entry into consultant sign-in
 - `/sign-in`
-  - consultant sign-in surface, using Google OAuth by default with a feature-flagged magic-link fallback
+  - consultant sign-in surface, using Google OAuth by default with a feature-flagged magic-link fallback and a localhost-only dev admin shortcut when explicitly enabled
 - `/auth/login`
   - starts consultant Supabase OAuth and validates the requested provider/redirect target
 - `/auth/callback`
   - exchanges the Supabase auth code and redirects into the consultant app
 - `/i/[linkToken]`
   - participant disclosure, metadata collection, interview shell, resume/completion states
+- `/t/[linkToken]`
+  - public testimonial voice review capture, transcript edit, star rating, optional reviewer name, and thank-you state
+- `/embed/testimonials/[projectId]`
+  - public iframe-friendly approved testimonial widget
 
 ### 4.2 Consultant routes
 
@@ -102,7 +115,7 @@ Last updated: April 23, 2026
 - `/app/projects/new`
   - project creation
 - `/app/projects/[projectId]`
-  - project dashboard, config summary, version history, synthesis, sessions
+  - project dashboard; feedback/discovery show config, synthesis, and sessions, while testimonials show review links, review moderation, and embed builder
 - `/app/projects/[projectId]/sessions/[sessionId]`
   - transcript-backed review and override surface
 
@@ -118,6 +131,10 @@ Last updated: April 23, 2026
   - ingest transcript segments plus runtime state changes such as intro delivered, readiness detected, pause or resume, and capture-monitor signals such as asked questions, remaining questions, follow-up count, novelty, repetition, and coverage confidence, keyed by optional realtime source item IDs for idempotent persistence and persisted through an atomic SQL append helper
 - `POST /api/public/sessions/[sessionId]/complete`
   - finalize the session, persist final elapsed interview timing, enqueue downstream session analysis jobs, and trigger immediate session-scoped dispatch
+- `POST /api/public/testimonials/[linkToken]/transcribe`
+  - validate a testimonial link, transcribe temporary audio, and return transcript plus best-effort suggested rating without storing audio
+- `POST /api/public/testimonials/[linkToken]/reviews`
+  - validate a testimonial link and create a pending text review with rating and optional reviewer name
 
 ### 4.4 Consultant read APIs
 
@@ -147,7 +164,7 @@ Last updated: April 23, 2026
 ### 5.1 Core types
 
 - `ProjectType`
-  - immutable project route selector: `discovery` or `feedback`, with discovery hidden by default from creation flows
+  - immutable project route selector: `discovery`, `feedback`, or `testimonial`, with discovery hidden by default from creation flows
 - `ProjectRecord`
   - consultant-owned project shell including immutable `projectType`, project `name`, current config version, and active public link token
 - `ProjectConfigVersion`
@@ -184,6 +201,10 @@ Last updated: April 23, 2026
   - per-session quality dimensions and flag state
 - `AnalysisJob`
   - queue record for transcript cleaning, extraction, scoring, or synthesis
+- `TestimonialLink`
+  - public review-link settings including business name, website URL, brand color, headline, prompt, token, and revocation state
+- `TestimonialReview`
+  - submitted text review with optional reviewer name, suggested rating, final rating, moderation status, and timestamps
 
 ### 5.2 Data invariants
 
@@ -195,6 +216,8 @@ Last updated: April 23, 2026
 - Overrides are layered separately and merged at read time.
 - Manual quality overrides never overwrite generated quality score rows.
 - Evidence references are required for major generated claims.
+- Testimonial reviews are transcript text only; audio is temporary request data and is not stored.
+- Only `approved` testimonial reviews render in embeds.
 
 ## 6. Interview runtime
 
@@ -263,6 +286,8 @@ Last updated: April 23, 2026
 - `project_synthesis_overrides`
 - `quality_scores`
 - `analysis_jobs`
+- `testimonial_links`
+- `testimonial_reviews`
 - `prompt_versions`
 - `model_versions`
 - `audit_logs`
@@ -282,7 +307,7 @@ Last updated: April 23, 2026
 ## 8. Security model
 
 - All consultant-owned tables use RLS.
-- Public participant access never uses the server secret key in the browser.
+- Public participant and testimonial access never uses the server secret key in the browser.
 - Server secret key access exists only in route handlers, background job execution, and setup tooling.
 - RLS helper functions run as security definers so workspace-access checks do not recurse through protected tables.
 - Consultant-authenticated RPCs and RLS checks that call `app.*` helpers require explicit schema grants; the `authenticated` role must retain `USAGE` on schema `app`.
@@ -303,8 +328,9 @@ Last updated: April 23, 2026
 - signal-first dashboard
 - zero-project dashboard empty state with a single CTA to create the first project
 - projects list with status chips and project-type badges
-- new-project setup uses the feedback starter configuration and a live participant/analysis preview rail; discovery cards appear only when `ENABLE_DISCOVERY_PROJECTS=true`
-- project detail with config version history, session table, quality flags, synthesis summary, and a share-timing hint for feedback projects
+- new-project setup offers `Get feedback` and `Gather testimonials`; discovery cards appear only when `ENABLE_DISCOVERY_PROJECTS=true`
+- feedback/discovery project detail includes config version history, session table, quality flags, synthesis summary, and a share-timing hint for feedback projects
+- testimonial project detail includes review links, pending/approved/rejected moderation, and an iframe embed builder with live preview
 - session review page with evidence-backed claims, editable overrides, answered or partial or missing required-question counts, and thin-evidence warnings when confidence is limited by transcript depth
 - session review page distinguishes transcript and analysis `pending`, `failed`, and `ready` states instead of showing placeholder copy as persisted content
 - authenticated app chrome stays server-rendered except for a small active-nav island, and review selection state updates are localized so transcript hover or focus does not rerender the full review surface
@@ -322,6 +348,8 @@ Last updated: April 23, 2026
 - paused, resumed, and completed states
 - completed state appears immediately after local teardown instead of waiting on completion-network latency, and no further agent audio or transcript events should arrive after that transition
 - completion copy mirrors the selected project type so discovery closes as planning input and feedback closes as improvement input
+- testimonial public UX uses a simpler no-agent recorder, shows recording/stop states, lets reviewers edit the transcript and star rating, and ends with a submitted-review thank-you screen
+- visual system: Instrument Serif body and headings, Caveat for handwritten margin notes and form labels, Inter Tight for sans labels and button text, JetBrains Mono for micro-eyebrows and timers; warm cream + clay paper-notebook palette is light-only (no dark mode in v1); the synthesis evidence drawer is the canonical affordance for "open the evidence behind this claim" — it slides in from the right and is rendered by `<EvidenceDrawer>` over `ProjectEvidenceSurface`; visible wordmark is `gather.` while codebase identifiers stay `GatherAI`; full surface conventions live in `STYLE_GUIDE.md`
 
 ## 11. Environment variables
 
@@ -332,11 +360,16 @@ Last updated: April 23, 2026
   - `SUPABASE_SECRET_KEY`
   - `CONSULTANT_AUTH_MODE`
   - `SUPABASE_OAUTH_PROVIDER`
+  - `DEV_ADMIN_LOGIN_ENABLED`
+  - `DEV_ADMIN_EMAIL`
+  - `DEV_ADMIN_PASSWORD`
   - `OPENAI_API_KEY`
   - `OPENAI_REALTIME_MODEL`
   - `OPENAI_VOICE_NAME`
   - `OPENAI_SESSION_ANALYSIS_MODEL`
   - `OPENAI_PROJECT_SYNTHESIS_MODEL`
+  - `OPENAI_TESTIMONIAL_TRANSCRIPTION_MODEL`
+  - `OPENAI_TESTIMONIAL_RATING_MODEL`
   - `BRAINTRUST_API_KEY`
   - `BRAINTRUST_PROJECT`
   - `RECOVERY_TOKEN_SECRET`

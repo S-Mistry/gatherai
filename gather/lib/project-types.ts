@@ -4,13 +4,18 @@ import type {
   ProjectType,
 } from "@/lib/domain/types"
 
-export const PROJECT_TYPE_ORDER: ProjectType[] = ["discovery", "feedback"]
+export const PROJECT_TYPE_ORDER: ProjectType[] = [
+  "discovery",
+  "feedback",
+  "testimonial",
+]
 export const DEFAULT_CREATE_PROJECT_TYPE: ProjectType = "feedback"
 
 export interface ProjectTypePreset {
   label: string
+  createTitle: string
   description: string
-  badgeVariant: "accent" | "success"
+  badgeVariant: "accent" | "success" | "neutral"
   audiencePlural: string
   anonymousRespondentLabel: string
   objective: string
@@ -34,6 +39,7 @@ export interface ProjectTypePreset {
 const PROJECT_TYPE_PRESETS: Record<ProjectType, ProjectTypePreset> = {
   discovery: {
     label: "Discovery",
+    createTitle: "Run discovery",
     description:
       "Understand needs, blockers, and tensions before the upcoming workshop or program.",
     badgeVariant: "accent",
@@ -75,8 +81,8 @@ const PROJECT_TYPE_PRESETS: Record<ProjectType, ProjectTypePreset> = {
   },
   feedback: {
     label: "Feedback",
-    description:
-      "Capture what landed, what missed, and what to improve after an experience, event, service, visit, or purchase.",
+    createTitle: "Get feedback",
+    description: "Understand what's working and what's not.",
     badgeVariant: "success",
     audiencePlural: "respondents",
     anonymousRespondentLabel: "Respondent",
@@ -116,6 +122,39 @@ const PROJECT_TYPE_PRESETS: Record<ProjectType, ProjectTypePreset> = {
     focusAreasLabel: "Recommended focus areas",
     shareHint:
       "Best shared the same day or within 24 hours, while the experience is still fresh.",
+  },
+  testimonial: {
+    label: "Testimonials",
+    createTitle: "Gather testimonials",
+    description: "Gather real reviews for your website in minutes.",
+    badgeVariant: "neutral",
+    audiencePlural: "reviewers",
+    anonymousRespondentLabel: "Reviewer",
+    objective:
+      "Collect short voice testimonials that can be reviewed and embedded on a website.",
+    areasOfInterest: ["Customer experience", "Proof points", "Review quote"],
+    requiredQuestions: ["Tell us about your experience."],
+    durationCapMinutes: 5,
+    anonymityMode: "named",
+    toneStyle: "Warm, simple, direct.",
+    followUpLimit: 1,
+    participantTitle: "Leave a short voice review.",
+    participantIntro:
+      "Share a short review in your own words. You can edit the transcript before submitting.",
+    disclosureLines: [
+      "We'll transcribe what you say.",
+      "Your voice recording is not saved.",
+      "Your written review is sent for approval.",
+    ],
+    completionTitle: "Thanks. Your review has been submitted.",
+    completionDescription:
+      "Your voice isn't saved. The written review is now waiting for approval.",
+    implicationsLabel: "Review implications",
+    implicationsEmptyMessage:
+      "Testimonials use review approval instead of interview analysis.",
+    focusAreasLabel: "Approved testimonials",
+    shareHint:
+      "Share this link with customers who are ready to leave a review.",
   },
 }
 
@@ -193,7 +232,9 @@ function sanitizeLegacyRequiredQuestion(
 }
 
 export function isProjectType(value: unknown): value is ProjectType {
-  return value === "discovery" || value === "feedback"
+  return (
+    value === "discovery" || value === "feedback" || value === "testimonial"
+  )
 }
 
 export function normalizeProjectType(value: unknown): ProjectType {
@@ -208,13 +249,19 @@ export function resolveCreateProjectType(
     return "discovery"
   }
 
-  return value === "feedback" ? "feedback" : DEFAULT_CREATE_PROJECT_TYPE
+  if (value === "feedback" || value === "testimonial") {
+    return value
+  }
+
+  return DEFAULT_CREATE_PROJECT_TYPE
 }
 
 export function getCreateProjectTypeOptions(
   discoveryEnabled: boolean
 ): ProjectType[] {
-  return discoveryEnabled ? PROJECT_TYPE_ORDER : ["feedback"]
+  return discoveryEnabled
+    ? ["discovery", "feedback", "testimonial"]
+    : ["feedback", "testimonial"]
 }
 
 export function getProjectTypePreset(projectType: unknown): ProjectTypePreset {
@@ -249,7 +296,9 @@ export function buildParticipantDisclosure(projectType: unknown) {
 export function sanitizePublicInterviewConfig(
   config: PublicInterviewConfig
 ): PublicInterviewConfig {
-  const projectType = normalizeProjectType(config.projectType)
+  const normalizedProjectType = normalizeProjectType(config.projectType)
+  const projectType =
+    normalizedProjectType === "testimonial" ? "feedback" : normalizedProjectType
 
   return {
     ...config,

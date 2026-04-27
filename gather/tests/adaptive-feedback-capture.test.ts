@@ -8,6 +8,8 @@ import {
 } from "../lib/data/mock"
 import {
   PARTICIPANT_INTERVIEWER_FINAL_LINE,
+  PARTICIPANT_MIC_AUDIO_CONSTRAINTS,
+  buildParticipantRealtimeAudioConfig,
   buildRealtimeInstructions,
   isParticipantInterviewerFinalLine,
 } from "../lib/openai/realtime-config"
@@ -76,6 +78,34 @@ test("feedback realtime instructions include adaptive probing policy", () => {
   )
 })
 
+test("participant audio config uses stricter noise handling", () => {
+  const audioConfig = buildParticipantRealtimeAudioConfig({
+    voice: "alloy",
+  })
+
+  assert.deepEqual(audioConfig.output, { voice: "alloy" })
+  assert.deepEqual(audioConfig.input?.noiseReduction, {
+    type: "near_field",
+  })
+  assert.deepEqual(audioConfig.input?.transcription, {
+    model: "gpt-4o-mini-transcribe",
+  })
+  assert.deepEqual(audioConfig.input?.turnDetection, {
+    type: "server_vad",
+    createResponse: true,
+    interruptResponse: true,
+    prefixPaddingMs: 300,
+    silenceDurationMs: 850,
+    threshold: 0.72,
+  })
+  assert.deepEqual(PARTICIPANT_MIC_AUDIO_CONSTRAINTS, {
+    channelCount: { ideal: 1 },
+    echoCancellation: { ideal: true },
+    noiseSuppression: { ideal: true },
+    autoGainControl: { ideal: false },
+  })
+})
+
 test("participant interviewer final line matcher tolerates casing and punctuation", () => {
   assert.equal(
     isParticipantInterviewerFinalLine(
@@ -120,6 +150,21 @@ test("mock public interview config exposes follow-up policy", () => {
   assert.equal(configVersion.followUpLimit, 1)
   assert.equal(publicConfig?.projectType, "feedback")
   assert.equal(publicConfig?.followUpLimit, 1)
+})
+
+test("mock public interview config rejects testimonial project links", () => {
+  const { project } = createProjectFromForm({
+    projectType: "testimonial",
+    name: "Review collection",
+    objective: "",
+    areasOfInterest: "",
+    requiredQuestions: "",
+    durationCapMinutes: 5,
+    anonymityMode: "named",
+  })
+  const publicConfig = getPublicInterviewConfig(project.publicLinkToken)
+
+  assert.equal(publicConfig, null)
 })
 
 test("mock public interview config sanitizes legacy discovery starter copy", () => {

@@ -119,7 +119,7 @@ export function ReviewEvidenceDrawer({
               <button
                 type="button"
                 aria-label="Close drawer"
-                className="focus-ring -mr-1 inline-flex size-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                className=" -mr-1 inline-flex size-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 <X className="size-4" />
               </button>
@@ -136,7 +136,7 @@ export function ReviewEvidenceDrawer({
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="Search transcript"
-                  className="focus-ring w-full rounded-xl border border-border/70 bg-background/80 py-2 pr-3 pl-8 text-sm outline-none placeholder:text-muted-foreground focus:border-primary/50"
+                  className=" w-full rounded-xl border border-border/70 bg-background/80 py-2 pr-3 pl-8 text-sm outline-none placeholder:text-muted-foreground focus:border-primary/50"
                 />
               </label>
             </div>
