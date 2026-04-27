@@ -78,7 +78,8 @@ function resolveSupabaseOAuthProvider(env, consultantAuthMode) {
     return null
   }
 
-  const candidate = env.SUPABASE_OAUTH_PROVIDER ?? DEFAULT_SUPABASE_OAUTH_PROVIDER
+  const candidate =
+    env.SUPABASE_OAUTH_PROVIDER ?? DEFAULT_SUPABASE_OAUTH_PROVIDER
 
   if (!supabaseOAuthProviders.includes(candidate)) {
     throw new Error(
@@ -113,13 +114,20 @@ function getOAuthProviderState(authConfig, provider) {
   throw new Error(`Unsupported OAuth provider: ${provider}`)
 }
 
-function applyOptionalOAuthProviderPatch({ authPatch, consultantAuthMode, env, oauthProvider }) {
+function applyOptionalOAuthProviderPatch({
+  authPatch,
+  consultantAuthMode,
+  env,
+  oauthProvider,
+}) {
   if (consultantAuthMode !== "supabase_oauth" || oauthProvider !== "google") {
     return false
   }
 
-  const googleClientId = env.SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID?.trim() ?? ""
-  const googleClientSecret = env.SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET?.trim() ?? ""
+  const googleClientId =
+    env.SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID?.trim() ?? ""
+  const googleClientSecret =
+    env.SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET?.trim() ?? ""
 
   if (!googleClientId && !googleClientSecret) {
     return false
@@ -154,8 +162,12 @@ function validateConfiguredAuth({
     )
   }
 
-  const configuredRedirectUrls = parseCommaSeparatedValues(authConfig.uri_allow_list)
-  const missingRedirectUrls = redirectUrls.filter((url) => !configuredRedirectUrls.has(url))
+  const configuredRedirectUrls = parseCommaSeparatedValues(
+    authConfig.uri_allow_list
+  )
+  const missingRedirectUrls = redirectUrls.filter(
+    (url) => !configuredRedirectUrls.has(url)
+  )
 
   if (missingRedirectUrls.length > 0) {
     throw new Error(
@@ -207,7 +219,9 @@ async function main() {
   const projectAuthCallbackUrl = buildProjectAuthCallbackUrl(projectUrl)
 
   if (!accessToken) {
-    throw new Error("SUPABASE_ACCESS_TOKEN is required in gather/.env.local or the shell.")
+    throw new Error(
+      "SUPABASE_ACCESS_TOKEN is required in gather/.env.local or the shell."
+    )
   }
 
   const headers = {
@@ -245,11 +259,14 @@ async function main() {
     oauthProvider,
   })
 
-  await request(`https://api.supabase.com/v1/projects/${projectRef}/config/auth`, {
-    method: "PATCH",
-    headers,
-    body: JSON.stringify(authPatch),
-  })
+  await request(
+    `https://api.supabase.com/v1/projects/${projectRef}/config/auth`,
+    {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify(authPatch),
+    }
+  )
 
   const verifiedAuthConfigResponse = await request(
     `https://api.supabase.com/v1/projects/${projectRef}/config/auth`,
@@ -282,19 +299,26 @@ async function main() {
       }),
     }
   )
-  const [{ has_base_schema: hasBaseSchema }] = await baseSchemaCheckResponse.json()
+  const [{ has_base_schema: hasBaseSchema }] =
+    await baseSchemaCheckResponse.json()
   const migrationFiles = (await fs.readdir(migrationsDir))
     .filter((entry) => entry.endsWith(".sql"))
     .sort()
     .filter((entry) => !hasBaseSchema || entry !== "0001_mvp_schema.sql")
 
   for (const migrationFile of migrationFiles) {
-    const migrationSql = await fs.readFile(path.join(migrationsDir, migrationFile), "utf8")
-    await request(`https://api.supabase.com/v1/projects/${projectRef}/database/query`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ query: migrationSql }),
-    })
+    const migrationSql = await fs.readFile(
+      path.join(migrationsDir, migrationFile),
+      "utf8"
+    )
+    await request(
+      `https://api.supabase.com/v1/projects/${projectRef}/database/query`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ query: migrationSql }),
+      }
+    )
   }
 
   const verifyResponse = await request(
@@ -320,6 +344,8 @@ async function main() {
               'project_synthesis_overrides',
               'quality_scores',
               'analysis_jobs',
+              'testimonial_links',
+              'testimonial_reviews',
               'prompt_versions',
               'model_versions',
               'audit_logs'
@@ -352,7 +378,9 @@ async function main() {
   const [verification] = await verifyResponse.json()
 
   if (!verification?.has_app_schema) {
-    throw new Error("Supabase bootstrap verification failed: schema app is missing.")
+    throw new Error(
+      "Supabase bootstrap verification failed: schema app is missing."
+    )
   }
 
   if (!verification?.authenticated_has_app_usage) {
@@ -371,8 +399,10 @@ async function main() {
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: publishableKey,
       SUPABASE_SECRET_KEY: secretKey,
       RECOVERY_TOKEN_SECRET:
-        currentEnv.RECOVERY_TOKEN_SECRET ?? crypto.randomBytes(32).toString("hex"),
-      CRON_SECRET: currentEnv.CRON_SECRET ?? crypto.randomBytes(32).toString("hex"),
+        currentEnv.RECOVERY_TOKEN_SECRET ??
+        crypto.randomBytes(32).toString("hex"),
+      CRON_SECRET:
+        currentEnv.CRON_SECRET ?? crypto.randomBytes(32).toString("hex"),
     }
     const orderedKeys = [
       "NEXT_PUBLIC_APP_URL",
@@ -385,12 +415,16 @@ async function main() {
       "OPENAI_API_KEY",
       "OPENAI_REALTIME_MODEL",
       "OPENAI_VOICE_NAME",
+      "OPENAI_TESTIMONIAL_TRANSCRIPTION_MODEL",
+      "OPENAI_TESTIMONIAL_RATING_MODEL",
       "BRAINTRUST_API_KEY",
       "BRAINTRUST_PROJECT",
       "RECOVERY_TOKEN_SECRET",
       "CRON_SECRET",
     ]
-    const remainingKeys = Object.keys(nextEnv).filter((key) => !orderedKeys.includes(key)).sort()
+    const remainingKeys = Object.keys(nextEnv)
+      .filter((key) => !orderedKeys.includes(key))
+      .sort()
     const lines = [...orderedKeys, ...remainingKeys]
       .filter((key) => key in nextEnv)
       .map((key) => `${key}=${nextEnv[key]}`)

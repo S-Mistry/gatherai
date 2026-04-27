@@ -22,6 +22,7 @@
 - Application: `gather/`
 - Database and queue schema: `gather/supabase/migrations/`
 - Public participant routes: `gather/app/i/[linkToken]` and `gather/app/api/public/...`
+- Public testimonial routes: `gather/app/t/[linkToken]`, `gather/app/embed/testimonials/[projectId]`, and `gather/app/api/public/testimonials/...`
 - Consultant surfaces: `gather/app/app/...`
 - Shared domain types: `gather/lib/domain/types.ts`
 
@@ -54,17 +55,20 @@
 - Before finalizing work, run `npm run docs:check`.
 
 ## UI Work
-- Always consult [`STYLE_GUIDE.md`](STYLE_GUIDE.md) before changing styles, adding components, or building new screens. Match its color tokens, typography rules, spacing, radii, translucency patterns, and component conventions.
+- Always consult [`STYLE_GUIDE.md`](STYLE_GUIDE.md) before changing styles, adding components, or building new screens. Match its color tokens, typography rules (Instrument Serif body / Caveat hand / Inter Tight sans / JetBrains Mono micro), spacing, radii, ornament conventions, and page templates.
 - Always consult [`ui-design.md`](ui-design.md) before producing any UI design mockup. Follow its output format, typography, icon, component, and interaction rules.
+- The visible wordmark is `gather.` (Caveat lowercase + clay dot). Repository, package, env var, and database identifiers stay `GatherAI`.
+- Dark mode is dropped in v1. Do not add `.dark` styles, `dark:` Tailwind variants, or theme toggles. The system is light-only.
 
 ## Architecture Guardrails
 - Consultant data is authenticated through Supabase Auth and isolated with RLS.
 - Public participant traffic never talks directly to Supabase with elevated privileges; it goes through Next.js route handlers.
 - Browser and SSR clients use Supabase publishable keys; server-only workflows use the Supabase secret key.
-- `feedback` is the default creation path. `discovery` remains feature-flagged for legacy or experimental use.
-- Transcript storage is text-only. Do not introduce audio persistence in v1.
+- `feedback` and `testimonial` are visible creation paths. `discovery` remains feature-flagged for legacy or experimental use.
+- Transcript and testimonial review storage is text-only. Do not introduce audio persistence in v1; testimonial audio is temporary request data for transcription only.
 - Generated outputs and consultant overrides remain separate records. Never overwrite raw generated artifacts.
 - The interview loop is hybrid: application state owns coverage, timing, and stop conditions; the realtime model owns phrasing and follow-up generation.
+- Testimonials do not use the realtime interview loop, Mia, analysis jobs, or synthesis. They use simple recording, transcription, editable text, star rating, moderation, and embed rendering.
 - MVP ships `strict` mode first. `adaptive` stays behind a future flag.
 
 ## When More Context Is Needed

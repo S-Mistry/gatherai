@@ -1,160 +1,241 @@
 import Link from "next/link"
-import { ArrowRight, ChartLine, LockLaminated, MicrophoneStage } from "@phosphor-icons/react/dist/ssr"
 
-import { Badge } from "@/components/ui/badge"
+import { AppBar } from "@/components/ui/app-bar"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { StickyNote, Tape } from "@/components/ui/ornaments"
 
 export default function Page() {
   return (
-    <main className="page-gradient min-h-screen">
-      <div className="mx-auto flex max-w-7xl flex-col gap-10 px-4 py-6 sm:px-6 lg:px-8">
-        <section className="panel overflow-hidden">
-          <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
-            <div className="space-y-6">
-              <Badge variant="accent" className="gap-2">
-                <MicrophoneStage className="size-4" />
-                For teams improving real experiences
-              </Badge>
-              <div className="space-y-4">
-                <h1 className="max-w-3xl text-5xl font-semibold leading-tight text-balance sm:text-6xl">
-                  Collect honest feedback after any experience without running
-                  every interview yourself.
-                </h1>
-                <p className="max-w-2xl text-lg leading-8 text-muted-foreground">
-                  Share one link. A thoughtful AI interviewer speaks with each
-                  respondent and hands you back themes, contradictions, and
-                  improvement priorities, with every line traceable to a real
-                  quote.
-                </p>
-              </div>
+    <div className="min-h-screen">
+      <AppBar
+        right={
+          <>
+            <Link
+              href="/sign-in"
+              className="font-sans text-sm text-[var(--ink-2)] hover:text-[var(--ink)]"
+            >
+              Sign in
+            </Link>
+            <Button asChild variant="clay" size="sm">
+              <Link href="/sign-in">Open workspace</Link>
+            </Button>
+          </>
+        }
+      />
 
-              <div className="flex flex-wrap gap-3">
-                <Button asChild size="lg">
-                  <Link href="/sign-in">
-                    Go to workspace
-                    <ArrowRight className="size-4" />
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" size="lg">
-                  <Link href="/sign-in">See what respondents see</Link>
-                </Button>
+      <main className="mx-auto max-w-[1280px] px-8 pt-16 pb-24 lg:px-12">
+        <section className="grid gap-12 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
+          <div>
+            <div className="font-hand mb-4 text-[28px] text-[var(--clay)]">
+              listening, made portable —
+            </div>
+            <h1
+              className="font-serif text-[64px] sm:text-[72px]"
+              style={{
+                fontWeight: 400,
+                lineHeight: 1.02,
+                letterSpacing: "-0.02em",
+                margin: "0 0 24px",
+              }}
+            >
+              Better interviews.{" "}
+              <span style={{ fontStyle: "italic", color: "var(--clay)" }}>
+                Without
+              </span>{" "}
+              you running every one.
+            </h1>
+            <p
+              className="font-serif text-[var(--ink-2)]"
+              style={{ fontSize: 22, lineHeight: 1.5, maxWidth: 560 }}
+            >
+              Share one link. A thoughtful interviewer speaks with each person and
+              hands you themes, contradictions, and the quotes underneath them —
+              every claim traceable to a real transcript.
+            </p>
+
+            <div className="mt-9 flex flex-wrap gap-3">
+              <Button asChild size="lg">
+                <Link href="/sign-in">Open workspace →</Link>
+              </Button>
+              <Button asChild variant="ghost" size="lg">
+                <Link href="/sign-in">See what respondents see</Link>
+              </Button>
+            </div>
+
+            <div className="mt-10 flex items-center gap-3.5">
+              <span className="chip">
+                <span className="dot" />
+                Browser-only
+              </span>
+              <span className="chip">Words only · we don&apos;t keep audio</span>
+              <span className="chip">Evidence drawer on every claim</span>
+            </div>
+          </div>
+
+          <div className="relative">
+            <div
+              className="card flat relative"
+              style={{ padding: "30px 32px" }}
+            >
+              <Tape className="left-1/2" style={{ top: -11, transform: "translateX(-50%) rotate(2deg)" }} />
+              <div className="font-hand text-[26px] text-[var(--clay)]">
+                what we heard —
+              </div>
+              <h3
+                className="font-serif"
+                style={{
+                  fontSize: 38,
+                  fontWeight: 400,
+                  lineHeight: 1.1,
+                  margin: "10px 0 18px",
+                  letterSpacing: "-0.012em",
+                }}
+              >
+                <span style={{ color: "var(--ink-2)" }}>Seven voices.</span>
+                <br />
+                <span style={{ fontStyle: "italic", color: "var(--clay)" }}>
+                  One
+                </span>{" "}
+                unresolved decision.
+              </h3>
+              <p
+                className="font-sans"
+                style={{
+                  fontSize: 14,
+                  lineHeight: 1.6,
+                  color: "var(--ink-2)",
+                  margin: 0,
+                }}
+              >
+                Synthesis pulls themes from every transcript — and every theme
+                opens a drawer with the quotes that prove it.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-2.5">
+                <span className="chip clay">
+                  <span className="dot" />
+                  6/7 interviews
+                </span>
+                <span className="chip">5 themes</span>
+                <span className="chip rose">2 contradictions</span>
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-1">
-              <Card className="bg-primary text-primary-foreground">
-                <CardHeader>
-                  <CardTitle className="text-primary-foreground">Runs in a browser</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm leading-6 text-primary-foreground/85">
-                    No app install. Respondents click a link and start talking.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Evidence, not vibes</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm leading-6 text-muted-foreground">
-                    Every theme links back to the transcript segment it came from.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Consistent interviews</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm leading-6 text-muted-foreground">
-                    Same must-ask questions, same depth, across every response.
-                  </p>
-                </CardContent>
-              </Card>
+            <div
+              className="absolute"
+              style={{ right: -18, bottom: -42, transform: "rotate(4deg)" }}
+            >
+              <StickyNote tint="sage">
+                <div
+                  className="font-hand"
+                  style={{ fontSize: 20, lineHeight: 1.3 }}
+                >
+                  set up in an afternoon —<br />
+                  reads itself the next morning.
+                </div>
+              </StickyNote>
             </div>
           </div>
         </section>
 
-        <section className="grid gap-4 lg:grid-cols-3">
-          <Card>
-            <CardHeader>
-              <ChartLine className="size-6 text-primary" />
-              <CardTitle className="mt-3">Set it up in minutes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm leading-6 text-muted-foreground">
-                Write the objective, list the topics, add your must-ask questions. Share the link
-                the same afternoon.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <MicrophoneStage className="size-6 text-primary" />
-              <CardTitle className="mt-3">Respondents just talk</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm leading-6 text-muted-foreground">
-                One tap to start. The AI interviewer asks one thing at a time and follows up
-                where it matters. Respondents can pause or end whenever.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <LockLaminated className="size-6 text-primary" />
-              <CardTitle className="mt-3">You walk in prepared</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm leading-6 text-muted-foreground">
-                Themes, contradictions, and recommended improvements, each one
-                linked to the quote it came from.
-              </p>
-            </CardContent>
-          </Card>
+        <section className="mt-32 grid gap-8 lg:grid-cols-3">
+          <Pillar
+            eyebrow="01 · setup"
+            title="One link, sent wide."
+            body="Write the objective, list the questions, send one link. Stakeholder interviews and feedback pulses share the same calm front door."
+          />
+          <Pillar
+            eyebrow="02 · conversation"
+            title="Voice, not forms."
+            body="Respondents press a button and talk. The interviewer adapts on the fly, follows up where it matters, and never keeps the audio."
+          />
+          <Pillar
+            eyebrow="03 · synthesis"
+            title="Evidence underneath."
+            body="Themes, contradictions and quotes — each one anchored to the surrounding transcript. The drawer on every claim is the whole point."
+          />
         </section>
 
-        <section className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-          <Card>
-            <CardHeader>
-              <CardTitle>Ready when you are</CardTitle>
-              <CardDescription>
-                Sign in to create your first project, or preview the respondent experience.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-wrap gap-3">
+        <section className="mt-32 grid gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+          <div>
+            <div className="font-hand text-[24px] text-[var(--clay)]">
+              ready when you are —
+            </div>
+            <h2
+              className="font-serif"
+              style={{
+                fontSize: 44,
+                fontWeight: 400,
+                lineHeight: 1.08,
+                letterSpacing: "-0.012em",
+                margin: "8px 0 16px",
+              }}
+            >
+              Sign in. Set up a project. Send one link.
+            </h2>
+            <p
+              className="font-sans"
+              style={{
+                fontSize: 15,
+                lineHeight: 1.65,
+                color: "var(--ink-2)",
+                maxWidth: 520,
+              }}
+            >
+              Restaurants, retros, launches, learning programs — anywhere honest
+              signal is hard to gather and easy to lose. Catch it while the
+              experience is still fresh.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild size="lg">
-                <Link href="/sign-in">
-                  Go to workspace
-                  <ArrowRight className="size-4" />
-                </Link>
+                <Link href="/sign-in">Open workspace →</Link>
               </Button>
-              <Button asChild variant="outline" size="lg">
-                <Link href="/sign-in">See what respondents see</Link>
+              <Button asChild variant="ghost" size="lg">
+                <Link href="/sign-in">See respondent view</Link>
               </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Built for the improvement loop</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm leading-6 text-muted-foreground">
-                Restaurants, courses, consultations, service visits, and live
-                events all need better signal. Capture it while the experience
-                is still fresh.
-              </p>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </section>
-      </div>
-    </main>
+      </main>
+    </div>
+  )
+}
+
+function Pillar({
+  eyebrow,
+  title,
+  body,
+}: {
+  eyebrow: string
+  title: string
+  body: string
+}) {
+  return (
+    <div className="card flat" style={{ padding: "26px 28px" }}>
+      <span className="eyebrow">{eyebrow}</span>
+      <h3
+        className="font-serif mt-3"
+        style={{
+          fontSize: 26,
+          fontWeight: 400,
+          lineHeight: 1.18,
+          letterSpacing: "-0.005em",
+          margin: 0,
+        }}
+      >
+        {title}
+      </h3>
+      <p
+        className="font-sans"
+        style={{
+          fontSize: 14,
+          lineHeight: 1.6,
+          color: "var(--ink-2)",
+          marginTop: 12,
+          marginBottom: 0,
+        }}
+      >
+        {body}
+      </p>
+    </div>
   )
 }

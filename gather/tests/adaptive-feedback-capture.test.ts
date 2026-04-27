@@ -152,6 +152,21 @@ test("mock public interview config exposes follow-up policy", () => {
   assert.equal(publicConfig?.followUpLimit, 1)
 })
 
+test("mock public interview config rejects testimonial project links", () => {
+  const { project } = createProjectFromForm({
+    projectType: "testimonial",
+    name: "Review collection",
+    objective: "",
+    areasOfInterest: "",
+    requiredQuestions: "",
+    durationCapMinutes: 5,
+    anonymityMode: "named",
+  })
+  const publicConfig = getPublicInterviewConfig(project.publicLinkToken)
+
+  assert.equal(publicConfig, null)
+})
+
 test("mock public interview config sanitizes legacy discovery starter copy", () => {
   const { project } = createProjectFromForm({
     projectType: "discovery",

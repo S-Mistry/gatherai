@@ -2,8 +2,25 @@ import type { HTMLAttributes } from "react"
 
 import { cn } from "@/lib/utils"
 
-export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("panel", className)} {...props} />
+interface CardProps extends HTMLAttributes<HTMLDivElement> {
+  flat?: boolean
+  lined?: boolean
+  redLine?: boolean
+}
+
+export function Card({ className, flat, lined, redLine, ...props }: CardProps) {
+  return (
+    <div
+      className={cn(
+        "card",
+        flat && "flat",
+        lined && "lined",
+        redLine && "red-line",
+        className
+      )}
+      {...props}
+    />
+  )
 }
 
 export function CardHeader({
@@ -13,11 +30,14 @@ export function CardHeader({
   return <div className={cn("space-y-2", className)} {...props} />
 }
 
-export function CardTitle({ className, ...props }: HTMLAttributes<HTMLHeadingElement>) {
+export function CardTitle({
+  className,
+  ...props
+}: HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h3
       className={cn(
-        "text-lg font-semibold tracking-tight text-balance text-foreground",
+        "font-serif text-2xl font-normal tracking-tight text-[var(--ink)]",
         className
       )}
       {...props}
@@ -31,7 +51,7 @@ export function CardDescription({
 }: HTMLAttributes<HTMLParagraphElement>) {
   return (
     <p
-      className={cn("text-sm leading-6 text-muted-foreground", className)}
+      className={cn("font-sans text-[13px] leading-6 text-[var(--ink-2)]", className)}
       {...props}
     />
   )

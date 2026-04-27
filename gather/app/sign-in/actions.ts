@@ -1,7 +1,14 @@
 "use server"
 
+import { redirect } from "next/navigation"
+
 import { resolveConsultantAuthMode } from "@/lib/auth/consultant-auth"
-import { appUrl, isSupabaseConfigured } from "@/lib/env"
+import {
+  appUrl,
+  env,
+  isDevAdminLoginEnabled,
+  isSupabaseConfigured,
+} from "@/lib/env"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 
 interface MagicLinkState {
@@ -62,6 +69,32 @@ export async function requestMagicLinkAction(
 
   return {
     status: "success",
-    message: "Magic link sent. Check your email to continue into the consultant workspace.",
+    message:
+      "Magic link sent. Check your email to continue into the consultant workspace.",
   }
+}
+
+export async function devAdminSignInAction(formData: FormData) {
+  if (!isDevAdminLoginEnabled || !isSupabaseConfigured) {
+    throw new Error("Dev admin sign-in is not enabled for this environment.")
+  }
+
+  const next = String(formData.get("next") ?? "/app")
+
+  const client = await createServerSupabaseClient()
+
+  if (!client) {
+    throw new Error("Supabase client creation failed.")
+  }
+
+  const { error } = await client.auth.signInWithPassword({
+    email: env.DEV_ADMIN_EMAIL!,
+    password: env.DEV_ADMIN_PASSWORD!,
+  })
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  redirect(next.startsWith("/") && !next.startsWith("//") ? next : "/app")
 }

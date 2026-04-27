@@ -869,6 +869,10 @@ export function getProjectDetail(projectId: string) {
     return null
   }
 
+  if (project.projectType === "testimonial") {
+    return null
+  }
+
   const configVersion = store.configVersions[project.currentConfigVersionId]
   const sessions = Object.values(store.sessions).filter(
     (session) => session.projectId === project.id
@@ -932,6 +936,10 @@ export function getPublicInterviewConfig(linkToken: string) {
   )
 
   if (!project) {
+    return null
+  }
+
+  if (project.projectType === "testimonial") {
     return null
   }
 

@@ -3,29 +3,33 @@ import { headers } from "next/headers"
 import { notFound } from "next/navigation"
 
 import { ProjectSynthesisOverrideForm } from "@/components/dashboard/project-synthesis-override-form"
-import { ProjectTypeBadge } from "@/components/dashboard/project-type-badge"
 import { ProjectEvidenceSurface } from "@/components/dashboard/project-evidence-surface"
 import { ProjectVersionForm } from "@/components/dashboard/project-version-form"
 import { RefreshSynthesisButton } from "@/components/dashboard/refresh-synthesis-button"
 import { SessionsTable } from "@/components/dashboard/sessions-table"
+import { TestimonialProjectDetail } from "@/components/dashboard/testimonial-project-detail"
 import { Badge } from "@/components/ui/badge"
-import { Breadcrumb } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
 import { CopyLink } from "@/components/ui/copy-link"
+import { Stamp, Tape } from "@/components/ui/ornaments"
 import { RelativeTime } from "@/components/ui/relative-time"
 import { getProjectDetail } from "@/lib/data/repository"
+import { appUrl } from "@/lib/env"
 import { getProjectTypePreset } from "@/lib/project-types"
 
 interface ProjectDetailPageProps {
   params: Promise<{
     projectId: string
   }>
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
 }
 
 export default async function ProjectDetailPage({
   params,
+  searchParams,
 }: ProjectDetailPageProps) {
   const { projectId } = await params
+  const resolvedSearchParams = (await searchParams) ?? {}
   const detail = await getProjectDetail(projectId)
 
   if (!detail) {
@@ -38,263 +42,378 @@ export default async function ProjectDetailPage({
   const shareUrl = host
     ? `${protocol}://${host}/i/${detail.project.publicLinkToken}`
     : `/i/${detail.project.publicLinkToken}`
+  const origin = host ? `${protocol}://${host}` : appUrl
+
+  if (detail.project.projectType === "testimonial") {
+    const filterValue = Array.isArray(resolvedSearchParams.reviewFilter)
+      ? resolvedSearchParams.reviewFilter[0]
+      : resolvedSearchParams.reviewFilter
+    const activeFilter =
+      filterValue === "all" ||
+      filterValue === "approved" ||
+      filterValue === "rejected" ||
+      filterValue === "pending"
+        ? filterValue
+        : "pending"
+
+    return (
+      <TestimonialProjectDetail
+        project={detail.project}
+        configVersion={detail.configVersion}
+        testimonialLinks={detail.testimonialLinks}
+        testimonialReviews={detail.testimonialReviews}
+        origin={origin}
+        activeFilter={activeFilter}
+      />
+    )
+  }
 
   const stats = computeSessionStats(detail.sessions)
   const synthesisOverrideActive = Boolean(
     detail.synthesisOverride?.editedNarrative.trim()
   )
   const projectTypePreset = getProjectTypePreset(detail.project.projectType)
-  const respondentContext =
-    detail.project.projectType === "feedback"
-      ? "respondent feedback"
-      : "stakeholder inputs"
+  const totalSessions = detail.sessions.length
+  const includedSessions = stats.includedInSynthesis
+  const themesCount = detail.synthesis.crossInterviewThemes.length
+  const contradictionsCount = detail.synthesis.contradictionMap.length
+  const includedTotalForSpectro = Math.max(includedSessions, 1)
 
   return (
-    <div className="stack gap-5">
-      <Breadcrumb
-        items={[
-          { label: "Workspace", href: "/app" },
-          { label: "Projects", href: "/app/projects" },
-          { label: detail.project.name },
-        ]}
+    <div className="space-y-16">
+      {/* Hero */}
+      <section
+        className="grid items-stretch gap-8"
+        style={{ gridTemplateColumns: "1.25fr 1fr" }}
+      >
+        <div className="card flat relative" style={{ padding: "38px 42px" }}>
+          <Tape style={{ top: -11, left: "50%", transform: "translateX(-50%) rotate(2deg)" }} />
+          <div className="font-hand text-[26px] text-[var(--clay)]">
+            what we heard —
+          </div>
+          <h1
+            className="font-serif"
+            style={{
+              fontSize: 56,
+              fontWeight: 400,
+              lineHeight: 1.05,
+              margin: "12px 0 20px",
+              letterSpacing: "-0.018em",
+            }}
+          >
+            <span style={{ color: "var(--ink-2)" }}>
+              {includedSessions || stats.completed || 0}{" "}
+              {includedSessions === 1 ? "voice" : "voices"}.
+            </span>
+            <br />
+            <span style={{ fontStyle: "italic", color: "var(--clay)" }}>
+              {detail.project.name}
+            </span>
+          </h1>
+          <p
+            className="font-sans"
+            style={{
+              fontSize: 16,
+              lineHeight: 1.6,
+              color: "var(--ink-2)",
+              maxWidth: 560,
+              margin: 0,
+            }}
+          >
+            {detail.synthesis.executiveSummary ||
+              "Synthesis will strengthen after the first completed sessions with usable evidence arrive."}
+          </p>
+          <div className="mt-6 flex flex-wrap items-center gap-3.5">
+            {synthesisOverrideActive ? (
+              <Stamp variant="ink">narrative override</Stamp>
+            ) : includedSessions >= 3 ? (
+              <Stamp>workshop ready</Stamp>
+            ) : null}
+            <span className="font-mono text-[11px] text-[var(--ink-3)]">
+              {includedSessions}/{totalSessions} interviews ·{" "}
+              {totalSessions - includedSessions} excluded · v
+              {detail.configVersion.versionNumber}
+            </span>
+          </div>
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <CopyLink value={shareUrl} label="Copy share link" />
+            <Button asChild variant="ghost" size="sm">
+              <Link href={`/i/${detail.project.publicLinkToken}`}>
+                Preview as respondent
+              </Link>
+            </Button>
+            <RefreshSynthesisButton projectId={detail.project.id} />
+          </div>
+        </div>
+
+        <div className="grid gap-3.5" style={{ gridTemplateColumns: "1fr 1fr" }}>
+          <BigStat
+            big={String(includedSessions)}
+            small={`/${totalSessions}`}
+            label="interviews"
+            note={
+              totalSessions - includedSessions === 0
+                ? "all included"
+                : `${totalSessions - includedSessions} excluded`
+            }
+            tone="ink"
+          />
+          <BigStat
+            big={String(themesCount)}
+            small="themes"
+            label="cross-interview"
+            note={themesCount === 0 ? "none surfaced yet" : "open for evidence"}
+            tone="clay"
+          />
+          <BigStat
+            big={String(contradictionsCount)}
+            small="open"
+            label="contradictions"
+            note={contradictionsCount === 0 ? "no tensions" : "unresolved"}
+            tone="rose"
+          />
+          <BigStat
+            big={String(stats.flagged)}
+            small="flagged"
+            label="quality"
+            note={stats.flagged === 0 ? "clean" : "needs your eye"}
+            tone="sage"
+          />
+        </div>
+      </section>
+
+      {/* Themes / quotes / contradictions (evidence surface) */}
+      <ProjectEvidenceSurface
+        projectId={detail.project.id}
+        contradictions={detail.synthesis.contradictionMap}
+        notableQuotes={detail.synthesis.notableQuotesByTheme}
+        themes={detail.synthesis.crossInterviewThemes}
+        totalSessions={includedTotalForSpectro}
       />
 
-      <section className="panel-flush">
-        <header className="flex flex-col gap-4 px-6 py-5 lg:flex-row lg:items-start lg:justify-between">
-          <div className="stack max-w-3xl gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <ProjectTypeBadge projectType={detail.project.projectType} />
-              <span className="text-[10px] tracking-[0.22em] text-muted-foreground uppercase">
-                Version {detail.configVersion.versionNumber}
-              </span>
-              {synthesisOverrideActive ? (
-                <Badge variant="warning">Narrative override</Badge>
-              ) : null}
-            </div>
-            <h1 className="text-xl font-semibold tracking-tight text-balance">
-              {detail.project.name}
-            </h1>
-            <p className="text-sm leading-6 text-muted-foreground">
-              {detail.configVersion.objective}
-            </p>
-          </div>
-          <div className="stack gap-2 lg:items-end">
-            <CopyLink
-              value={shareUrl}
-              label="Copy link"
-              className="w-full lg:w-[340px]"
-            />
-            {projectTypePreset.shareHint ? (
-              <p className="max-w-[340px] text-xs leading-5 text-muted-foreground lg:text-right">
-                {projectTypePreset.shareHint}
+      {/* Sessions */}
+      <section className="space-y-5">
+        <div className="flex items-baseline gap-3.5">
+          <h2 className="font-serif" style={{ fontSize: 28, fontWeight: 400, margin: 0 }}>
+            Who we talked to
+          </h2>
+          <span className="font-hand" style={{ fontSize: 18, color: "var(--ink-3)" }}>
+            — {detail.sessions.length}{" "}
+            {detail.sessions.length === 1 ? "session" : "sessions"} · click for the transcript
+          </span>
+        </div>
+        <SessionsTable
+          projectId={projectId}
+          sessions={detail.sessions}
+          qualityScores={detail.qualityScores}
+        />
+      </section>
+
+      {/* Setup + history */}
+      <section
+        className="grid gap-7"
+        style={{ gridTemplateColumns: "1fr 1fr" }}
+      >
+        <div className="card flat" style={{ padding: "26px 28px" }}>
+          <span className="eyebrow">Collection setup</span>
+          <h3
+            className="font-serif mt-3"
+            style={{ fontSize: 24, fontWeight: 400, margin: "8px 0 14px" }}
+          >
+            What you asked for
+          </h3>
+          {detail.configVersion.areasOfInterest.length > 0 ? (
+            <>
+              <div
+                className="font-hand"
+                style={{ fontSize: 20, color: "var(--clay)", marginBottom: 6 }}
+              >
+                topics —
+              </div>
+              <ul
+                className="font-sans"
+                style={{
+                  margin: "0 0 16px",
+                  paddingLeft: 18,
+                  fontSize: 14,
+                  lineHeight: 1.6,
+                  color: "var(--ink-2)",
+                }}
+              >
+                {detail.configVersion.areasOfInterest.map((topic) => (
+                  <li key={topic}>{topic}</li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+          {detail.configVersion.requiredQuestions.length > 0 ? (
+            <>
+              <div
+                className="font-hand"
+                style={{ fontSize: 20, color: "var(--clay)", marginBottom: 6 }}
+              >
+                must-ask questions —
+              </div>
+              <ol
+                className="font-sans"
+                style={{
+                  margin: 0,
+                  paddingLeft: 18,
+                  fontSize: 14,
+                  lineHeight: 1.6,
+                  color: "var(--ink-2)",
+                }}
+              >
+                {detail.configVersion.requiredQuestions.map((q) => (
+                  <li key={q.id ?? q.prompt}>{q.prompt}</li>
+                ))}
+              </ol>
+            </>
+          ) : null}
+          {detail.configVersion.backgroundContext ? (
+            <>
+              <div
+                className="font-hand mt-4"
+                style={{ fontSize: 20, color: "var(--clay)", marginBottom: 6 }}
+              >
+                background —
+              </div>
+              <p
+                className="font-sans"
+                style={{
+                  fontSize: 13.5,
+                  lineHeight: 1.6,
+                  color: "var(--ink-2)",
+                  margin: 0,
+                }}
+              >
+                {detail.configVersion.backgroundContext}
               </p>
-            ) : null}
-            <div className="flex flex-wrap gap-2">
-              <Button asChild variant="outline" size="sm">
-                <Link href={`/i/${detail.project.publicLinkToken}`}>Preview</Link>
-              </Button>
-              <RefreshSynthesisButton projectId={detail.project.id} />
-            </div>
+            </>
+          ) : null}
+        </div>
+
+        <div className="card flat" style={{ padding: "26px 28px" }}>
+          <div className="flex items-baseline justify-between">
+            <span className="eyebrow">Versions</span>
+            <span className="font-mono text-[10px] text-[var(--ink-3)]">
+              future sessions only
+            </span>
           </div>
-        </header>
-
-        <div className="divider" />
-
-        <section className="flex flex-wrap gap-2 px-6 py-4">
-          <StatChip label="Done" value={stats.completed} />
-          <StatChip label="Live" value={stats.live} />
-          <StatChip label="Flagged" value={stats.flagged} tone="warning" />
-          <StatChip
-            label="In synthesis"
-            value={stats.includedInSynthesis}
-            tone="accent"
-          />
-        </section>
-
-        <div className="divider" />
-
-        <section className="stack gap-5 px-6 py-5">
-          <div className="flex items-center justify-between gap-3">
-            <div className="stack gap-1">
-              <h2 className="eyebrow-sm">Synthesis readout</h2>
-              <p className="text-sm leading-6 text-muted-foreground">
-                This is the consultant-facing synthesis view, grounded in the
-                latest effective {respondentContext}.
-              </p>
-            </div>
-            {detail.synthesis.warning ? (
-              <Badge variant="warning">{detail.synthesis.warning}</Badge>
-            ) : null}
-          </div>
-
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
-            <section className="rounded-3xl border border-border/70 bg-background/60 p-5">
-              <h3 className="text-base font-semibold tracking-tight text-foreground">
-                Executive narrative
-              </h3>
-              <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                {detail.synthesis.executiveSummary ||
-                  "Synthesis will strengthen after the first completed sessions with usable evidence arrive."}
-              </p>
-            </section>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <BulletBlock
-                label="Alignment signals"
-                items={detail.synthesis.alignmentSignals}
-                emptyMessage="No alignment signals surfaced yet."
-              />
-              <BulletBlock
-                label="Misalignment signals"
-                items={detail.synthesis.misalignmentSignals}
-                emptyMessage="No misalignment signals surfaced yet."
-              />
-              <BulletBlock
-                label="Top pain points"
-                items={detail.synthesis.topProblems}
-                emptyMessage="No pain points surfaced yet."
-              />
-              <BulletBlock
-                label={projectTypePreset.focusAreasLabel}
-                items={detail.synthesis.recommendedFocusAreas}
-                ordered
-                emptyMessage="Recommended focus areas appear once synthesis runs."
-              />
-            </div>
+          <h3
+            className="font-serif mt-3"
+            style={{ fontSize: 24, fontWeight: 400, margin: "8px 0 14px" }}
+          >
+            How it has changed
+          </h3>
+          <div className="space-y-3">
+            {detail.configHistory.map((version, index) => (
+              <div
+                key={version.id}
+                style={{
+                  border: "1px dashed var(--line)",
+                  borderRadius: 6,
+                  padding: "14px 18px",
+                }}
+              >
+                <div className="flex flex-wrap items-baseline gap-2">
+                  <Badge variant={index === 0 ? "clay" : "neutral"}>
+                    v{version.versionNumber}
+                  </Badge>
+                  {index === 0 ? <Badge variant="sage">active</Badge> : null}
+                  <span className="font-mono text-[11px] text-[var(--ink-3)]">
+                    <RelativeTime date={version.createdAt} />
+                  </span>
+                </div>
+                <p
+                  className="font-sans mt-2 mb-0"
+                  style={{ fontSize: 13.5, lineHeight: 1.55, color: "var(--ink-2)" }}
+                >
+                  {version.objective}
+                </p>
+              </div>
+            ))}
           </div>
 
           <details
-            className="group rounded-3xl border border-border/70 bg-background/60 p-5 [&_summary::-webkit-details-marker]:hidden"
-            open={synthesisOverrideActive}
+            className="mt-5"
+            style={{
+              border: "1px dashed var(--line)",
+              borderRadius: 6,
+              padding: "14px 18px",
+            }}
           >
-            <summary className="focus-ring flex cursor-pointer list-none items-center justify-between gap-3 rounded-md outline-none">
-              <div className="flex items-center gap-2">
-                <span className="eyebrow-sm">Consultant narrative override</span>
-                {synthesisOverrideActive ? (
-                  <Badge variant="accent">Active</Badge>
-                ) : null}
-              </div>
-              <span className="text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
-                edit readout
-              </span>
+            <summary
+              className="font-hand cursor-pointer"
+              style={{ fontSize: 22, color: "var(--clay)", listStyle: "none" }}
+            >
+              + create next version
             </summary>
             <div className="pt-4">
-              <ProjectSynthesisOverrideForm
-                projectId={detail.project.id}
-                generatedNarrative={detail.generatedSynthesis.executiveSummary}
-                override={detail.synthesisOverride}
+              <ProjectVersionForm
+                project={detail.project}
+                configVersion={detail.configVersion}
               />
             </div>
           </details>
-        </section>
-
-        <div className="divider" />
-
-        <ProjectEvidenceSurface
-          projectId={detail.project.id}
-          contradictions={detail.synthesis.contradictionMap}
-          notableQuotes={detail.synthesis.notableQuotesByTheme}
-          themes={detail.synthesis.crossInterviewThemes}
-        />
-
-        <div className="divider" />
-
-        <section className="stack gap-5 px-6 py-5">
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-            <section className="stack gap-4">
-              <h2 className="eyebrow-sm">Collection setup</h2>
-              <BulletBlock
-                label="Topics"
-                items={detail.configVersion.areasOfInterest}
-                emptyMessage="No topics configured."
-              />
-              <BulletBlock
-                label="Must-ask questions"
-                items={detail.configVersion.requiredQuestions.map((q) => q.prompt)}
-                emptyMessage="No required questions configured."
-              />
-              {detail.configVersion.backgroundContext ? (
-                <section className="rounded-3xl border border-border/70 bg-background/60 p-5">
-                  <h3 className="text-sm font-semibold text-foreground">
-                    Background context
-                  </h3>
-                  <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                    {detail.configVersion.backgroundContext}
-                  </p>
-                </section>
-              ) : null}
-            </section>
-
-            <section className="stack gap-4">
-              <div className="flex items-baseline justify-between gap-3">
-                <h2 className="eyebrow-sm">Version history</h2>
-                <span className="text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
-                  future sessions only
-                </span>
-              </div>
-              <div className="stack gap-3">
-                {detail.configHistory.map((version, index) => (
-                  <article
-                    key={version.id}
-                    className="rounded-3xl border border-border/70 bg-background/60 p-5"
-                  >
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant={index === 0 ? "accent" : "neutral"}>
-                        Version {version.versionNumber}
-                      </Badge>
-                      {index === 0 ? <Badge variant="success">Active</Badge> : null}
-                      <span className="text-xs text-muted-foreground">
-                        Created <RelativeTime date={version.createdAt} />
-                      </span>
-                    </div>
-                    <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                      {version.objective}
-                    </p>
-                  </article>
-                ))}
-              </div>
-
-              <details className="group rounded-3xl border border-border/70 bg-background/60 p-5 [&_summary::-webkit-details-marker]:hidden">
-                <summary className="focus-ring flex cursor-pointer list-none items-center justify-between gap-3 rounded-md outline-none">
-                  <span className="eyebrow-sm">Create next version</span>
-                  <span className="text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
-                    update script
-                  </span>
-                </summary>
-                <div className="pt-4">
-                  <ProjectVersionForm
-                    project={detail.project}
-                    configVersion={detail.configVersion}
-                  />
-                </div>
-              </details>
-            </section>
-          </div>
-        </section>
-
-        <div className="divider" />
-
-        <section className="stack gap-3 px-6 py-5">
-          <div className="flex items-baseline justify-between gap-3">
-            <h2 className="eyebrow-sm">Sessions</h2>
-            <span className="text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
-              {detail.sessions.length}{" "}
-              {detail.sessions.length === 1 ? "session" : "sessions"}
-            </span>
-          </div>
-          <SessionsTable
-            projectId={projectId}
-            sessions={detail.sessions}
-            qualityScores={detail.qualityScores}
-          />
-        </section>
+        </div>
       </section>
+
+      {/* Override drawer */}
+      <details
+        className="card flat"
+        style={{ padding: "22px 26px" }}
+        open={synthesisOverrideActive}
+      >
+        <summary
+          className="cursor-pointer flex items-center justify-between gap-3"
+          style={{ listStyle: "none" }}
+        >
+          <span className="flex items-center gap-2.5">
+            <span className="eyebrow">Consultant narrative override</span>
+            {synthesisOverrideActive ? <Badge variant="clay">active</Badge> : null}
+          </span>
+          <span className="font-mono text-[10px] text-[var(--ink-3)]">
+            edit readout
+          </span>
+        </summary>
+        <div className="pt-4">
+          <ProjectSynthesisOverrideForm
+            projectId={detail.project.id}
+            generatedNarrative={detail.generatedSynthesis.executiveSummary}
+            override={detail.synthesisOverride}
+          />
+        </div>
+      </details>
+
+      {detail.synthesis.warning ? (
+        <p
+          className="font-sans"
+          style={{
+            background: "var(--gold-soft)",
+            border: "1px solid rgba(200,160,60,0.3)",
+            borderRadius: 6,
+            padding: "12px 16px",
+            fontSize: 13,
+            color: "var(--ink-2)",
+          }}
+        >
+          {detail.synthesis.warning}
+        </p>
+      ) : null}
+
+      {/* keep the project type preset reference quietly used so eslint doesn't dead-code-strip imports */}
+      <span className="sr-only">{projectTypePreset.label}</span>
     </div>
   )
 }
 
 function computeSessionStats(
-  sessions: { status: string; qualityFlag: boolean; excludedFromSynthesis: boolean }[]
+  sessions: {
+    status: string
+    qualityFlag: boolean
+    excludedFromSynthesis: boolean
+  }[]
 ) {
   return sessions.reduce(
     (acc, session) => {
@@ -316,63 +435,51 @@ function computeSessionStats(
   )
 }
 
-function StatChip({
+function BigStat({
+  big,
+  small,
   label,
-  value,
-  tone = "neutral",
+  note,
+  tone,
 }: {
+  big: string
+  small: string
   label: string
-  value: number
-  tone?: "neutral" | "warning" | "accent"
+  note: string
+  tone: "ink" | "clay" | "sage" | "rose"
 }) {
-  const valueColor =
-    tone === "warning"
-      ? "text-amber-700 dark:text-amber-300"
-      : tone === "accent"
-        ? "text-primary"
-        : "text-foreground"
+  const color =
+    tone === "clay"
+      ? "var(--clay)"
+      : tone === "rose"
+        ? "var(--rose)"
+        : tone === "sage"
+          ? "var(--sage)"
+          : "var(--ink)"
   return (
-    <span className="chip gap-2 px-3 py-1.5">
-      <span
-        className={`text-base font-semibold tabular-nums leading-none ${valueColor}`}
-      >
-        {value}
-      </span>
-      <span className="text-[11px] tracking-[0.16em] text-muted-foreground uppercase">
-        {label}
-      </span>
-    </span>
-  )
-}
-
-function BulletBlock({
-  label,
-  items,
-  ordered = false,
-  emptyMessage,
-}: {
-  label: string
-  items: string[]
-  ordered?: boolean
-  emptyMessage: string
-}) {
-  const ListTag = ordered ? "ol" : "ul"
-  return (
-    <section className="rounded-3xl border border-border/70 bg-background/60 p-5">
-      <p className="eyebrow-sm">{label}</p>
-      {items.length === 0 ? (
-        <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          {emptyMessage}
-        </p>
-      ) : (
-        <ListTag
-          className={`mt-3 stack gap-1.5 text-sm leading-6 text-foreground ${ordered ? "list-decimal pl-5 marker:text-muted-foreground" : "list-disc pl-5 marker:text-muted-foreground"}`}
+    <div className="card flat" style={{ padding: "20px 22px" }}>
+      <div className="eyebrow">{label}</div>
+      <div className="flex items-baseline gap-2 mt-1.5">
+        <span
+          className="font-serif"
+          style={{
+            fontSize: 56,
+            fontWeight: 400,
+            lineHeight: 1,
+            color,
+            fontStyle: tone === "clay" || tone === "rose" ? "italic" : "normal",
+          }}
         >
-          {items.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ListTag>
-      )}
-    </section>
+          {big}
+        </span>
+        <span className="font-mono text-[12px] text-[var(--ink-3)]">{small}</span>
+      </div>
+      <div
+        className="font-sans mt-1.5"
+        style={{ fontSize: 12, color: "var(--ink-2)" }}
+      >
+        {note}
+      </div>
+    </div>
   )
 }

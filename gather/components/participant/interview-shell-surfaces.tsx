@@ -2,21 +2,17 @@
 
 import { useCallback, useState } from "react"
 import {
-  Microphone,
   PauseCircle,
   PlayCircle,
-  ShieldCheck,
   WarningCircle,
 } from "@phosphor-icons/react"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { VoiceStatus, type VoiceState } from "@/components/ui/voice-status"
+import { Stamp, WaveBars } from "@/components/ui/ornaments"
+import { type VoiceState } from "@/components/ui/voice-status"
 import type { MicSupport } from "@/lib/participant/mic-support"
 import { getProjectTypePreset } from "@/lib/project-types"
-import {
-  PARTICIPANT_INTERVIEWER_NAME,
-} from "@/lib/openai/realtime-config"
+import { PARTICIPANT_INTERVIEWER_NAME } from "@/lib/openai/realtime-config"
 import type { ProjectType, PublicInterviewConfig } from "@/lib/domain/types"
 
 export type InterviewShellStatus =
@@ -36,11 +32,21 @@ function formatMinutes(seconds: number): string {
 
 export function InterviewObjectivePanel({ objective }: { objective: string }) {
   return (
-    <div className="rounded-[28px] border border-border/70 bg-background/80 p-5">
-      <p className="text-sm tracking-[0.24em] text-muted-foreground uppercase">
-        What we&apos;d like to learn
+    <div
+      style={{
+        border: "1px dashed var(--line)",
+        borderRadius: 8,
+        padding: "18px 22px",
+        background: "var(--card-2)",
+      }}
+    >
+      <span className="eyebrow">What we&apos;d like to learn</span>
+      <p
+        className="font-serif mt-3"
+        style={{ fontSize: 18, lineHeight: 1.5, color: "var(--ink)", margin: 0 }}
+      >
+        {objective}
       </p>
-      <p className="mt-3 text-base leading-7 text-foreground">{objective}</p>
     </div>
   )
 }
@@ -53,39 +59,54 @@ export function InterviewInfoSidebar({
   const preset = getProjectTypePreset(config.projectType)
 
   return (
-    <Card className="space-y-6">
-      <CardHeader>
-        <CardTitle>A few things to know</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="rounded-2xl border border-border/70 bg-background/70 p-4">
-          <p className="text-sm font-semibold text-foreground">How it works</p>
-          <ul className="mt-3 space-y-2 text-sm leading-6 text-muted-foreground">
+    <div className="card flat" style={{ padding: "26px 28px" }}>
+      <div className="font-hand text-[24px] text-[var(--clay)]">
+        a few things to know —
+      </div>
+
+      <div className="mt-5 space-y-4">
+        <InfoBlock title="how it works">
+          <ul
+            className="font-sans"
+            style={{
+              margin: 0,
+              paddingLeft: 18,
+              fontSize: 13.5,
+              lineHeight: 1.6,
+              color: "var(--ink-2)",
+            }}
+          >
             <li>One question at a time.</li>
             <li>Take as long as you want to answer.</li>
-            <li>You can pause or end early - nothing is lost.</li>
+            <li>You can pause or end early — nothing is lost.</li>
           </ul>
-        </div>
+        </InfoBlock>
 
-        <div className="rounded-2xl border border-border/70 bg-background/70 p-4">
-          <p className="text-sm font-semibold text-foreground">
-            How you&apos;re identified
-          </p>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+        <InfoBlock title="how you're identified">
+          <p
+            className="font-sans m-0"
+            style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--ink-2)" }}
+          >
             {config.anonymityMode === "anonymous"
-              ? "Fully anonymous - no name or role is attached to what you say."
+              ? "Fully anonymous — no name or role attached to what you say."
               : config.anonymityMode === "pseudonymous"
-                ? `By label only - you'll appear as a labeled ${preset.anonymousRespondentLabel.toLowerCase()}, not by name.`
-                : "By name - the consultant will see who said what."}
+                ? `By label only — you'll appear as a labeled ${preset.anonymousRespondentLabel.toLowerCase()}, not by name.`
+                : "By name — the consultant will see who said what."}
           </p>
-        </div>
+        </InfoBlock>
 
         {config.metadataPrompts.length > 0 ? (
-          <div className="rounded-2xl border border-border/70 bg-background/70 p-4">
-            <p className="text-sm font-semibold text-foreground">
-              A few quick questions first
-            </p>
-            <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+          <InfoBlock title="a few quick questions first">
+            <ul
+              className="font-sans"
+              style={{
+                margin: 0,
+                paddingLeft: 18,
+                fontSize: 13.5,
+                lineHeight: 1.55,
+                color: "var(--ink-2)",
+              }}
+            >
               {config.metadataPrompts.map((prompt) => (
                 <li key={prompt.id}>
                   {prompt.label}
@@ -93,10 +114,37 @@ export function InterviewInfoSidebar({
                 </li>
               ))}
             </ul>
-          </div>
+          </InfoBlock>
         ) : null}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
+  )
+}
+
+function InfoBlock({
+  title,
+  children,
+}: {
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <div
+      style={{
+        border: "1px dashed var(--line)",
+        borderRadius: 6,
+        padding: "14px 18px",
+        background: "var(--card-2)",
+      }}
+    >
+      <div
+        className="font-hand mb-2"
+        style={{ fontSize: 18, color: "var(--clay)" }}
+      >
+        {title}
+      </div>
+      {children}
+    </div>
   )
 }
 
@@ -129,14 +177,21 @@ export function PreStartSurface({
 
     return (
       <div className="space-y-4" aria-live="polite">
-        <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
+        <div
+          style={{
+            border: "1px solid var(--rose)",
+            background: "var(--rose-soft)",
+            borderRadius: 6,
+            padding: "16px 18px",
+          }}
+        >
           <div className="flex items-start gap-2">
-            <WarningCircle className="mt-0.5 size-4 text-destructive" />
+            <WarningCircle className="mt-0.5 size-4 text-[var(--rose)]" />
             <div className="space-y-2">
-              <p className="text-base font-semibold text-foreground">
+              <p className="font-serif text-lg text-[var(--ink)] m-0">
                 {headline}
               </p>
-              <p className="text-sm leading-6 text-muted-foreground">
+              <p className="font-sans text-sm leading-6 text-[var(--ink-2)] m-0">
                 {blocked.message}
               </p>
             </div>
@@ -145,11 +200,10 @@ export function PreStartSurface({
         <div className="flex flex-wrap gap-3">
           <Button
             size="lg"
-            variant="outline"
+            variant="ghost"
             onClick={() => void onRecheckMicSupport()}
-            className="w-full sm:w-auto"
           >
-            I fixed it - try again
+            I fixed it — try again
           </Button>
           <CopyLinkButton />
         </div>
@@ -161,7 +215,7 @@ export function PreStartSurface({
     status === "requesting_mic"
       ? "Allow microphone access to begin."
       : status === "connecting"
-        ? "Setting up your microphone..."
+        ? "Setting up your microphone…"
         : "Take a breath. Press start when you're ready."
 
   const showError = status === "error" || status === "fallback"
@@ -169,31 +223,28 @@ export function PreStartSurface({
   return (
     <div className="space-y-4" aria-live="polite">
       <Button
+        variant="clay"
         size="lg"
         onClick={onStart}
         disabled={status === "requesting_mic" || status === "connecting"}
-        className="w-full sm:w-auto"
       >
-        <Microphone className="size-4" />
-        {status === "connecting" ? "Connecting..." : "Start when ready"}
+        {status === "connecting" ? "Connecting…" : "Start when ready →"}
       </Button>
 
-      <div className="flex items-start gap-2 text-sm leading-6 text-muted-foreground">
+      <div
+        className={
+          "font-sans flex items-start gap-2 text-sm leading-6 " +
+          (showError ? "text-[var(--ink)]" : "text-[var(--ink-3)]")
+        }
+      >
         {showError ? (
-          <WarningCircle className="mt-0.5 size-4 text-destructive" />
+          <WarningCircle className="mt-0.5 size-4 text-[var(--rose)]" />
         ) : null}
-        <p className={showError ? "text-foreground" : undefined}>
-          {showError ? errorMessage : helper}
-        </p>
+        <p className="m-0">{showError ? errorMessage : helper}</p>
       </div>
 
       {showError ? (
-        <Button
-          size="lg"
-          variant="outline"
-          onClick={onStart}
-          className="w-full sm:w-auto"
-        >
+        <Button size="lg" variant="ghost" onClick={onStart}>
           Try again
         </Button>
       ) : null}
@@ -229,12 +280,7 @@ function CopyLinkButton() {
   }, [])
 
   return (
-    <Button
-      size="lg"
-      variant="secondary"
-      onClick={() => void handleCopy()}
-      className="w-full sm:w-auto"
-    >
+    <Button size="lg" variant="ghost" onClick={() => void handleCopy()}>
       {copied ? "Link copied" : "Copy link"}
     </Button>
   )
@@ -269,17 +315,37 @@ export function LiveSurface({
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between gap-3">
-        <VoiceStatus state={voiceState} label={statusLabel} />
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
+          <WaveBars count={20} height={40} />
+          <span
+            className="font-serif"
+            style={{
+              fontSize: 18,
+              color: "var(--ink-2)",
+              fontStyle: "italic",
+            }}
+          >
+            {statusLabel}
+          </span>
+        </div>
         <span
-          className="text-sm text-muted-foreground tabular-nums"
+          className="font-mono text-[12px] text-[var(--ink-3)]"
           aria-label={`${formatMinutes(elapsedSeconds)} minutes elapsed; ${durationAriaDescription}`}
         >
           {formatMinutes(elapsedSeconds)} / {durationTargetLabel}
         </span>
       </div>
 
-      <p className="text-base leading-7 text-muted-foreground">
+      <p
+        className="font-serif"
+        style={{
+          fontSize: 18,
+          lineHeight: 1.6,
+          color: "var(--ink-2)",
+          margin: 0,
+        }}
+      >
         {paused
           ? "Paused. Press resume when you're ready."
           : interviewStarted
@@ -288,7 +354,7 @@ export function LiveSurface({
       </p>
 
       <div className="flex flex-wrap gap-3">
-        <Button variant="outline" size="lg" onClick={onTogglePause}>
+        <Button variant="ghost" size="lg" onClick={onTogglePause}>
           {paused ? (
             <PlayCircle className="size-4" />
           ) : (
@@ -296,7 +362,7 @@ export function LiveSurface({
           )}
           {paused ? "Resume" : "Pause"}
         </Button>
-        <Button variant="secondary" size="lg" onClick={onComplete}>
+        <Button variant="clay" size="lg" onClick={onComplete}>
           I&apos;m done
         </Button>
       </div>
@@ -312,20 +378,34 @@ export function CompletionSurface({
   const preset = getProjectTypePreset(projectType)
 
   return (
-    <Card className="text-center">
-      <CardContent className="flex flex-col items-center gap-4 py-12">
-        <div className="rounded-full border border-primary/30 bg-primary/10 p-3 text-primary">
-          <ShieldCheck className="size-7" />
-        </div>
-        <div className="space-y-2">
-          <h2 className="text-2xl font-semibold text-foreground">
-            {preset.completionTitle}
-          </h2>
-          <p className="max-w-md text-sm leading-7 text-muted-foreground">
-            {preset.completionDescription} You can close this tab.
-          </p>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="card flat text-center" style={{ padding: "60px 40px" }}>
+      <div className="mb-6">
+        <Stamp variant="sage">received · thank you</Stamp>
+      </div>
+      <h2
+        className="font-serif"
+        style={{
+          fontSize: 56,
+          fontWeight: 400,
+          lineHeight: 1.05,
+          letterSpacing: "-0.02em",
+          margin: "0 0 16px",
+        }}
+      >
+        {preset.completionTitle}
+      </h2>
+      <p
+        className="font-serif"
+        style={{
+          fontSize: 19,
+          lineHeight: 1.55,
+          color: "var(--ink-2)",
+          margin: "0 auto 24px",
+          maxWidth: 480,
+        }}
+      >
+        {preset.completionDescription} You can close this tab.
+      </p>
+    </div>
   )
 }

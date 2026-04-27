@@ -82,7 +82,7 @@ export default async function SessionReviewPage({
           <aside className="hidden xl:sticky xl:top-32 xl:block xl:w-[340px] xl:shrink-0 xl:self-start">
             <div className="flex max-h-[calc(100vh-9rem)] flex-col gap-3">
               <div className="flex items-center justify-between gap-2 px-1">
-                <span className="eyebrow-sm">Transcript</span>
+                <span className="eyebrow">Transcript</span>
                 <span className="text-[10px] tracking-[0.18em] text-muted-foreground/80 uppercase">
                   {review.transcript.length} segments
                 </span>

@@ -1,5 +1,4 @@
 import Link from "next/link"
-import { ArrowRight } from "@phosphor-icons/react/dist/ssr"
 import { redirect } from "next/navigation"
 
 import {
@@ -10,11 +9,15 @@ import {
   resolveSupabaseOAuthProvider,
 } from "@/lib/auth/consultant-auth"
 import { getOptionalConsultantSession } from "@/lib/auth/session"
-import { requestMagicLinkAction } from "@/app/sign-in/actions"
+import {
+  devAdminSignInAction,
+  requestMagicLinkAction,
+} from "@/app/sign-in/actions"
 import { MagicLinkForm } from "@/components/marketing/magic-link-form"
-import { Badge } from "@/components/ui/badge"
+import { AppBar } from "@/components/ui/app-bar"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tape } from "@/components/ui/ornaments"
+import { env, isDevAdminLoginEnabled } from "@/lib/env"
 
 type SearchParams = Record<string, string | string[] | undefined>
 
@@ -58,64 +61,156 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
 
   const description =
     showOAuthCta && providerLabel !== null
-      ? `Continue with ${providerLabel} to open your private consultant workspace. No password to remember.`
+      ? `Continue with ${providerLabel} to open your private workspace. No password to remember.`
       : showMagicLinkForm
-        ? "We'll email you a one-tap sign-in link. No password to remember."
-        : "Consultant sign-in is unavailable until the auth configuration is fixed."
+        ? "We'll email a one-tap sign-in link. No password to remember."
+        : "Sign-in is unavailable until the auth configuration is fixed."
 
   return (
-    <main className="page-gradient min-h-screen">
-      <div className="mx-auto flex min-h-screen max-w-5xl items-center px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mx-auto w-full max-w-[480px]">
-          <Card className="space-y-6">
-            <CardHeader>
-              <Badge variant="accent">Welcome</Badge>
-              <CardTitle className="mt-3 text-4xl">Sign in to your workspace</CardTitle>
-              <CardDescription>{description}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {errorMessage ? (
-                <p className="rounded-3xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm leading-6 text-rose-700 dark:text-rose-300">
-                  {errorMessage}
-                </p>
-              ) : null}
+    <div className="min-h-screen">
+      <AppBar
+        right={
+          <Link
+            href="/"
+            className="font-sans text-sm text-[var(--ink-2)] hover:text-[var(--ink)]"
+          >
+            ← back to landing
+          </Link>
+        }
+      />
 
-              {showOAuthCta && oauthHref && providerLabel ? (
-                <div className="space-y-4">
-                  <Button asChild size="lg" className="w-full">
-                    <Link href={oauthHref}>
-                      Continue with {providerLabel}
-                      <ArrowRight className="size-4" />
-                    </Link>
-                  </Button>
-                  <p className="text-sm leading-6 text-muted-foreground">
-                    We use your verified account email to identify the right private workspace.
-                  </p>
-                </div>
-              ) : null}
+      <main className="mx-auto flex w-full max-w-[520px] items-start px-6 py-16">
+        <div
+          className="card flat relative w-full"
+          style={{ padding: "44px 48px" }}
+        >
+          <Tape style={{ top: -11, left: 60, transform: "rotate(-3deg)" }} />
 
-              {showMagicLinkForm ? <MagicLinkForm action={requestMagicLinkAction} /> : null}
+          <span className="font-hand text-[24px] text-[var(--clay)]">
+            welcome —
+          </span>
+          <h1
+            className="font-serif"
+            style={{
+              fontSize: 48,
+              fontWeight: 400,
+              lineHeight: 1.05,
+              letterSpacing: "-0.018em",
+              margin: "8px 0 6px",
+            }}
+          >
+            Sign in.
+          </h1>
+          <p
+            className="font-sans"
+            style={{
+              fontSize: 14,
+              lineHeight: 1.6,
+              color: "var(--ink-2)",
+              margin: "0 0 28px",
+            }}
+          >
+            {description}
+          </p>
 
-              {!showOAuthCta && !showMagicLinkForm ? (
-                <p className="text-sm leading-6 text-muted-foreground">
-                  Fix the consultant auth environment variables, then reload this page.
-                </p>
-              ) : null}
+          {errorMessage ? (
+            <p
+              className="font-sans"
+              style={{
+                fontSize: 13,
+                lineHeight: 1.55,
+                color: "var(--rose)",
+                background: "var(--rose-soft)",
+                borderRadius: 6,
+                padding: "12px 16px",
+                marginBottom: 24,
+              }}
+            >
+              {errorMessage}
+            </p>
+          ) : null}
 
-              <p className="text-xs leading-6 text-muted-foreground">
-                Your data stays yours. Each workspace is private, and respondent
-                conversations never leave it.
+          {showOAuthCta && oauthHref && providerLabel ? (
+            <div className="space-y-5">
+              <Button asChild size="lg" className="w-full">
+                <Link href={oauthHref}>Continue with {providerLabel} →</Link>
+              </Button>
+              <p
+                className="font-sans"
+                style={{
+                  fontSize: 13,
+                  lineHeight: 1.55,
+                  color: "var(--ink-3)",
+                }}
+              >
+                We use your verified account email to find the right private
+                workspace.
               </p>
-              <p className="text-xs text-muted-foreground">
-                New here?{" "}
-                <Link href="/" className="font-medium text-primary underline-offset-4 hover:underline">
-                  See how it works →
-                </Link>
+            </div>
+          ) : null}
+
+          {showMagicLinkForm ? (
+            <MagicLinkForm action={requestMagicLinkAction} />
+          ) : null}
+
+          {isDevAdminLoginEnabled ? (
+            <form action={devAdminSignInAction} className="space-y-3">
+              <input type="hidden" name="next" value={next} />
+              <Button type="submit" variant="outline" className="w-full">
+                Enter as dev admin
+              </Button>
+              <p
+                className="font-sans"
+                style={{
+                  fontSize: 12.5,
+                  lineHeight: 1.5,
+                  color: "var(--ink-3)",
+                  margin: 0,
+                }}
+              >
+                Local testing only: {env.DEV_ADMIN_EMAIL}
               </p>
-            </CardContent>
-          </Card>
+            </form>
+          ) : null}
+
+          {!showOAuthCta && !showMagicLinkForm ? (
+            <p
+              className="font-sans"
+              style={{ fontSize: 13, lineHeight: 1.55, color: "var(--ink-3)" }}
+            >
+              Fix the consultant auth environment variables, then reload this
+              page.
+            </p>
+          ) : null}
+
+          <hr className="divider-dashed" style={{ margin: "32px 0 20px" }} />
+
+          <p
+            className="font-sans"
+            style={{
+              fontSize: 12.5,
+              lineHeight: 1.5,
+              color: "var(--ink-3)",
+              margin: "0 0 6px",
+            }}
+          >
+            Each workspace is private. Respondent conversations never leave it.
+            Words only — we don&apos;t keep audio.
+          </p>
+          <p
+            className="font-sans"
+            style={{ fontSize: 12.5, color: "var(--ink-3)", margin: 0 }}
+          >
+            New here?{" "}
+            <Link
+              href="/"
+              className="text-[var(--clay)] underline-offset-4 hover:underline"
+            >
+              See how it works →
+            </Link>
+          </p>
         </div>
-      </div>
-    </main>
+      </main>
+    </div>
   )
 }

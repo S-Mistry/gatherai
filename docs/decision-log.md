@@ -1,6 +1,6 @@
 # Decision Log
 
-Last updated: April 23, 2026
+Last updated: April 27, 2026 (D-019 visual system replacement)
 
 ## Locked Decisions
 
@@ -82,12 +82,22 @@ Last updated: April 23, 2026
 ### D-016 Dual-mode project flow
 - Status: accepted
 - Decision: keep `discovery` and `feedback` in the shared schema and runtime, but position the product around `feedback`; discovery creation stays behind a feature flag and is disabled by default.
-- Consequence: `project_type` remains immutable, existing discovery projects stay readable, normal project setup defaults to feedback, and participant framing plus runtime guidance must not assume workshop language for feedback projects.
+- Consequence: `project_type` remains immutable, existing discovery projects stay readable, normal project setup defaults to feedback while testimonials are available as a separate choice, and participant framing plus runtime guidance must not assume workshop language for feedback projects.
 
 ### D-017 Project shell identity
 - Status: accepted
 - Decision: remove `client_name` from the top-level project record and use `project.name` as the single required project identifier.
 - Consequence: project create/edit flows, repository types, prompts, and schema no longer depend on a separate client field.
+
+### D-018 Testimonial workflow
+- Status: accepted
+- Decision: add `testimonial` as a first-class project type for short voice-to-text reviews, moderated approvals, and iframe embeds.
+- Consequence: testimonial capture uses `/t/[linkToken]`, stores submitted transcript text only, keeps audio as temporary request data for transcription, and does not use Mia, realtime interviews, analysis jobs, or synthesis.
+
+### D-019 Visual system replacement (Studio cream/clay)
+- Status: accepted
+- Decision: replace the previous frosted-glass + Montserrat + terracotta system with a warm cream + clay paper-notebook system. Body and headings use Instrument Serif, handwritten margin notes use Caveat, sans labels use Inter Tight, micro-eyebrows use JetBrains Mono. Tactile ornaments — masking tape, rubber stamps, pushpins, sticky notes, scribble underlines — are first-class primitives. Dark mode is dropped in v1; the system is light-only. The visible wordmark is `gather.` (Caveat lowercase + clay dot); repo, package, env var, and database identifiers stay `GatherAI`.
+- Consequence: `STYLE_GUIDE.md` is rewritten to describe the new system; `ui-design.md` is amended so future mockups produced by the design assistant follow it. `gather/app/globals.css`, `gather/app/layout.tsx`, every `gather/components/ui/*` primitive, and every page under `gather/app/{,app,i,t,embed,sign-in}/` are reskinned in one sweep. `ThemeProvider`, `ThemeBootstrap`, the `d` hotkey, and `gather/lib/theme/shared.ts` are removed. New primitives `<Wordmark>`, `<AppBar>`, `<Crumb>`, `<Field>`, `<EvidenceDrawer>` and ornament components (`Tape`, `Stamp`, `Pin`, `Scribble`, `WaveBars`, `MicRing`, `Spectrogram`, `StickyNote`) live under `gather/components/ui/`. Legacy Badge variants (`accent`, `success`, `warning`, `danger`) remain as aliases for `clay`, `sage`, `gold`, `rose`. Reintroducing dark mode is a future decision.
 
 ## Reference Notes
 - OpenAI Realtime docs describe WebRTC as ideal for browser and client-side interactions and document server-side controls for realtime sessions.

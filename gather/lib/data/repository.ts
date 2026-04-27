@@ -47,6 +47,7 @@ import type {
   ProjectType,
   ProjectSynthesisGenerated,
   ProjectSynthesisOverride,
+  PublicTestimonialConfig,
   QualityDimension,
   QualityScore,
   QuestionDefinition,
@@ -57,6 +58,9 @@ import type {
   SessionQualityOverride,
   SessionRuntimeState,
   SessionStatus,
+  TestimonialLink,
+  TestimonialReview,
+  TestimonialReviewStatus,
   TranscriptSegment,
   TranscriptSpeaker,
   WorkspaceSummary,
@@ -76,6 +80,16 @@ import {
   createSecretSupabaseClient,
   createServerSupabaseClient,
 } from "@/lib/supabase/server"
+import {
+  DEFAULT_TESTIMONIAL_HEADLINE,
+  DEFAULT_TESTIMONIAL_PROMPT,
+  normalizeBrandColor,
+  normalizeOptionalText,
+  normalizeTestimonialReviewStatus,
+  normalizeWebsiteUrl,
+  parseTestimonialRating,
+  truncateReviewText,
+} from "@/lib/testimonials"
 
 interface ProfileRow {
   id: string
@@ -224,6 +238,33 @@ interface QualityScoreRow {
   updated_at: string
 }
 
+interface TestimonialLinkRow {
+  id: string
+  project_id: string
+  link_token: string
+  business_name: string
+  website_url: string
+  brand_color: string
+  headline: string
+  prompt: string
+  revoked_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+interface TestimonialReviewRow {
+  id: string
+  project_id: string
+  testimonial_link_id: string
+  transcript: string
+  reviewer_name: string | null
+  suggested_rating: number | null
+  rating: number
+  status: TestimonialReviewStatus
+  created_at: string
+  updated_at: string
+}
+
 interface AnalysisJobRow {
   id: string
   job_type: AnalysisJobType
@@ -265,6 +306,13 @@ interface NormalizedProjectCreateInput {
   anonymityMode: AnonymityMode
   toneStyle: string
   followUpLimit: number
+  testimonial?: {
+    businessName: string
+    websiteUrl: string
+    brandColor: string
+    headline: string
+    prompt: string
+  }
 }
 
 interface CreatedProjectGraph {
@@ -898,6 +946,37 @@ function mapQualityScore(row: QualityScoreRow): QualityScore {
   }
 }
 
+function mapTestimonialLink(row: TestimonialLinkRow): TestimonialLink {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    linkToken: row.link_token,
+    businessName: row.business_name,
+    websiteUrl: row.website_url,
+    brandColor: row.brand_color,
+    headline: row.headline,
+    prompt: row.prompt,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    revokedAt: row.revoked_at ?? undefined,
+  }
+}
+
+function mapTestimonialReview(row: TestimonialReviewRow): TestimonialReview {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    testimonialLinkId: row.testimonial_link_id,
+    transcript: row.transcript,
+    reviewerName: row.reviewer_name ?? undefined,
+    suggestedRating: row.suggested_rating ?? undefined,
+    rating: row.rating,
+    status: normalizeTestimonialReviewStatus(row.status),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}
+
 function mapAnalysisJob(row: AnalysisJobRow): AnalysisJob {
   return {
     id: row.id,
@@ -942,6 +1021,11 @@ function normalizeProjectCreateInput(
     requiredQuestions: string
     durationCapMinutes: number
     anonymityMode: string
+    testimonialBusinessName?: string
+    testimonialWebsiteUrl?: string
+    testimonialBrandColor?: string
+    testimonialHeadline?: string
+    testimonialPrompt?: string
   },
   slug: string
 ): NormalizedProjectCreateInput {
@@ -968,7 +1052,7 @@ function normalizeProjectCreateInput(
       goal: "Consultant supplied question.",
     }))
 
-  return {
+  const normalized: NormalizedProjectCreateInput = {
     projectType,
     name: input.name || "Untitled project",
     slug,
@@ -984,9 +1068,12 @@ function normalizeProjectCreateInput(
             goal: "Mode starter question.",
           })),
     durationCapMinutes:
-      Number.isFinite(input.durationCapMinutes) && input.durationCapMinutes >= 4
-        ? Math.min(input.durationCapMinutes, 30)
-        : preset.durationCapMinutes,
+      projectType === "testimonial"
+        ? preset.durationCapMinutes
+        : Number.isFinite(input.durationCapMinutes) &&
+            input.durationCapMinutes >= 4
+          ? Math.min(input.durationCapMinutes, 30)
+          : preset.durationCapMinutes,
     anonymityMode: (["named", "pseudonymous", "anonymous"].includes(
       input.anonymityMode
     )
@@ -995,6 +1082,33 @@ function normalizeProjectCreateInput(
     toneStyle: preset.toneStyle,
     followUpLimit: preset.followUpLimit,
   }
+
+  if (projectType === "testimonial") {
+    const websiteUrl = normalizeWebsiteUrl(input.testimonialWebsiteUrl)
+
+    if (!websiteUrl) {
+      fail("A valid website URL is required for testimonial projects.")
+    }
+
+    normalized.testimonial = {
+      businessName: normalizeOptionalText(
+        input.testimonialBusinessName,
+        normalized.name
+      ),
+      websiteUrl,
+      brandColor: normalizeBrandColor(input.testimonialBrandColor),
+      headline: normalizeOptionalText(
+        input.testimonialHeadline,
+        DEFAULT_TESTIMONIAL_HEADLINE
+      ),
+      prompt: normalizeOptionalText(
+        input.testimonialPrompt,
+        DEFAULT_TESTIMONIAL_PROMPT
+      ),
+    }
+  }
+
+  return normalized
 }
 
 async function loadCreatedProjectGraph(
@@ -1115,6 +1229,30 @@ async function createProjectGraphLegacy(
     configRow,
     publicLinkToken: linkRow.link_token,
   }
+}
+
+async function createInitialTestimonialLink(
+  client: ServerClient,
+  projectId: string,
+  input: NonNullable<NormalizedProjectCreateInput["testimonial"]>
+) {
+  const result = await client
+    .from("testimonial_links")
+    .insert({
+      project_id: projectId,
+      link_token: `test-${crypto.randomUUID()}`,
+      business_name: input.businessName,
+      website_url: input.websiteUrl,
+      brand_color: input.brandColor,
+      headline: input.headline,
+      prompt: input.prompt,
+    })
+    .select("*")
+    .single<TestimonialLinkRow>()
+
+  return mapTestimonialLink(
+    expectData(result, "Unable to create testimonial link")
+  )
 }
 
 async function getConsultantContext(): Promise<ConsultantContext | null> {
@@ -1347,6 +1485,10 @@ function buildPublicInterviewConfig(bundle: {
   config: ProjectConfigVersion
 }) {
   const projectType = normalizeProjectType(bundle.project.project_type)
+
+  if (projectType === "testimonial") {
+    fail("Testimonials do not use the interview runtime.")
+  }
 
   return sanitizePublicInterviewConfig({
     projectId: bundle.project.id,
@@ -2455,6 +2597,8 @@ export async function getProjectDetail(projectId: string) {
     sessionsResult,
     synthesesResult,
     synthesisOverrideResult,
+    testimonialLinksResult,
+    testimonialReviewsResult,
   ] = await Promise.all([
     client
       .from("project_config_versions")
@@ -2483,6 +2627,17 @@ export async function getProjectDetail(projectId: string) {
       .select("*")
       .eq("project_id", projectId)
       .maybeSingle<ProjectSynthesisOverrideRow>(),
+    client
+      .from("testimonial_links")
+      .select("*")
+      .eq("project_id", projectId)
+      .is("revoked_at", null)
+      .order("created_at", { ascending: false }),
+    client
+      .from("testimonial_reviews")
+      .select("*")
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: false }),
   ])
 
   const configRows = expectRows(
@@ -2548,6 +2703,14 @@ export async function getProjectDetail(projectId: string) {
     generatedSynthesis,
     synthesisOverride,
     qualityScores,
+    testimonialLinks: expectRows(
+      testimonialLinksResult,
+      "Unable to load testimonial links"
+    ).map((row) => mapTestimonialLink(row as TestimonialLinkRow)),
+    testimonialReviews: expectRows(
+      testimonialReviewsResult,
+      "Unable to load testimonial reviews"
+    ).map((row) => mapTestimonialReview(row as TestimonialReviewRow)),
   }
 }
 
@@ -2878,7 +3041,222 @@ export async function getPublicInterviewConfig(linkToken: string) {
     return null
   }
 
+  if (normalizeProjectType(bundle.project.project_type) === "testimonial") {
+    return null
+  }
+
   return buildPublicInterviewConfig(bundle)
+}
+
+export async function getPublicTestimonialConfig(
+  linkToken: string
+): Promise<PublicTestimonialConfig | null> {
+  const client = requireSecretClient()
+  const linkResult = await client
+    .from("testimonial_links")
+    .select("*")
+    .eq("link_token", linkToken)
+    .is("revoked_at", null)
+    .maybeSingle<TestimonialLinkRow>()
+
+  if (linkResult.error) {
+    fail(`Unable to load testimonial link: ${linkResult.error.message}`)
+  }
+
+  if (!linkResult.data) {
+    return null
+  }
+
+  return {
+    projectId: linkResult.data.project_id,
+    linkId: linkResult.data.id,
+    linkToken: linkResult.data.link_token,
+    businessName: linkResult.data.business_name,
+    websiteUrl: linkResult.data.website_url,
+    brandColor: linkResult.data.brand_color,
+    headline: linkResult.data.headline,
+    prompt: linkResult.data.prompt,
+  }
+}
+
+export async function submitTestimonialReview(
+  linkToken: string,
+  input: {
+    transcript: string
+    reviewerName?: string
+    rating: number
+    suggestedRating?: number | null
+  }
+) {
+  const config = await getPublicTestimonialConfig(linkToken)
+
+  if (!config) {
+    return null
+  }
+
+  const transcript = truncateReviewText(input.transcript)
+  const rating = parseTestimonialRating(input.rating)
+  const suggestedRating = parseTestimonialRating(input.suggestedRating)
+  const reviewerName = truncateReviewText(input.reviewerName, 120)
+
+  if (!transcript || !rating) {
+    fail("A written review and star rating are required.")
+  }
+
+  const client = requireSecretClient()
+  const result = await client
+    .from("testimonial_reviews")
+    .insert({
+      project_id: config.projectId,
+      testimonial_link_id: config.linkId,
+      transcript,
+      reviewer_name: reviewerName || null,
+      suggested_rating: suggestedRating,
+      rating,
+      status: "pending",
+    })
+    .select("*")
+    .single<TestimonialReviewRow>()
+
+  return mapTestimonialReview(
+    expectData(result, "Unable to submit testimonial review")
+  )
+}
+
+export async function getPublicTestimonialEmbed(projectId: string, limit = 20) {
+  const client = requireSecretClient()
+  const boundedLimit = Math.max(1, Math.min(20, Math.round(limit)))
+  const [projectResult, linksResult, reviewsResult] = await Promise.all([
+    client
+      .from("projects")
+      .select("*")
+      .eq("id", projectId)
+      .eq("project_type", "testimonial")
+      .maybeSingle<ProjectRow>(),
+    client
+      .from("testimonial_links")
+      .select("*")
+      .eq("project_id", projectId)
+      .is("revoked_at", null)
+      .order("created_at", { ascending: false }),
+    client
+      .from("testimonial_reviews")
+      .select("*")
+      .eq("project_id", projectId)
+      .eq("status", "approved")
+      .order("created_at", { ascending: false })
+      .limit(boundedLimit),
+  ])
+
+  if (projectResult.error) {
+    fail(`Unable to load testimonial project: ${projectResult.error.message}`)
+  }
+
+  if (!projectResult.data) {
+    return null
+  }
+
+  const links = expectRows(
+    linksResult,
+    "Unable to load testimonial embed links"
+  ).map((row) => mapTestimonialLink(row as TestimonialLinkRow))
+  const activeLink = links[0]
+
+  if (!activeLink) {
+    return null
+  }
+
+  return {
+    project: projectResult.data,
+    link: activeLink,
+    reviews: expectRows(
+      reviewsResult,
+      "Unable to load approved testimonial reviews"
+    ).map((row) => mapTestimonialReview(row as TestimonialReviewRow)),
+  }
+}
+
+export async function updateTestimonialReviewStatus(input: {
+  projectId: string
+  reviewId: string
+  status: TestimonialReviewStatus
+}) {
+  const client = await createServerSupabaseClient()
+
+  if (!client) {
+    fail("Supabase publishable-key environment is not configured.")
+  }
+
+  const result = await client
+    .from("testimonial_reviews")
+    .update({
+      status: input.status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("project_id", input.projectId)
+    .eq("id", input.reviewId)
+    .select("*")
+    .single<TestimonialReviewRow>()
+
+  return mapTestimonialReview(
+    expectData(result, "Unable to update testimonial review status")
+  )
+}
+
+export async function createTestimonialLink(input: {
+  projectId: string
+  businessName: string
+  websiteUrl: string
+  brandColor: string
+  headline: string
+  prompt: string
+}) {
+  const client = await createServerSupabaseClient()
+
+  if (!client) {
+    fail("Supabase publishable-key environment is not configured.")
+  }
+
+  const projectResult = await client
+    .from("projects")
+    .select("*")
+    .eq("id", input.projectId)
+    .single<ProjectRow>()
+  const project = expectData(
+    projectResult,
+    "Unable to load testimonial project"
+  )
+
+  if (normalizeProjectType(project.project_type) !== "testimonial") {
+    fail("Review links can only be created for testimonial projects.")
+  }
+
+  const websiteUrl = normalizeWebsiteUrl(input.websiteUrl)
+
+  if (!websiteUrl) {
+    fail("A valid website URL is required for testimonial links.")
+  }
+
+  const result = await client
+    .from("testimonial_links")
+    .insert({
+      project_id: input.projectId,
+      link_token: `test-${crypto.randomUUID()}`,
+      business_name: normalizeOptionalText(input.businessName, project.name),
+      website_url: websiteUrl,
+      brand_color: normalizeBrandColor(input.brandColor),
+      headline: normalizeOptionalText(
+        input.headline,
+        DEFAULT_TESTIMONIAL_HEADLINE
+      ),
+      prompt: normalizeOptionalText(input.prompt, DEFAULT_TESTIMONIAL_PROMPT),
+    })
+    .select("*")
+    .single<TestimonialLinkRow>()
+
+  return mapTestimonialLink(
+    expectData(result, "Unable to create testimonial link")
+  )
 }
 
 export async function createParticipantSession(
@@ -2904,6 +3282,10 @@ export async function startParticipantSession(
   const bundle = await getProjectBundleByLinkToken(linkToken)
 
   if (!bundle) {
+    return null
+  }
+
+  if (normalizeProjectType(bundle.project.project_type) === "testimonial") {
     return null
   }
 
@@ -3171,6 +3553,11 @@ export async function createProjectFromForm(input: {
   requiredQuestions: string
   durationCapMinutes: number
   anonymityMode: string
+  testimonialBusinessName?: string
+  testimonialWebsiteUrl?: string
+  testimonialBrandColor?: string
+  testimonialHeadline?: string
+  testimonialPrompt?: string
 }) {
   const context = await getRequiredConsultantContext()
   const client = await createServerSupabaseClient()
@@ -3192,6 +3579,18 @@ export async function createProjectFromForm(input: {
       context.workspace.id,
       normalizedInput
     ))
+
+  if (normalizedInput.projectType === "testimonial") {
+    if (!normalizedInput.testimonial) {
+      fail("Testimonial project setup is missing link settings.")
+    }
+
+    await createInitialTestimonialLink(
+      client,
+      createdProject.projectRow.id,
+      normalizedInput.testimonial
+    )
+  }
 
   return {
     project: mapProject(

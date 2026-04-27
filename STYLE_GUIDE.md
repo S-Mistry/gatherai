@@ -1,82 +1,60 @@
-# GatherAI Style Guide
+# Gather Style Guide
 
 ## Overview
 
-GatherAI's interface aims for a **warm, editorial, evidence-first** feel — the visual register of a consultant's notebook rather than a SaaS dashboard. The system is built on:
+Gather's interface is a **warm, paper-notebook system** — Instrument Serif body, Caveat handwritten margin notes, Inter Tight sans labels, JetBrains Mono micro-eyebrows. Cream surfaces, ink type, clay accents, sage and gold for status, rose for destructive. Tactile ornaments — masking tape, rubber stamps, pushpins, sticky notes, scribble underlines, hand-drawn arrows — anchor the visual register so the product reads like a consultant's bound notebook, not a SaaS dashboard.
+
+The system is built on:
 
 - **Next.js 16 / React 19** with the `app/` router.
 - **Tailwind CSS v4** using the CSS-first configuration (`@theme inline` in `app/globals.css`). There is no `tailwind.config.js` — tokens live as CSS variables and are surfaced to Tailwind via `@theme`.
-- **shadcn/ui** (`style: "radix-maia"`, `baseColor: "mist"`) for primitive composition, with `class-variance-authority` (CVA) driving variants.
-- **Radix UI primitives** for low-level behavior (Slot, etc.).
-- **Phosphor Icons** (`@phosphor-icons/react`) as the sole icon library.
-- **Server-inserted head bootstrap + local ThemeProvider** for light/dark switching (class-based, with a `d` keyboard hotkey to toggle).
-- **OKLCH color space** for every theme color — no hex, no HSL.
+- **shadcn/ui Slot primitive** for `Button asChild` only. Most other primitives are bespoke and live under `components/ui/`.
+- **Phosphor Icons** (`@phosphor-icons/react`) — used sparingly. Hand and serif type does most of the iconographic work.
+- **Light mode only.** Dark mode is dropped in v1; the design is a single warm cream palette.
 
-The aesthetic leans heavily on **soft translucency** (`bg-white/72`, `bg-background/70`, `backdrop-blur`), **generous rounding** (pill buttons, 32px panels), and **radial color-mix gradients** on body and hero surfaces.
+Wordmark is `gather.` — Caveat lowercase with a clay dot. Repository, package names, env vars, and DB names stay `GatherAI` for backward compatibility.
 
 ---
 
 ## Color Palette
 
-All palette tokens are declared in `gather/app/globals.css` as OKLCH values under `:root` (light) and `.dark`, then aliased through `@theme inline` so Tailwind utilities like `bg-primary`, `text-muted-foreground`, `border-border` resolve correctly.
+All palette tokens are declared in `gather/app/globals.css` under `:root`, then mapped onto shadcn semantic tokens (`--color-background`, `--color-primary`, etc.) through `@theme inline` so Tailwind utilities like `bg-primary`, `text-muted-foreground`, `border-border` resolve correctly.
 
-### Light Theme (`:root`)
+### Cream + ink scale
 
-| Token | OKLCH | Role |
+| Token | Value | Role |
 |---|---|---|
-| `--background` | `oklch(0.985 0.012 95.4)` | Warm off-white page background (faint yellow cast). |
-| `--foreground` | `oklch(0.225 0.026 248.9)` | Deep ink-blue body text. |
-| `--card` | `oklch(0.995 0.004 95)` | Near-white surfaces (slightly warmer than background). |
-| `--card-foreground` | `oklch(0.225 0.026 248.9)` | Text on cards (= foreground). |
-| `--popover` | `oklch(0.995 0.004 95)` | Popover surface (= card). |
-| `--popover-foreground` | `oklch(0.225 0.026 248.9)` | Popover text. |
-| `--primary` | `oklch(0.53 0.127 33.9)` | **Terracotta / burnt sienna** — brand accent, CTAs, links. |
-| `--primary-foreground` | `oklch(0.985 0.014 84.8)` | Warm cream on primary backgrounds. |
-| `--secondary` | `oklch(0.93 0.026 93.1)` | Warm cream/parchment for secondary buttons. |
-| `--secondary-foreground` | `oklch(0.265 0.03 248.1)` | Dark ink on secondary. |
-| `--muted` | `oklch(0.954 0.012 82.4)` | Muted surface (warm gray-cream). |
-| `--muted-foreground` | `oklch(0.48 0.032 245.1)` | Muted body / captions (cool gray-blue). |
-| `--accent` | `oklch(0.89 0.035 65.4)` | Warm peach accent (used for badges and hover tints). |
-| `--accent-foreground` | `oklch(0.265 0.03 248.1)` | Dark ink on accent. |
-| `--destructive` | `oklch(0.59 0.2 25.3)` | Saturated red-orange for destructive intent. |
-| `--border` | `oklch(0.88 0.014 88.8)` | Warm-neutral hairline borders. |
-| `--input` | `oklch(0.88 0.014 88.8)` | Input borders (= border). |
-| `--ring` | `oklch(0.67 0.108 36.2)` | Focus ring (lighter terracotta). |
+| `--cream` | `#f5ecd9` | Page background (warm parchment). |
+| `--cream-2` | `#ece0c6` | Subtle inset surfaces (split-panel backgrounds, version cards). |
+| `--cream-3` | `#e6d8b8` | Reserved for deeper contrast areas. |
+| `--card` | `#fffaf0` | Card surface (a touch warmer than background). |
+| `--card-2` | `#fdf4e1` | Alternate card surface for variant emphasis. |
+| `--ink` | `#2a2319` | Primary type, ink. |
+| `--ink-2` | `#5c4e3a` | Secondary type. |
+| `--ink-3` | `#8a7a60` | Captions and `.eyebrow`. |
+| `--ink-4` | `#b8a37a` | Quiet placeholders, dividers. |
+| `--line` | `#c7b896` | Hairline borders. |
+| `--line-soft` | `rgba(139,115,80,0.18)` | Even lighter divider on cream. |
 
-### Dark Theme (`.dark`)
+### Accent hues (OKLCH)
 
-| Token | OKLCH | Role |
+| Token | OKLCH | Soft pair | Role |
+|---|---|---|---|
+| `--clay` | `oklch(62% 0.14 40)` | `--clay-soft` | Brand accent. Caveat margin notes, primary CTAs, live indicators, scribble strokes. |
+| `--sage` | `oklch(66% 0.08 140)` | `--sage-soft` | Success / approve / feedback pulse / completion. |
+| `--rose` | `oklch(60% 0.16 25)` | `--rose-soft` | Destructive, errors, contradictions surfaced for attention. |
+| `--gold` | `oklch(72% 0.13 75)` | `--gold-soft` | Stars, warning chips, contradiction "position A" panels. |
+| `--stamp` | `oklch(52% 0.17 25)` | — | Rubber-stamp red (used by `.stamp`). |
+
+### Shadows
+
+| Token | Value | Role |
 |---|---|---|
-| `--background` | `oklch(0.2 0.016 248.7)` | Deep navy-slate. |
-| `--foreground` | `oklch(0.965 0.01 91)` | Warm near-white text. |
-| `--card` | `oklch(0.255 0.018 247.2)` | Elevated navy surface. |
-| `--primary` | `oklch(0.73 0.127 38.6)` | Brighter terracotta (shifts lighter for dark mode contrast). |
-| `--primary-foreground` | `oklch(0.205 0.014 248.8)` | Near-black on primary. |
-| `--secondary` | `oklch(0.31 0.012 246.2)` | Muted navy. |
-| `--muted` | `oklch(0.27 0.012 246.2)` | Muted navy (darker). |
-| `--muted-foreground` | `oklch(0.74 0.012 95.1)` | Warm light gray text. |
-| `--accent` | `oklch(0.33 0.02 58.3)` | Dim warm accent. |
-| `--destructive` | `oklch(0.68 0.18 24.2)` | Brighter red for dark bg contrast. |
-| `--border` | `oklch(1 0 0 / 10%)` | White-on-black hairline (10% alpha). |
-| `--input` | `oklch(1 0 0 / 14%)` | Slightly stronger input border. |
-| `--ring` | `oklch(0.73 0.127 38.6)` | Primary-matching focus ring. |
+| `--shadow-1` | `0 1px 0 rgba(0,0,0,0.03), 0 2px 6px rgba(60,40,20,0.08)` | `card.flat`. |
+| `--shadow-2` | `… + 0 12px 40px rgba(60,40,20,0.06)` | Default `.card`. |
+| `--shadow-pop` | `… + 0 8px 24px / 0 18px 60px` | `.project-tile:hover`. |
 
-### Semantic Status Colors
-
-Status hues are **not** theme tokens; they reference Tailwind's built-in palettes with low alpha for softness. From `components/ui/badge.tsx`:
-
-- **Success** — `border-emerald-500/25 bg-emerald-500/12 text-emerald-700 dark:text-emerald-300`
-- **Warning** — `border-amber-500/25 bg-amber-500/12 text-amber-700 dark:text-amber-300`
-- **Danger** — `border-rose-500/25 bg-rose-500/12 text-rose-700 dark:text-rose-300`
-- **Accent** — `border-primary/20 bg-primary/12 text-primary` (uses theme primary)
-- **Neutral** — `border-border/70 bg-card/80 text-foreground`
-
-### Palette Usage Patterns
-
-- **Translucent brand tint**: `bg-primary/12` with `border-primary/20` for pills, highlights, and active nav states.
-- **Parchment CTAs**: Full `bg-primary text-primary-foreground` reserved for the highest-intent action on a page (e.g., hero "Active projects" stat card, primary button).
-- **Frosted surfaces**: `bg-white/72`, `bg-background/70`, `bg-card/60` with `backdrop-blur` is the canonical "panel on gradient" look — never fully opaque.
-- **Gradient backdrops**: The `body` selector paints three stacked layers — top-left primary glow (18%), top-right accent glow (28%), and a white-to-transparent sheen (18% → 0%). The `.page-gradient` utility repeats the pattern at component scope.
+Drop shadows are quiet by design — depth comes from surface tone, not blur.
 
 ---
 
@@ -84,510 +62,270 @@ Status hues are **not** theme tokens; they reference Tailwind's built-in palette
 
 ### Font Families
 
-Fonts are loaded via `next/font/google` in `gather/app/layout.tsx`:
+Loaded via `next/font/google` in `gather/app/layout.tsx`:
 
 ```ts
-const montserrat = Montserrat({ subsets: ["latin"], variable: "--font-sans" })
-const fontMono   = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" })
+Instrument_Serif → --font-serif (body + headings, normal & italic)
+Caveat           → --font-hand  (handwritten margin notes, eyebrows-with-personality)
+Inter_Tight      → --font-sans  (UI labels, button text, chip text, sans body)
+JetBrains_Mono   → --font-mono  (eyebrows, timers, tabular figures)
 ```
 
-In `globals.css`, `@theme inline` aliases both `--font-sans` and `--font-heading` to the same Montserrat variable:
+In `globals.css`, `@theme inline` aliases `--font-heading: var(--font-serif)`. `html` and `body` default to `var(--font-serif)`.
 
-```css
---font-heading: var(--font-sans);
---font-sans: var(--font-sans);
-```
+Use the helper classes in markup:
 
-**Implication**: headings and body share Montserrat; differentiation is carried entirely by **weight, size, tracking, and case**. Geist Mono is wired up but used sparingly (reserve for monospace UI like tokens, IDs, code).
+- `.font-serif` — Instrument Serif (italic supported via inline style).
+- `.font-hand` — Caveat. Reserved for clay-coloured margin notes, type-picker flavor labels, form labels, "+ add a question" affordances.
+- `.font-sans` — Inter Tight. Buttons, chips, body copy in dense areas.
+- `.font-mono` — JetBrains Mono. Eyebrows (`.eyebrow`), timers, IDs, counts.
 
 ### Type Scale
 
-Sizes observed across the app, ordered by role:
-
-| Role | Classes | Example |
+| Role | Size / weight / leading | Example |
 |---|---|---|
-| Hero headline | `text-5xl font-semibold leading-tight text-balance sm:text-6xl` | Landing hero (`app/page.tsx`) |
-| Page title (H1) | `text-4xl font-semibold` (occasionally `text-balance`) | `/app`, `/app/projects`, `/app/projects/new`, `/sign-in` |
-| Card title XL (stat) | `text-4xl` or `text-5xl` on `CardTitle` | `MetricCard` value, hero stat card |
-| Section title (H2) | `text-2xl font-semibold text-balance` | Sidebar title |
-| Card title (default) | `text-lg font-semibold tracking-tight text-balance text-foreground` | `components/ui/card.tsx` `CardTitle` |
-| Lead paragraph | `text-lg leading-8 text-muted-foreground` | Landing hero subcopy |
-| Body (large) | `text-base leading-7 text-muted-foreground` | Page intros |
-| Body (default) | `text-sm leading-6 text-muted-foreground` | Card content, list items |
-| Label / UI | `text-sm font-medium` | Form labels, nav items |
-| Micro / eyebrow | `text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground` | `.eyebrow` utility |
-| Badge | `text-[11px] font-semibold uppercase tracking-[0.24em]` | `components/ui/badge.tsx` |
+| Hero headline | `64–78px / 400 / 1.02 / -0.018em` (italic-clay accents) | Dashboard greeting, completion stamp |
+| H1 | `44–56px / 400 / 1.05 / -0.012em` | New project setup, project list |
+| H2 | `26–32px / 400 / 1.12` | Section heads ("In motion", "Themes") |
+| H3 / card title | `22–26px / 400 / 1.15–1.2` | Project tile name, theme card title |
+| Lead | `18–22px / 1.5 (italic for muted lead)` | Hero subcopy |
+| Body sans | `13–14px / 1.55–1.65 / Inter Tight 400/500` | Chip text, descriptions |
+| Body serif | `15–17px / 1.5–1.6` | Long-form quotes, evidence excerpts |
+| Hand label | `18–32px / Caveat 400` | Form labels, margin notes, type picker flavors |
+| Eyebrow | `10–11px / mono / 0.18em / uppercase` | Section eyebrows |
+| Stamp | `11px / Inter Tight 700 / 0.28em / uppercase` | "received · 24th voice" |
 
-### Weight Conventions
+### Conventions
 
-- `font-semibold` (600) — **every heading and title**. There is no `font-bold` in the codebase.
-- `font-medium` (500) — form labels, nav item labels, emphasis inside muted paragraphs, button text (via CVA default).
-- Default (400) — all long-form body copy.
-
-### Tracking & Casing
-
-Tracking is a **primary hierarchy tool** — tighter on titles, aggressively loose on uppercase micro-labels.
-
-- `tracking-tight` — default card titles.
-- `tracking-[0.24em]` — badges, uppercase descriptors inside cards (e.g., "OBJECTIVE" label in the interview shell).
-- `tracking-[0.3em]` — the `.eyebrow` utility, reserved for over-titles above a real heading.
-
-Uppercase is **always** paired with heavy tracking; never use `uppercase` without widening letter-spacing.
-
-### Leading & Balance
-
-- `leading-6` on all `text-sm` body copy.
-- `leading-7` on `text-base` body copy.
-- `leading-8` on `text-lg` lead paragraphs.
-- `text-balance` on every multi-word heading — it is the house style for H1/H2/card titles.
+- **`font-weight: 400`** is the default for headings — Instrument Serif's natural weight is the look. Never reach for `font-weight: 700`; the system has none.
+- Use `font-style: italic` + `color: var(--clay)` for the **single accent word** in a headline ("Two ways to listen. *Pick one.*").
+- Pair `<Scribble>` with the most important phrase in a question ("what would have made the biggest difference?"). Don't scribble more than one phrase per screen.
+- Caveat is a *typographic* element, not decoration. Use it for labels and margin notes — never for body copy.
+- Eyebrows always come with `0.18em` letter-spacing minimum. Never set uppercase without tracking.
+- `text-balance` on multi-word headings.
 
 ---
 
 ## Spacing System
 
-Tailwind's default 4px spacing scale is used throughout. Consistent patterns:
+The system uses a generous page width (`max-w-[1320px]`) and large vertical rhythm.
 
-### Vertical Rhythm
+### Vertical rhythm
 
-- `space-y-2` — tight form-label-to-input spacing.
-- `space-y-3` — list items, sub-sections, header content in badges+titles.
-- `space-y-4` — default `CardContent` internal spacing (see `card.tsx`).
-- `space-y-6` — section padding inside panels, card groups in a column.
-- `gap-6` — the canonical grid gap between major sections on a page.
-- `gap-10` — hero-level grid (two-column marketing layout).
+- Sections inside a page: `space-y-14` (~56px) at the page level, `space-y-7` (~28px) within a card.
+- Between fields in a form: `gap-7` (~28px). Notebook fields breathe.
+- Between list items: `gap-3` to `gap-4`.
+- `mt-3` between an eyebrow and its title.
 
 ### Padding
 
-- `px-3 py-1` — badge (combined with `rounded-full`).
-- `px-4 py-3` — default `Input` / `Textarea` / nav item.
-- `p-4` — small info tiles nested inside cards (`rounded-2xl` children).
-- `p-5` — medium info tiles (`rounded-3xl` children).
-- `p-6` — `.panel` default padding.
+- `.app-bar`: `18px 36px`.
+- `.card`: `22px 26px` default, `30px 32px` for hero or wide cards.
+- `.card.lined.red-line`: `30px 36px 36px 70px` (extra left-padding for the red margin line).
+- `.btn`: `11px 20px` default; `7px 14px` (`.sm`); `14px 26px` (`.lg`).
+- `.chip`: `5px 11px`.
+- Notebook field input: `padding: 10px 2px` (the dashed underline does the visual work).
 
-### Page Containers
-
-Every top-level page wraps in:
+### Page container
 
 ```tsx
-<main className="page-gradient min-h-screen">
-  <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+<div className="min-h-screen">
+  <AppBar … />
+  <main className="mx-auto w-full max-w-[1320px] px-6 py-9 sm:px-8 lg:px-10">
     {/* sections */}
-  </div>
-</main>
+  </main>
+</div>
 ```
 
-- `max-w-7xl` — canonical page max width (sign-in uses `max-w-5xl` for an intimate two-card layout).
-- Horizontal padding ladder: `px-4` → `sm:px-6` → `lg:px-8`.
-- Vertical padding: `py-5`/`py-6`/`py-8` depending on density.
+(`AppShell` already wraps every consultant route — pages add their content inside.)
 
-### Grid Patterns
+### Grid patterns
 
-- Two-column hero: `grid gap-10 lg:grid-cols-[1.1fr_0.9fr]` (asymmetric, content-leaning).
-- Primary / secondary split: `lg:grid-cols-[1.15fr_0.85fr]` or `[1.2fr_0.8fr]` (note the fractional ratios — avoid plain 50/50 except for form rows).
-- Four-up metrics: `grid gap-4 md:grid-cols-2 xl:grid-cols-4`.
-- Feature triads: `grid gap-4 lg:grid-cols-3`.
+- Synthesis hero: `grid items-stretch gap-8` at `1.25fr / 1fr`.
+- BigStat tiles: `grid` at `1fr 1fr` with `gap: 14px`.
+- Theme rows: `grid` at `320px / 1fr / 200px / auto` (title / summary / spectrogram / evidence).
+- Sticky-note quotes: `grid-cols-12` with each note spanning 3–5 columns and rotated −2° to +2°.
+- Contradiction split: `1fr 110px 1fr` (position A / versus axis / position B).
+- Type picker: `1fr 1fr` with each card tilted ±0.5°.
 
 ---
 
-## Component Styles
+## Component Primitives
 
-### Button (`components/ui/button.tsx`)
+### Wordmark — `components/ui/wordmark.tsx`
 
-Built with CVA. Base classes define the signature look:
-
-```
-rounded-4xl (pill) · border border-transparent · bg-clip-padding · text-sm font-medium ·
-transition-all · focus-visible ring-[3px] of ring/50 · active:translate-y-px (tactile press) ·
-disabled:opacity-50
+```tsx
+<Wordmark href="/" />   // Caveat lowercase + clay dot. Renders inside <AppBar>.
 ```
 
-**Variants**
+### App bar — `components/ui/app-bar.tsx`
 
-- `default` — `bg-primary text-primary-foreground hover:bg-primary/80`
-- `outline` — `border-border bg-input/30 hover:bg-input/50`
-- `secondary` — `bg-secondary text-secondary-foreground hover:bg-secondary/80`
-- `ghost` — transparent, `hover:bg-muted`
-- `destructive` — `bg-destructive/10 text-destructive hover:bg-destructive/20` (soft destructive — not a solid red fill)
-- `link` — inline, `underline-offset-4 hover:underline`
-
-**Sizes**
-
-- `xs` → `h-6 px-2.5 text-xs` (also `icon-xs` = `size-6`)
-- `sm` → `h-8 px-3`
-- `default` → `h-9 px-3`
-- `lg` → `h-10 px-4`
-- Icon variants: `icon`, `icon-sm`, `icon-lg` — square sizes matching the height tokens.
-
-Icons are auto-sized: `[&_svg:not([class*='size-'])]:size-4` (3 at `xs`).
-
-### Card (`components/ui/card.tsx`)
-
-`Card` is a thin wrapper that applies the `.panel` class. Structure:
-
-- `Card` → frosted panel.
-- `CardHeader` → `space-y-2`.
-- `CardTitle` → `text-lg font-semibold tracking-tight text-balance`.
-- `CardDescription` → `text-sm leading-6 text-muted-foreground`.
-- `CardContent` → `space-y-4`.
-
-### Badge (`components/ui/badge.tsx`)
-
-```
-inline-flex items-center rounded-full border px-3 py-1
-text-[11px] font-semibold uppercase tracking-[0.24em]
+```tsx
+<AppBar
+  crumb={[{ label: "Workspace", href: "/app" }, { label: detail.project.name }]}
+  right={<Button variant="clay" size="sm">+ New project</Button>}
+  avatar={<AppBarAvatar initials="EJ" />}
+/>
 ```
 
-Five variants (`neutral`, `accent`, `success`, `warning`, `danger`) — see palette above. Always include a short uppercase label; often paired with a Phosphor icon (`className="gap-2"` then `<Icon className="size-4" />`).
+The bar uses a sticky cream background, a dashed bottom border, and the wordmark on the left. Each consultant route flows beneath it; participant routes also use it (with a `chip` on the right rather than an avatar).
 
-### Input & Textarea
+### Crumb — `components/ui/crumb.tsx`
 
-Identical styling patterns — rounded rectangles with frosted fill and an animated focus halo:
+Inter Tight breadcrumb with `/` separators — sits inside the AppBar.
 
+### Card — `components/ui/card.tsx`
+
+```tsx
+<Card flat>           // .card.flat — single hairline lift
+<Card lined redLine>  // ruled paper + red margin line (notebook setup form)
+<Card>                // default warm card with shadow-2
 ```
-w-full rounded-2xl border border-border/70 bg-white/80 px-4 py-3 text-sm
-shadow-sm outline-none transition
-placeholder:text-muted-foreground
-focus:border-primary/50 focus:ring-4 focus:ring-primary/10
-dark:bg-card/70
+
+`CardTitle` is Instrument Serif `text-2xl font-normal`; `CardDescription` is Inter Tight 13px on `--ink-2`.
+
+### Button — `components/ui/button.tsx`
+
+```tsx
+<Button>                       // ink fill (default)
+<Button variant="clay">        // clay fill — reserved for primary CTAs
+<Button variant="sage">        // sage fill — feedback / approve actions
+<Button variant="ghost">       // 1.5px ink outline, no shadow
+<Button variant="link">        // inline text link
+<Button variant="destructive"> // ghost outline tinted rose
 ```
 
-Textarea adds `min-h-28`.
+Sizes: `sm / default / lg`. Button wraps the `.btn` system class — every visual is in CSS, not utilities, so changing the look means editing `globals.css`.
 
-Native `<select>` elements re-use the same class string inline (see `projects/new/page.tsx`) — there is no dedicated `Select` component in the UI kit yet.
+### Badge / Chip — `components/ui/badge.tsx`
 
-### Custom Global Components (`globals.css`)
+```tsx
+<Badge variant="clay">live</Badge>
+<Badge variant="sage" dot>collecting</Badge>
+<Badge variant="gold">scheduling</Badge>
+<Badge variant="rose">excluded</Badge>
+<Badge variant="solid">workshop ready</Badge>
+```
 
-Declared under `@layer components`:
+Variants `accent` / `success` / `warning` / `danger` are kept as **legacy aliases** mapping to `clay` / `sage` / `gold` / `rose` — old callsites continue to work.
 
-- **`.panel`**
-  ```
-  rounded-[32px] border border-border/70 bg-white/72 p-6
-  shadow-[0_18px_60px_-32px_rgba(23,30,55,0.35)]
-  backdrop-blur
-  dark:bg-card/82
-  ```
-  The canonical frosted-glass surface. The 32px radius and custom long shadow are deliberate signatures — don't substitute `rounded-3xl` + `shadow-lg`.
+### Field + Input + Textarea
 
-- **`.eyebrow`**
-  ```
-  text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground
-  ```
-  Over-titles for grouped content (e.g., "Areas of interest" above a list).
+```tsx
+<Field label="project name" htmlFor="name">
+  <Input id="name" name="name" required />
+</Field>
+```
 
-- **`.page-gradient`**
-  Layered background: warm white-to-background vertical fade plus a top-left primary glow.
+Inputs and textareas are **notebook fields**: transparent background, dashed bottom border that goes solid clay on focus. Caveat clay label sits above. Size scales — `font-serif text-xl` is the default; this is meant to feel like writing in a journal.
 
-### App Shell (`components/dashboard/app-shell.tsx`)
+### Ornaments — `components/ui/ornaments.tsx`
 
-- Two-column layout, sidebar `lg:w-80`, becomes stacked on mobile.
-- Sidebar is itself a `.panel`.
-- Nav items: `rounded-2xl border px-4 py-3 text-sm font-medium transition`, with active state `border-primary/20 bg-primary/12 text-primary` plus a 2px primary dot on the right.
-- Environment footer: nested rounded card (`rounded-2xl border border-border/70 bg-background/75 p-4`) pinned with `mt-auto`.
+| Component | Purpose |
+|---|---|
+| `<Tape tint="yellow|green|rose">` | Masking-tape strip across the top of a paper card. |
+| `<Stamp variant="stamp|sage|ink">` | Tilted rubber-stamp pill. Use for "workshop ready", "received · Nth voice". One stamp per page max. |
+| `<Pin tint="clay|sage|gold|stamp">` | Pushpin dot at the top of a note. |
+| `<Scribble>` | Hand-drawn underline (clay SVG) — wrap the most important phrase. |
+| `<WaveBars count={20} height={36}>` | Animated audio wave — interview live state, recording timer. |
+| `<MicRing active onClick>` | The big clay record button (feedback / testimonial flow). |
+| `<Spectrogram frequency={6} total={7}>` | Theme frequency bars on synthesis. |
+| `<StickyNote tint="cream|peach|sage|lilac" rotate={-2}>` | Quote sticky note with paper shadow. |
+
+### Evidence drawer — `components/ui/evidence-drawer.tsx`
+
+A right-side drawer with a dashed-divider header. Use for any "open the evidence behind this claim" moment. Closes on Escape, click-backdrop, or the close button. Inside the drawer use `font-serif` for quoted text, `font-hand` for the speaker tag, `eyebrow` for the section label.
+
+The synthesis page's themes / quotes / contradictions all open this drawer through `ProjectEvidenceSurface` (which manages the loading state and cache).
 
 ---
 
-## Shadows & Elevation
+## Page Patterns
 
-The project uses shadow **sparingly** — elevation comes from translucency + color, not drop shadows.
+### Dashboard (`/app`)
 
-- **Panel shadow (signature)**: `shadow-[0_18px_60px_-32px_rgba(23,30,55,0.35)]`
-  - 18px Y-offset, 60px blur, -32px spread, ~35% opacity navy ink.
-  - The negative spread tightens the shadow footprint; it feels like diffused contact light rather than a drop shadow.
-- **Input/Textarea**: `shadow-sm` — a single hairline lift.
-- **Focus halo**: `focus:ring-4 focus:ring-primary/10` on inputs, `focus-visible:ring-[3px] ring/50` on buttons. Rings are the primary "elevation on interaction" signal.
+Caveat greeting (`good morning, ellen —`) → italic-clay accent headline counting projects → two sections:
 
-Do **not** use `shadow-md`, `shadow-lg`, or `shadow-xl` — they are absent from the codebase and will break the house register.
+- **In motion** (2-col `<ProjectTile>` grid for live or synthesizing projects).
+- **Quiet for now** (3-col grid; last cell is a dashed `+ start a new one` tile).
+
+`<ProjectTile>` shows a hand-flavor tag (`☞ stakeholder interviews`, `✶ feedback pulse`, `☉ testimonial collection`), the project name in serif, progress as either a dot row (stakeholder) or filled bar (feedback / testimonial), a status chip and a relative-time stamp.
+
+### New project (`/app/projects/new`)
+
+Two-step flow without a route change. Step 1 is the **TypePicker**: two paper cards tilted ±0.5° with rotated tape, Caveat flavor labels, serif title, sans description, and three chips below. Step 2 is the **SetupForm** — a `card lined red-line` (ruled paper) with notebook fields. Numbered questions use Caveat clay numerals.
+
+### Project detail / synthesis (`/app/projects/[id]`)
+
+Hero card with `Tape`, `what we heard —` Caveat eyebrow, italic-clay project name, an executive narrative, and a `<Stamp>workshop ready</Stamp>` when ≥3 sessions are included. To the right, a 2×2 grid of `BigStat` tiles (interviews / themes / contradictions / quality).
+
+Below: `ProjectEvidenceSurface` renders **Themes** as spectrogram rows, **In their words** as a 12-col sticky-note constellation, and **Where they disagree** as gold/sage split panels with a `VersusAxis`. Each item opens the evidence drawer.
+
+Bottom of the page: collection setup, version history, optional consultant override, and a quality warning banner if synthesis is moderate-confidence.
+
+### Stakeholder interview (`/i/[linkToken]`)
+
+`AppBar` with a clay `recording transcript only` chip. Hero card with greeting + objective. Right rail with three `card flat`s: project context, today's questions checklist (sage/clay rings), anonymity disclaimer. The notebook layout is single-column for the conversation; the right-side waveform was deliberately removed in the design — never reintroduce it.
+
+Live state uses inline `<WaveBars>` plus an italic Caveat status. Controls below: clay `End conversation`, ghost `Pause`, ghost `Ask again`. Caveat elapsed/remaining on the right.
+
+### Feedback / testimonial (`/t/[linkToken]`)
+
+Single screen: `AppBar` with sage `words only · we don't keep audio` chip; centered card with green tape and a `<Scribble>` on the question; centered `<MicRing>`; `<WaveBars>` + Caveat italic timer below. Sage `Submit` and ghost `Start over` CTAs. **No live transcript shown to the participant** — they speak, we listen, they see the editable transcript only after stopping.
+
+### Completion / thank-you
+
+Sage `<Stamp>received · thank you</Stamp>`, big serif headline, Caveat `— really.` accent, body, optional sage sticky-note explaining what happens next.
+
+### Embed (`/embed/testimonials/[projectId]`)
+
+Cream background, mono `In their words` eyebrow, italic brand-color business name in the headline. Approved reviews render as `.sticky` notes with rotation, gold star row, serif quote, mono name. "Powered by gather." footer link.
 
 ---
 
-## Animations & Transitions
+## Animations & Motion
 
-- `transition` / `transition-all` / `transition-colors` — applied broadly on interactive surfaces (buttons, nav links, inputs, anchors via the global `a { @apply transition-colors }`).
-- `active:not-aria-[haspopup]:translate-y-px` — every button has a 1px press-down except when it's controlling a popover. This is the signature tactility.
-- **`tw-animate-css`** is imported in `globals.css` — shadcn-bundled keyframe utilities are available (`animate-in`, `animate-out`, `fade-in`, `slide-in-*`). Use these for panels entering and menu transitions; do not write bespoke `@keyframes`.
-- The server-inserted head bootstrap applies the saved or system theme before hydration.
-- The local `ThemeProvider` temporarily disables transitions during theme changes to suppress flash.
+- **Bar breathe**: `bar-breathe 1.1s ease-in-out infinite` — the wave bars scale between 8px and 48px while opacity 0.5 → 1.
+- **Mic pulse + ripple**: `mic-pulse 2.4s` + `mic-ripple 2.4s` (with a 1.2s delay on the second ripple) — the big record ring breathes and emits two soft rings.
+- **Live pulse**: `live-pulse 1.6s` — the live-now dot on a project tile.
+- **Drawer slide**: `slide-in 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)` + `fade-in 0.2s` on backdrop.
+- **Project tile hover**: `transform translateY(-2px)` + shadow-pop transition over 150ms.
+- **Button hover**: `transform translateY(-1px)` + an extra 1px of ink shadow.
 
-No bespoke animation durations are defined — rely on Tailwind defaults (`duration-150` implicit).
+`tw-animate-css` is imported but only used in passing — most animations live in `globals.css` keyframes.
 
 ---
 
 ## Border Radius
 
-Radii are generously large — small radii look broken against the 32px panel. Custom radius scale from `@theme inline`:
-
-```
---radius: 1rem (16px) · base
---radius-sm: 0.6rem  (~9.6px)
---radius-md: 0.8rem  (~12.8px)
---radius-lg: 1rem    (16px)
---radius-xl: 1.3rem  (~20.8px)
---radius-2xl: 1.7rem (~27.2px)
-```
-
-In practice most components use **Tailwind's arbitrary radius utilities** directly rather than the token scale:
+The system uses **smaller radii than typical SaaS** — paper edges, not pebbles.
 
 | Utility | Used on |
 |---|---|
-| `rounded-full` | Badges, primary dot indicators |
-| `rounded-4xl` | Buttons (the pill signature) |
-| `rounded-3xl` | Large info tiles inside cards |
-| `rounded-2xl` | Inputs, textareas, nav items, small nested tiles |
-| `rounded-[28px]` | Custom — Objective callout inside interview shell |
-| `rounded-[32px]` | `.panel` (the canonical surface) |
+| `rounded-full` | Buttons, chips, pills, dots, mic ring, avatar |
+| `rounded-md` (~6px) | `.card` (the canonical paper surface) |
+| `rounded-[8px]` | `.project-tile`, contradiction position panels, embed reviews |
+| `rounded-[3px]` | `.stamp`, `.sticky` |
 
-Rule of thumb: **the bigger the surface, the bigger the radius.** Panels > tiles > inputs > buttons (pill).
+Don't use `rounded-3xl`/`rounded-4xl`/`rounded-[28px]` — they break the paper register. Dashed borders (`border-dashed` / `divider-dashed`) are the system's preferred soft separator.
 
 ---
 
-## Opacity & Transparency
-
-Opacity is used constantly — it's the single most distinctive tool in this system. Patterns:
-
-### Surface Translucency
-
-- Panels over gradient: `bg-white/72` (light) / `bg-card/82` (dark).
-- Nested tile inside a panel: `bg-background/70`, `bg-background/75`, `bg-background/80`.
-- "Dashed hint" tiles: `bg-card/60` with `border-dashed`.
-
-### Color Tints (token/N pattern)
-
-Alpha-tinted theme colors for soft highlights:
-
-- `bg-primary/12` + `border-primary/20` — active nav, accent badge, highlight callouts.
-- `text-primary-foreground/75`, `text-primary-foreground/80` — secondary text on primary backgrounds.
-- `bg-destructive/10`, `bg-destructive/20` — destructive button (soft, not alarming).
-- `border-border/70` — default border opacity across the app (full `border-border` is rarely used).
-
-### Border-Translucent Dark Mode
-
-Dark theme borders use alpha on pure white: `oklch(1 0 0 / 10%)`, `oklch(1 0 0 / 14%)` — this is the idiomatic way to get hairline dividers that track the dark background without manual dark: overrides.
-
-### Interactive Opacity
-
-- `hover:bg-primary/80` — primary button hover fades rather than darkens.
-- `disabled:opacity-50` — canonical disabled state for buttons.
-- `aria-invalid:ring-destructive/20` — 20% destructive ring on invalid fields.
-
----
-
-## Common Tailwind CSS Usage in Project
-
-### Layout & Structure
-
-- `mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8` — page container (memorize this; it's on every top-level route).
-- `min-h-screen` — applied to the outer page-gradient wrapper.
-- `flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between` — the canonical "title + CTA" header row.
-- `grid gap-4 md:grid-cols-2 xl:grid-cols-4` — metric grids.
-- `min-w-0 flex-1` — on `<main>` inside the app shell, to prevent flex overflow.
-
-### Responsive Breakpoints
-
-- `sm:` — 640px (mostly reflow title rows).
-- `md:` — 768px (2-column form rows, 2-column metric grids).
-- `lg:` — 1024px (**primary** breakpoint for sidebar → content side-by-side, and for asymmetric grid splits).
-- `xl:` — 1280px (4-column metric grids).
-
-There is no explicit `2xl:` usage — `max-w-7xl` caps the layout before that point matters.
-
-### Typography
-
-- `text-balance` — applied to virtually every multi-word heading.
-- `leading-6` / `leading-7` / `leading-8` — paired tightly with text size.
-- `tracking-[0.24em]` / `tracking-[0.3em]` — uppercase micro-labels.
-- `truncate` — used on recovery tokens and long IDs in the interview shell.
-
-### Color
-
-- `text-muted-foreground` — default body copy color (not `text-foreground`). Use `text-foreground` only for emphasis, numeric values, and titles.
-- `text-primary` — link-like emphasis within muted paragraphs, feature icons.
-- `text-primary-foreground/75` — secondary text on a filled-primary card.
-
-### Effects
-
-- `backdrop-blur` — on every panel.
-- `border-dashed` — only on "hint" or "status" tiles (interview shell's status card).
-- `shrink-0` — sidebar, icons inside buttons.
-
-### Data & ARIA Attribute Selectors
-
-The button component uses advanced selectors that are worth knowing:
-
-- `aria-expanded:bg-muted` — treat pressed-open dropdown triggers as hover-state.
-- `aria-invalid:border-destructive aria-invalid:ring-[3px]` — form validation styling without a separate "error" class.
-- `has-data-[icon=inline-start]:pl-2.5` — the button tightens padding when it contains a leading icon, via `data-icon="inline-start"` on the child.
-
-### Dark Mode
-
-- Class strategy via the external startup bootstrap: `.dark` on `<html>`, default theme `system`.
-- Custom variant: `@custom-variant dark (&:is(.dark *))` — lets us write `dark:bg-card/70` anywhere.
-- Rarely needed for text (tokens already swap), but common for surface alphas like `dark:bg-card/82`.
-
----
-
-## Example Component — Reference Implementation
-
-Below is a reference component that exercises the full system: frosted panel container, eyebrow → H1 → muted lead, badge, primary+outline buttons with icons, info tiles, and status badge.
-
-```tsx
-import Link from "next/link"
-import { ArrowRight, CheckCircle, Lightning } from "@phosphor-icons/react/dist/ssr"
-
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-
-export function ReferenceSection() {
-  return (
-    <main className="page-gradient min-h-screen">
-      <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-        {/* Hero panel */}
-        <section className="panel space-y-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="space-y-3">
-              <Badge variant="accent" className="gap-2">
-                <Lightning className="size-4" />
-                Workshop readiness
-              </Badge>
-              <div>
-                <h1 className="text-4xl font-semibold text-balance">
-                  Interviews tied to transcript evidence
-                </h1>
-                <p className="mt-3 max-w-2xl text-base leading-7 text-muted-foreground">
-                  Every synthesized claim traces back to a session segment — no unattributed
-                  summaries, no hallucinated themes.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <Button asChild size="lg">
-                <Link href="/app">
-                  Open workspace
-                  <ArrowRight className="size-4" />
-                </Link>
-              </Button>
-              <Button asChild variant="outline" size="lg">
-                <Link href="/app/projects">View projects</Link>
-              </Button>
-            </div>
-          </div>
-        </section>
-
-        {/* Metric triad */}
-        <section className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader>
-              <CardDescription className="uppercase tracking-[0.24em]">
-                Completed
-              </CardDescription>
-              <CardTitle className="mt-3 text-4xl">24</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm leading-6 text-muted-foreground">
-                Transcript-backed interviews ready for synthesis.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardDescription className="uppercase tracking-[0.24em]">
-                In progress
-              </CardDescription>
-              <CardTitle className="mt-3 text-4xl">5</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm leading-6 text-muted-foreground">
-                Active or resumable participant sessions.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-primary text-primary-foreground">
-            <CardHeader>
-              <CardDescription className="text-primary-foreground/75">
-                Quality
-              </CardDescription>
-              <CardTitle className="text-4xl text-primary-foreground">
-                92%
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm leading-6 text-primary-foreground/80">
-                Average coverage score across all included sessions.
-              </p>
-            </CardContent>
-          </Card>
-        </section>
-
-        {/* Nested tile pattern */}
-        <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-          <Card>
-            <CardHeader>
-              <CardDescription>Emerging theme</CardDescription>
-              <CardTitle>Approval bottlenecks</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-3xl border border-border/70 bg-background/70 p-5">
-                <p className="eyebrow">Supporting evidence</p>
-                <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                  "The main bottleneck is that no one knows who can approve exceptions
-                  without escalating."
-                </p>
-                <div className="mt-4 flex items-center gap-2">
-                  <Badge variant="success">
-                    <CheckCircle className="size-3" />
-                    Verified
-                  </Badge>
-                  <Badge variant="neutral">6 sessions</Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardDescription>Next action</CardDescription>
-              <CardTitle>Review flagged sessions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button variant="outline" className="w-full justify-between">
-                Open session queue
-                <ArrowRight className="size-4" />
-              </Button>
-              <Button variant="secondary" className="w-full justify-between">
-                Refresh synthesis
-                <ArrowRight className="size-4" />
-              </Button>
-            </CardContent>
-          </Card>
-        </section>
-      </div>
-    </main>
-  )
-}
-```
-
----
-
-## Patterns & Conventions Checklist
+## Patterns Checklist
 
 When adding a new screen, verify each of these:
 
-- [ ] Root `<main>` uses `page-gradient min-h-screen`.
-- [ ] Inner container is `mx-auto max-w-7xl flex flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8`.
-- [ ] First section of every page is a `.panel` (or a `Card`) containing a `Badge` → H1 → muted lead.
-- [ ] Headings use `font-semibold` (never `bold`) + `text-balance`.
-- [ ] Body copy defaults to `text-sm leading-6 text-muted-foreground`.
-- [ ] Nested tiles inside cards use `rounded-2xl border border-border/70 bg-background/70` (small) or `rounded-3xl … p-5` (medium).
-- [ ] Buttons use CVA variants — no raw `<button>` styling.
-- [ ] Icons come from `@phosphor-icons/react` (use `/dist/ssr` in server components).
-- [ ] Uppercase labels always pair with `tracking-[0.24em]` or `tracking-[0.3em]`.
-- [ ] Active/selected states use `bg-primary/12 text-primary` tint — not a solid fill.
-- [ ] New theme tokens go in `:root` + `.dark` and are aliased through `@theme inline`.
-- [ ] Colors are always OKLCH. Do not introduce hex or HSL.
-- [ ] Don't add `shadow-md`/`shadow-lg`. If you need elevation beyond `.panel`, reach for translucency + `backdrop-blur`.
+- [ ] Page wraps in `<AppBar>` + `<main className="mx-auto w-full max-w-[1320px] px-6 py-9 sm:px-8 lg:px-10">`.
+- [ ] First section opens with a Caveat eyebrow → serif headline → optional muted lead.
+- [ ] Headings use `font-weight: 400`. There is no `font-bold`.
+- [ ] Body text defaults to `var(--ink-2)` (use `text-[var(--ink-2)]` on Tailwind classes that don't pick it up).
+- [ ] Forms wrap each input in `<Field label="…">`. Inputs use the notebook style (`<Input>`/`<Textarea>` primitives).
+- [ ] Buttons use the `<Button>` CVA variants — never raw `<button>` styling for primary actions.
+- [ ] One `<Stamp>` per page max. One `<Tape>` per card. One `<Scribble>` per heading.
+- [ ] Active / live states use `clay` (interviews) or `sage` (feedback / testimonial). Never both on the same surface.
+- [ ] No `dark:` classes — the system is light-only.
+- [ ] No `panel`/`panel-flush` classes — those are legacy. Use `card` / `card flat` / `card lined red-line`.
+- [ ] Colors via the named CSS vars (`var(--clay)`, etc.) or shadcn aliases (`bg-primary`, `text-muted-foreground`). Never raw hex/HSL except inside `:root`.
 
 ---
 
@@ -597,15 +335,19 @@ When adding a new screen, verify each of these:
 |---|---|
 | Theme tokens, global layers, custom components | `gather/app/globals.css` |
 | Fonts | `gather/app/layout.tsx` |
-| Theme startup bootstrap | `gather/components/theme-bootstrap.tsx` |
-| Shared theme constants and helpers | `gather/lib/theme/shared.ts` |
-| Theme provider + `d` hotkey | `gather/components/theme-provider.tsx` |
-| Button variants | `gather/components/ui/button.tsx` |
-| Card primitives | `gather/components/ui/card.tsx` |
-| Badge variants | `gather/components/ui/badge.tsx` |
+| Wordmark | `gather/components/ui/wordmark.tsx` |
+| App bar + avatar | `gather/components/ui/app-bar.tsx` |
+| Breadcrumb | `gather/components/ui/crumb.tsx` |
+| Field wrapper | `gather/components/ui/field.tsx` |
+| Ornaments (tape/stamp/pin/scribble/wave/mic/spectro/sticky) | `gather/components/ui/ornaments.tsx` |
+| Evidence drawer shell | `gather/components/ui/evidence-drawer.tsx` |
+| Button | `gather/components/ui/button.tsx` |
+| Card | `gather/components/ui/card.tsx` |
+| Badge | `gather/components/ui/badge.tsx` |
 | Input / Textarea | `gather/components/ui/input.tsx`, `textarea.tsx` |
-| App shell (sidebar layout) | `gather/components/dashboard/app-shell.tsx` |
-| Metric card reference | `gather/components/dashboard/metric-card.tsx` |
-| Interview shell (rich page example) | `gather/components/participant/interview-shell.tsx` |
-| `cn` utility (clsx + tailwind-merge) | `gather/lib/utils.ts` |
-| shadcn registry config | `gather/components.json` |
+| Project tile | `gather/components/dashboard/project-tile.tsx` |
+| App shell (top chrome wrapper) | `gather/components/dashboard/app-shell.tsx` |
+| Synthesis evidence surface | `gather/components/dashboard/project-evidence-surface.tsx` |
+| Interview surfaces | `gather/components/participant/interview-shell-surfaces.tsx` |
+| Testimonial capture shell | `gather/components/testimonials/testimonial-capture-shell.tsx` |
+| `cn` utility | `gather/lib/utils.ts` |

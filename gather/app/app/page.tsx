@@ -1,164 +1,167 @@
 import Link from "next/link"
-import { ArrowRight, FlagPennant, FolderOpen } from "@phosphor-icons/react/dist/ssr"
 
-import { ContinueReviewingRail } from "@/components/dashboard/continue-reviewing-rail"
-import { MetricCard } from "@/components/dashboard/metric-card"
-import { ProjectTypeBadge } from "@/components/dashboard/project-type-badge"
+import { ProjectTile } from "@/components/dashboard/project-tile"
 import { Button } from "@/components/ui/button"
-import { EmptyState } from "@/components/ui/empty-state"
+import { getProjectTypePreset } from "@/lib/project-types"
 import { getWorkspaceSnapshot } from "@/lib/data/repository"
+
+function workspaceFirstName(name: string) {
+  const trimmed = name.trim()
+  if (!trimmed) return "there"
+  const handle = trimmed.replace(/['"]/g, "")
+  return handle.split(/\s+/)[0] ?? handle
+}
+
+function dayLabel() {
+  return new Date().toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  })
+}
 
 export default async function ConsultantHomePage() {
   const snapshot = await getWorkspaceSnapshot()
-  const aggregate = snapshot.projects.reduce(
-    (accumulator, project) => ({
-      inProgress: accumulator.inProgress + project.sessionCounts.inProgress,
-      completed: accumulator.completed + project.sessionCounts.completed,
-      abandoned: accumulator.abandoned + project.sessionCounts.abandoned,
-      flagged: accumulator.flagged + project.sessionCounts.flagged,
-    }),
-    { inProgress: 0, completed: 0, abandoned: 0, flagged: 0 }
+  const firstName = workspaceFirstName(snapshot.workspace.name)
+
+  const tiles = snapshot.projects.map((project) => ({
+    id: project.id,
+    name: project.name,
+    projectType: project.projectType,
+    status: project.status,
+    sessionCounts: project.sessionCounts,
+    includedSessions: project.includedSessions,
+    updatedAt: project.updatedAt,
+    tagline: getProjectTypePreset(project.projectType).audiencePlural,
+  }))
+
+  const live = tiles.filter(
+    (p) => p.sessionCounts.inProgress > 0 || p.status === "synthesizing"
+  )
+  const quiet = tiles.filter(
+    (p) => !(p.sessionCounts.inProgress > 0 || p.status === "synthesizing")
   )
 
-  const firstProject = snapshot.projects[0] ?? null
-  const flaggedCount = snapshot.recentNeedsReviewSessions.length
+  const waitingCount =
+    snapshot.recentNeedsReviewSessions.length + Math.max(0, live.length)
 
   return (
-    <div className="stack gap-5">
-      <section className="panel-flush">
-        <header className="flex flex-col justify-between gap-3 px-6 py-5 lg:flex-row lg:items-end">
-          <div className="stack gap-1">
-            <p className="eyebrow-sm">Welcome back</p>
-            <h1 className="text-2xl font-semibold tracking-tight text-balance">
-              {snapshot.workspace.name}
-            </h1>
-          </div>
-          <Button asChild size="sm">
-            <Link href="/app/projects/new">New project</Link>
-          </Button>
-        </header>
-
-        <div className="divider" />
-
-        <section className="grid gap-3 px-6 py-5 md:grid-cols-2 xl:grid-cols-4">
-          <MetricCard
-            label="Projects"
-            value={String(snapshot.projects.length)}
-            hint="Active feedback collection."
-            href="/app/projects"
-            ariaLabel={`Projects: ${snapshot.projects.length}. Open the projects list.`}
-          />
-          <MetricCard
-            label="Live now"
-            value={String(aggregate.inProgress)}
-            hint={`${aggregate.inProgress} sessions in progress.`}
-            href="/app/projects?filter=live"
-            ariaLabel={`Live now: ${aggregate.inProgress}. Open projects with sessions in progress.`}
-          />
-          <MetricCard
-            label="Completed"
-            value={String(aggregate.completed)}
-            hint="Ready for review."
-            href="/app/projects?filter=completed"
-            ariaLabel={`Completed: ${aggregate.completed}. Open projects with completed sessions.`}
-          />
-          <MetricCard
-            label="Needs review"
-            value={String(aggregate.flagged)}
-            hint="Short answers or unclear responses."
-            accent="Review before trusting synthesis."
-            href="/app/projects?filter=needs-review"
-            ariaLabel={`Needs review: ${aggregate.flagged}. Open projects with flagged sessions.`}
-          />
-        </section>
-
-        <div className="divider" />
-
-        {firstProject ? (
-          <section className="stack gap-3 px-6 py-5">
-            <div className="flex items-center justify-between gap-3">
-              <div className="stack gap-1">
-                <p className="eyebrow-sm">Active project</p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-lg font-semibold tracking-tight text-foreground">
-                    {firstProject.name}
-                  </h2>
-                  <ProjectTypeBadge projectType={firstProject.projectType} />
-                </div>
-              </div>
-              <Button asChild variant="ghost" size="sm">
-                <Link
-                  href={`/app/projects/${firstProject.id}`}
-                  className="inline-flex items-center gap-1"
-                >
-                  Open
-                  <ArrowRight className="size-3.5" />
-                </Link>
-              </Button>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <span className="chip">
-                <span className="font-semibold tabular-nums text-foreground">
-                  {firstProject.sessionCounts.completed}
-                </span>
-                done
-              </span>
-              <span className="chip">
-                <span className="font-semibold tabular-nums text-foreground">
-                  {firstProject.sessionCounts.inProgress}
-                </span>
-                live
-              </span>
-              <span className="chip">
-                <span className="font-semibold tabular-nums text-foreground">
-                  {firstProject.sessionCounts.abandoned}
-                </span>
-                abandoned
-              </span>
-            </div>
-
-            {firstProject.activeThemes.length > 0 ? (
-              <div className="stack gap-2">
-                <p className="eyebrow-sm">Themes emerging</p>
-                <ul className="stack gap-1.5 list-disc pl-5 text-sm leading-6 text-muted-foreground marker:text-muted-foreground">
-                  {firstProject.activeThemes.map((theme) => (
-                    <li key={theme.id}>{theme.title}</li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-          </section>
-        ) : (
-          <section className="px-6 py-5">
-            <EmptyState
-              icon={FolderOpen}
-              title="No projects yet."
-              description="Create one to share a link with respondents."
-              action={
-                <Button asChild>
-                  <Link href="/app/projects/new">New project</Link>
-                </Button>
-              }
-            />
-          </section>
-        )}
-
-        <div className="divider" />
-
-        <section className="stack gap-3 px-6 py-5">
-          <div className="flex items-center justify-between gap-3">
-            <p className="eyebrow-sm">Continue reviewing</p>
-            {flaggedCount > 0 ? (
-              <span className="inline-flex items-center gap-1 text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
-                <FlagPennant className="size-3" />
-                {flaggedCount} flagged
-              </span>
-            ) : null}
-          </div>
-          <ContinueReviewingRail sessions={snapshot.recentNeedsReviewSessions} />
-        </section>
+    <div className="space-y-14">
+      <section>
+        <div className="font-hand text-[28px] text-[var(--clay)]">
+          good morning, {firstName} —
+        </div>
+        <h1
+          className="font-serif"
+          style={{
+            fontSize: 60,
+            fontWeight: 400,
+            lineHeight: 1.02,
+            margin: "0 0 18px",
+            letterSpacing: "-0.015em",
+          }}
+        >
+          {tiles.length === 0 ? (
+            <>No projects yet.</>
+          ) : waitingCount > 0 ? (
+            <>
+              {tiles.length} project{tiles.length === 1 ? "" : "s"},{" "}
+              <span style={{ fontStyle: "italic", color: "var(--clay)" }}>
+                {waitingCount}
+              </span>{" "}
+              waiting on you.
+            </>
+          ) : (
+            <>{tiles.length} projects, all quiet.</>
+          )}
+        </h1>
+        <div className="flex flex-wrap items-baseline gap-7">
+          <span className="font-sans" style={{ fontSize: 14, color: "var(--ink-2)" }}>
+            {snapshot.recentNeedsReviewSessions.length > 0
+              ? `${snapshot.recentNeedsReviewSessions.length} session${snapshot.recentNeedsReviewSessions.length === 1 ? "" : "s"} flagged for review.`
+              : "No flagged sessions — synthesis is fresh."}
+          </span>
+          <span className="font-mono text-[11px] text-[var(--ink-3)]">
+            {dayLabel()}
+          </span>
+        </div>
       </section>
+
+      {live.length > 0 ? (
+        <section>
+          <div className="mb-5 flex items-baseline gap-3.5">
+            <h2
+              className="font-serif"
+              style={{ fontSize: 26, fontWeight: 400, margin: 0 }}
+            >
+              In motion
+            </h2>
+            <span className="font-hand text-[18px] text-[var(--ink-3)]">
+              — need a look
+            </span>
+          </div>
+          <div className="grid gap-5 lg:grid-cols-2">
+            {live.map((p) => (
+              <ProjectTile key={p.id} project={p} />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <section>
+        <div className="mb-5 flex items-baseline gap-3.5">
+          <h2
+            className="font-serif"
+            style={{
+              fontSize: 22,
+              fontWeight: 400,
+              margin: 0,
+              color: "var(--ink-2)",
+            }}
+          >
+            {tiles.length === 0
+              ? "Start your first project"
+              : quiet.length === 0
+                ? "Everything in motion"
+                : "Quiet for now"}
+          </h2>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {quiet.map((p) => (
+            <ProjectTile key={p.id} project={p} />
+          ))}
+          <Link
+            href="/app/projects/new"
+            className="grid place-items-center text-center text-[var(--ink-3)]"
+            style={{
+              border: "1.5px dashed var(--line)",
+              borderRadius: 8,
+              padding: "26px 24px",
+              minHeight: 180,
+            }}
+          >
+            <div>
+              <div className="font-hand text-[32px] text-[var(--clay)]">
+                + start a new one
+              </div>
+              <div
+                className="font-sans"
+                style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 8 }}
+              >
+                feedback pulse · testimonial collection
+              </div>
+            </div>
+          </Link>
+        </div>
+      </section>
+
+      {tiles.length === 0 ? (
+        <section className="flex justify-center">
+          <Button asChild size="lg" variant="clay">
+            <Link href="/app/projects/new">+ Create your first project</Link>
+          </Button>
+        </section>
+      ) : null}
     </div>
   )
 }
