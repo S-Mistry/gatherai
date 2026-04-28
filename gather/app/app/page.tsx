@@ -1,7 +1,6 @@
 import Link from "next/link"
 
 import { ProjectTile } from "@/components/dashboard/project-tile"
-import { Button } from "@/components/ui/button"
 import { getProjectTypePreset } from "@/lib/project-types"
 import { getWorkspaceSnapshot } from "@/lib/data/repository"
 
@@ -9,15 +8,51 @@ function workspaceFirstName(name: string) {
   const trimmed = name.trim()
   if (!trimmed) return "there"
   const handle = trimmed.replace(/['"]/g, "")
-  return handle.split(/\s+/)[0] ?? handle
+  return (handle.split(/\s+/)[0] ?? handle).toLowerCase()
 }
 
 function dayLabel() {
-  return new Date().toLocaleDateString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  })
+  return new Date()
+    .toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    })
+    .toLowerCase()
+    .replace(",", " ·")
+}
+
+function ordinal(n: number): string {
+  const abs = Math.abs(n)
+  const lastTwo = abs % 100
+  if (lastTwo >= 11 && lastTwo <= 13) return `${n}th`
+  switch (abs % 10) {
+    case 1:
+      return `${n}st`
+    case 2:
+      return `${n}nd`
+    case 3:
+      return `${n}rd`
+    default:
+      return `${n}th`
+  }
+}
+
+function describeFreshness(snapshot: Awaited<ReturnType<typeof getWorkspaceSnapshot>>) {
+  const fresh = snapshot.projects
+    .filter((p) => p.status === "synthesizing" || p.sessionCounts.completed > 0)
+    .sort((a, b) => (a.updatedAt > b.updatedAt ? -1 : 1))[0]
+  if (!fresh) return "No flagged sessions — synthesis is fresh."
+  const completed = fresh.sessionCounts.completed
+  if (completed === 0) {
+    return "Synthesis is waiting on its first completed session."
+  }
+  return (
+    <>
+      <strong style={{ color: "var(--ink)" }}>{fresh.name}</strong> finished its{" "}
+      {ordinal(completed)} interview overnight — synthesis is fresh.
+    </>
+  )
 }
 
 export default async function ConsultantHomePage() {
@@ -41,20 +76,19 @@ export default async function ConsultantHomePage() {
   const quiet = tiles.filter(
     (p) => !(p.sessionCounts.inProgress > 0 || p.status === "synthesizing")
   )
-
-  const waitingCount =
-    snapshot.recentNeedsReviewSessions.length + Math.max(0, live.length)
+  const waitingCount = live.length + snapshot.recentNeedsReviewSessions.length
 
   return (
-    <div className="space-y-14">
-      <section>
-        <div className="font-hand text-[28px] text-[var(--clay)]">
+    <>
+      {/* Hero */}
+      <section style={{ padding: "48px 48px 28px", maxWidth: 1280, margin: "0 auto" }}>
+        <div className="font-hand" style={{ fontSize: 28, color: "var(--clay)", marginBottom: 4 }}>
           good morning, {firstName} —
         </div>
         <h1
           className="font-serif"
           style={{
-            fontSize: 60,
+            fontSize: 64,
             fontWeight: 400,
             lineHeight: 1.02,
             margin: "0 0 18px",
@@ -75,32 +109,28 @@ export default async function ConsultantHomePage() {
             <>{tiles.length} projects, all quiet.</>
           )}
         </h1>
-        <div className="flex flex-wrap items-baseline gap-7">
+        <div style={{ display: "flex", gap: 28, alignItems: "baseline", flexWrap: "wrap" }}>
           <span className="font-sans" style={{ fontSize: 14, color: "var(--ink-2)" }}>
-            {snapshot.recentNeedsReviewSessions.length > 0
-              ? `${snapshot.recentNeedsReviewSessions.length} session${snapshot.recentNeedsReviewSessions.length === 1 ? "" : "s"} flagged for review.`
-              : "No flagged sessions — synthesis is fresh."}
+            {describeFreshness(snapshot)}
           </span>
-          <span className="font-mono text-[11px] text-[var(--ink-3)]">
+          <span className="font-mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
             {dayLabel()}
           </span>
         </div>
       </section>
 
+      {/* In motion */}
       {live.length > 0 ? (
-        <section>
-          <div className="mb-5 flex items-baseline gap-3.5">
-            <h2
-              className="font-serif"
-              style={{ fontSize: 26, fontWeight: 400, margin: 0 }}
-            >
+        <section style={{ padding: "0 48px 32px", maxWidth: 1280, margin: "0 auto" }}>
+          <div className="section-head">
+            <h2 className="font-serif" style={{ fontSize: 26, fontWeight: 400 }}>
               In motion
             </h2>
-            <span className="font-hand text-[18px] text-[var(--ink-3)]">
+            <span className="font-hand" style={{ fontSize: 18, color: "var(--ink-3)" }}>
               — need a look
             </span>
           </div>
-          <div className="grid gap-5 lg:grid-cols-2">
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 22 }}>
             {live.map((p) => (
               <ProjectTile key={p.id} project={p} />
             ))}
@@ -108,16 +138,12 @@ export default async function ConsultantHomePage() {
         </section>
       ) : null}
 
-      <section>
-        <div className="mb-5 flex items-baseline gap-3.5">
+      {/* Quiet for now */}
+      <section style={{ padding: "20px 48px 80px", maxWidth: 1280, margin: "0 auto" }}>
+        <div className="section-head">
           <h2
             className="font-serif"
-            style={{
-              fontSize: 22,
-              fontWeight: 400,
-              margin: 0,
-              color: "var(--ink-2)",
-            }}
+            style={{ fontSize: 22, fontWeight: 400, color: "var(--ink-2)" }}
           >
             {tiles.length === 0
               ? "Start your first project"
@@ -126,42 +152,38 @@ export default async function ConsultantHomePage() {
                 : "Quiet for now"}
           </h2>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 18 }}>
           {quiet.map((p) => (
             <ProjectTile key={p.id} project={p} />
           ))}
           <Link
             href="/app/projects/new"
-            className="grid place-items-center text-center text-[var(--ink-3)]"
+            className="grid place-items-center text-center"
             style={{
               border: "1.5px dashed var(--line)",
               borderRadius: 8,
-              padding: "26px 24px",
+              padding: "24px 26px",
               minHeight: 180,
+              color: "var(--ink-3)",
             }}
           >
             <div>
-              <div className="font-hand text-[32px] text-[var(--clay)]">
+              <div
+                className="font-hand"
+                style={{ fontSize: 32, color: "var(--clay)" }}
+              >
                 + start a new one
               </div>
               <div
                 className="font-sans"
                 style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 8 }}
               >
-                feedback pulse · testimonial collection
+                stakeholder interviews · feedback pulse
               </div>
             </div>
           </Link>
         </div>
       </section>
-
-      {tiles.length === 0 ? (
-        <section className="flex justify-center">
-          <Button asChild size="lg" variant="clay">
-            <Link href="/app/projects/new">+ Create your first project</Link>
-          </Button>
-        </section>
-      ) : null}
-    </div>
+    </>
   )
 }

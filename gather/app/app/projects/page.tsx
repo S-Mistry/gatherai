@@ -80,7 +80,14 @@ export default async function ProjectsPage({
   const activeFilterConfig = activeFilter ? filterConfig[activeFilter] : null
 
   return (
-    <div className="space-y-10">
+    <div
+      style={{
+        padding: "48px 48px 80px",
+        maxWidth: 1280,
+        margin: "0 auto",
+      }}
+      className="space-y-10"
+    >
       <section>
         <div className="font-hand text-[24px] text-[var(--clay)]">
           your bookshelf —
@@ -92,7 +99,7 @@ export default async function ProjectsPage({
               style={{
                 fontSize: 44,
                 fontWeight: 400,
-                letterSpacing: "-0.012em",
+                letterSpacing: "-0.01em",
                 margin: 0,
               }}
             >

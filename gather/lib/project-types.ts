@@ -68,12 +68,12 @@ const PROJECT_TYPE_PRESETS: Record<ProjectType, ProjectTypePreset> = {
       "Before the team decides what to do next, they'd love to hear what's working, what isn't, and what you would change. I'll ask a few questions and listen carefully.",
     disclosureLines: [
       "I'll listen and write down what you say.",
-      "Your voice recording is not saved.",
-      "Only the consultant sees the transcript.",
+      "We'll cover one topic at a time.",
+      "You can pause or stop whenever you need.",
     ],
     completionTitle: "Thanks. That gives the team a clearer starting point.",
     completionDescription:
-      "Your voice isn't saved. The transcript helps the team prepare for what comes next.",
+      "Your perspective helps the team prepare for what comes next.",
     implicationsLabel: "Workshop implications",
     implicationsEmptyMessage:
       "No workshop implications were grounded from this transcript yet.",
@@ -109,13 +109,13 @@ const PROJECT_TYPE_PRESETS: Record<ProjectType, ProjectTypePreset> = {
       "The team behind this experience would love to hear what worked, what missed, and what to improve next time. I'll ask a few short questions and listen carefully.",
     disclosureLines: [
       "I'll listen and write down what you say.",
-      "Your voice recording is not saved.",
-      "Only the organizer sees the transcript.",
+      "We'll cover one topic at a time.",
+      "You can pause or stop whenever you need.",
     ],
     completionTitle:
       "Thanks. Your feedback is now part of the improvement loop.",
     completionDescription:
-      "Your voice isn't saved. The transcript helps the team improve the experience.",
+      "Your feedback helps the team improve the experience.",
     implicationsLabel: "Improvement implications",
     implicationsEmptyMessage:
       "No grounded improvement implications were captured from this transcript yet.",
@@ -143,12 +143,12 @@ const PROJECT_TYPE_PRESETS: Record<ProjectType, ProjectTypePreset> = {
       "Share a short review in your own words. You can edit the transcript before submitting.",
     disclosureLines: [
       "We'll transcribe what you say.",
-      "Your voice recording is not saved.",
+      "You can edit the text before submitting.",
       "Your written review is sent for approval.",
     ],
     completionTitle: "Thanks. Your review has been submitted.",
     completionDescription:
-      "Your voice isn't saved. The written review is now waiting for approval.",
+      "Your written review is now waiting for approval.",
     implicationsLabel: "Review implications",
     implicationsEmptyMessage:
       "Testimonials use review approval instead of interview analysis.",

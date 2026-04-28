@@ -32,7 +32,7 @@ const feedbackConfig: PublicInterviewConfig = {
   toneStyle: "Warm, concise, reflective, researcher-like.",
   followUpLimit: 1,
   intro: "We would love to understand what landed and what missed.",
-  disclosure: "Only the transcript is retained.",
+  disclosure: "We'll cover one topic at a time.",
   areasOfInterest: ["What worked", "What to improve"],
   requiredQuestions: [
     {
@@ -77,6 +77,8 @@ test("feedback realtime instructions include adaptive probing policy", () => {
     instructions,
     /final spoken line must be exactly: Thanks for sharing that\. We're finished now\./
   )
+  assert.doesNotMatch(instructions, /audio is not stored/)
+  assert.doesNotMatch(instructions, /transcript is retained/)
 })
 
 test("participant audio config uses stricter noise handling", () => {

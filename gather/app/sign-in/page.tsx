@@ -65,9 +65,9 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
 
   const description =
     showOAuthCta && providerLabel !== null
-      ? `Continue with ${providerLabel} to open your private workspace. No password to remember.`
+      ? `Continue with ${providerLabel} to open your workspace.`
       : showMagicLinkForm
-        ? "We'll email a one-tap sign-in link. No password to remember."
+        ? "We'll email a one-tap sign-in link."
         : "Sign-in is unavailable until the auth configuration is fixed."
 
   return (
@@ -139,17 +139,6 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
               <Button asChild size="lg" className="w-full">
                 <Link href={oauthHref}>Continue with {providerLabel} →</Link>
               </Button>
-              <p
-                className="font-sans"
-                style={{
-                  fontSize: 13,
-                  lineHeight: 1.55,
-                  color: "var(--ink-3)",
-                }}
-              >
-                We use your verified account email to find the right private
-                workspace.
-              </p>
             </div>
           ) : null}
 
@@ -198,8 +187,8 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
               margin: "0 0 6px",
             }}
           >
-            Each workspace is private. Respondent conversations never leave it.
-            Words only — we don&apos;t keep audio.
+            Create projects, share links, and review responses from one
+            workspace.
           </p>
           <p
             className="font-sans"

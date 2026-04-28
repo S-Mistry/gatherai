@@ -1,19 +1,18 @@
 "use client"
 
 import { useCallback, useState } from "react"
-import {
-  PauseCircle,
-  PlayCircle,
-  WarningCircle,
-} from "@phosphor-icons/react"
+import { WarningCircle } from "@phosphor-icons/react"
 
 import { Button } from "@/components/ui/button"
-import { Stamp, WaveBars } from "@/components/ui/ornaments"
+import { MarginNote } from "@/components/ui/margin-note"
+import { Tape, WaveBars } from "@/components/ui/ornaments"
 import { type VoiceState } from "@/components/ui/voice-status"
 import type { MicSupport } from "@/lib/participant/mic-support"
 import { getProjectTypePreset } from "@/lib/project-types"
 import { PARTICIPANT_INTERVIEWER_NAME } from "@/lib/openai/realtime-config"
-import type { ProjectType, PublicInterviewConfig } from "@/lib/domain/types"
+import type { PublicInterviewConfig, QuestionDefinition } from "@/lib/domain/types"
+import type { TranscriptPayloadSegment } from "@/lib/participant/realtime-history"
+import { Completion } from "./completion"
 
 export type InterviewShellStatus =
   | "ready"
@@ -30,125 +29,404 @@ function formatMinutes(seconds: number): string {
   return `${minutes}`
 }
 
-export function InterviewObjectivePanel({ objective }: { objective: string }) {
+// ────────────────────────────────────────────────────────
+// NotebookCard — the design's `card lined red-line` with two
+// tapes, scribble Q heading, transcript rows, inline live row.
+// ────────────────────────────────────────────────────────
+
+export function NotebookCard({
+  respondentLabel,
+  activeQuestion,
+  questionIndex,
+  totalQuestions,
+  segments,
+  voiceState,
+  paused,
+  showLiveRow,
+  livePartial,
+  marginNote,
+  preStart,
+}: {
+  respondentLabel: string
+  activeQuestion: string
+  questionIndex: number
+  totalQuestions: number
+  segments: TranscriptPayloadSegment[]
+  voiceState: VoiceState
+  paused: boolean
+  showLiveRow: boolean
+  livePartial?: string | null
+  marginNote?: { top: number; text: React.ReactNode } | null
+  preStart?: React.ReactNode
+}) {
   return (
     <div
+      className="card lined red-line"
       style={{
-        border: "1px dashed var(--line)",
-        borderRadius: 8,
-        padding: "18px 22px",
-        background: "var(--card-2)",
+        padding: "38px 44px 44px 74px",
+        minHeight: 740,
+        position: "relative",
       }}
     >
-      <span className="eyebrow">What we&apos;d like to learn</span>
-      <p
-        className="font-serif mt-3"
-        style={{ fontSize: 18, lineHeight: 1.5, color: "var(--ink)", margin: 0 }}
+      <Tape style={{ top: -11, left: 60, transform: "rotate(-3deg)" }} />
+      <Tape
+        tint="green"
+        style={{ top: -9, right: 80, transform: "rotate(4deg)" }}
+      />
+
+      <div
+        className="font-hand inline-block"
+        style={{
+          fontSize: 28,
+          color: "var(--clay)",
+          transform: "rotate(-1.5deg)",
+          marginBottom: 6,
+        }}
       >
-        {objective}
-      </p>
+        conversation with {respondentLabel.toLowerCase()} —
+      </div>
+      <div
+        style={{
+          display: "flex",
+          gap: 14,
+          alignItems: "baseline",
+          marginBottom: 28,
+        }}
+      >
+        <span
+          className="font-mono"
+          style={{ fontSize: 11, color: "var(--ink-3)" }}
+        >
+          Q{questionIndex} / {totalQuestions}
+        </span>
+        <h2
+          className="font-serif"
+          style={{ fontSize: 34, lineHeight: 1.15, margin: 0, fontWeight: 400 }}
+        >
+          <span className="scribble">{activeQuestion}</span>
+        </h2>
+      </div>
+
+      <div style={{ display: "grid", gap: 4 }}>
+        {segments.map((segment, i) => {
+          const isParticipant = segment.speaker === "participant"
+          return (
+            <div
+              key={segment.sourceItemId}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "90px 1fr",
+                gap: 16,
+                padding: "10px 0",
+              }}
+            >
+              <div
+                className="font-hand"
+                style={{
+                  fontSize: 20,
+                  color: isParticipant ? "var(--clay)" : "var(--ink-3)",
+                  transform: `rotate(${i % 2 ? -2 : 1}deg)`,
+                }}
+              >
+                {isParticipant ? "you" : "gather"} →
+              </div>
+              <div
+                className="font-serif"
+                style={{ fontSize: 21, lineHeight: 1.5 }}
+              >
+                {segment.text}
+              </div>
+            </div>
+          )
+        })}
+
+        {showLiveRow ? (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "90px 1fr",
+              gap: 16,
+              padding: "14px 0 6px",
+            }}
+          >
+            <div
+              className="font-hand"
+              style={{
+                fontSize: 20,
+                color: "var(--clay)",
+                transform: "rotate(-1deg)",
+              }}
+            >
+              you →
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <WaveBars count={22} height={42} />
+              <span
+                className="font-hand"
+                style={{ fontSize: 20, color: "var(--ink-3)" }}
+              >
+                {livePartial ??
+                  (paused
+                    ? "paused — tap resume to continue"
+                    : voiceState === "listening"
+                      ? "listening…"
+                      : voiceState === "thinking"
+                        ? `${PARTICIPANT_INTERVIEWER_NAME.toLowerCase()} is thinking…`
+                        : voiceState === "speaking"
+                          ? `${PARTICIPANT_INTERVIEWER_NAME.toLowerCase()} is talking…`
+                          : "take your time — speak when ready")}
+              </span>
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      {marginNote ? (
+        <MarginNote top={marginNote.top}>{marginNote.text}</MarginNote>
+      ) : null}
+
+      {preStart ? <div style={{ marginTop: 36 }}>{preStart}</div> : null}
     </div>
   )
 }
 
-export function InterviewInfoSidebar({
+// ────────────────────────────────────────────────────────
+// SidebarRail — three `card flat`s with project context,
+// today's questions checklist, anonymity disclaimer.
+// ────────────────────────────────────────────────────────
+
+export function SidebarRail({
   config,
+  activeIndex,
+  doneIndices,
+  respondentLabel,
 }: {
   config: PublicInterviewConfig
+  activeIndex: number
+  doneIndices: Set<number>
+  respondentLabel: string
 }) {
   const preset = getProjectTypePreset(config.projectType)
+  const anonymityCopy =
+    config.anonymityMode === "anonymous"
+      ? "Your response appears without a name or role."
+      : config.anonymityMode === "pseudonymous"
+        ? `Your response appears under "${respondentLabel}" instead of a name.`
+        : "Your response appears with the name you provide."
 
   return (
-    <div className="card flat" style={{ padding: "26px 28px" }}>
-      <div className="font-hand text-[24px] text-[var(--clay)]">
-        a few things to know —
+    <div
+      style={{
+        display: "grid",
+        gap: 18,
+        position: "sticky",
+        top: 90,
+        alignSelf: "start",
+      }}
+    >
+      <div className="card flat">
+        <div
+          className="font-hand"
+          style={{ fontSize: 24, color: "var(--clay)", marginBottom: 4 }}
+        >
+          hello —
+        </div>
+        <h3
+          className="font-serif"
+          style={{
+            fontSize: 24,
+            margin: "0 0 12px",
+            lineHeight: 1.18,
+            fontWeight: 400,
+          }}
+        >
+          {config.projectName}
+        </h3>
+        <p
+          className="font-sans"
+          style={{
+            fontSize: 13,
+            lineHeight: 1.55,
+            color: "var(--ink-2)",
+            margin: 0,
+          }}
+        >
+          {config.objective}
+        </p>
+        {config.areasOfInterest.length > 0 ? (
+          <div
+            style={{
+              marginTop: 14,
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 6,
+            }}
+          >
+            {config.areasOfInterest.map((area) => (
+              <span key={area} className="chip">
+                {area}
+              </span>
+            ))}
+          </div>
+        ) : null}
       </div>
 
-      <div className="mt-5 space-y-4">
-        <InfoBlock title="how it works">
+      {config.requiredQuestions.length > 0 ? (
+        <div className="card flat">
+          <div
+            className="font-hand"
+            style={{ fontSize: 24, color: "var(--clay)", marginBottom: 12 }}
+          >
+            today&apos;s questions
+          </div>
+          {config.requiredQuestions.map((q: QuestionDefinition, i) => {
+            const done = doneIndices.has(i)
+            const active = i === activeIndex
+            return (
+              <div
+                key={q.id}
+                style={{
+                  display: "flex",
+                  gap: 12,
+                  padding: "10px 0",
+                  borderBottom:
+                    i < config.requiredQuestions.length - 1
+                      ? "1px dashed var(--line)"
+                      : "none",
+                  alignItems: "flex-start",
+                }}
+              >
+                <span
+                  style={{
+                    minWidth: 22,
+                    height: 22,
+                    borderRadius: "50%",
+                    border:
+                      "2px solid " +
+                      (done
+                        ? "var(--sage)"
+                        : active
+                          ? "var(--clay)"
+                          : "var(--line)"),
+                    background: done ? "var(--sage)" : "transparent",
+                    display: "grid",
+                    placeItems: "center",
+                    marginTop: 2,
+                  }}
+                >
+                  {done ? (
+                    <span style={{ color: "var(--card)", fontSize: 11 }}>
+                      ✓
+                    </span>
+                  ) : null}
+                </span>
+                <span
+                  className="font-serif"
+                  style={{
+                    fontSize: 16,
+                    lineHeight: 1.4,
+                    color: done
+                      ? "var(--ink-3)"
+                      : active
+                        ? "var(--ink)"
+                        : "var(--ink-2)",
+                    fontWeight: active ? 600 : 400,
+                  }}
+                >
+                  {q.prompt}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      ) : null}
+
+      <div className="card flat" style={{ background: "var(--card-2)" }}>
+        <div className="eyebrow" style={{ marginBottom: 8 }}>
+          Anonymity · {config.anonymityMode}
+        </div>
+        <p
+          className="font-sans"
+          style={{
+            fontSize: 12.5,
+            lineHeight: 1.5,
+            color: "var(--ink-2)",
+            margin: 0,
+          }}
+        >
+          {anonymityCopy}
+        </p>
+        {preset.disclosureLines.length > 0 ? (
           <ul
             className="font-sans"
             style={{
-              margin: 0,
+              margin: "10px 0 0",
               paddingLeft: 18,
-              fontSize: 13.5,
-              lineHeight: 1.6,
-              color: "var(--ink-2)",
+              fontSize: 12,
+              lineHeight: 1.5,
+              color: "var(--ink-3)",
             }}
           >
-            <li>One question at a time.</li>
-            <li>Take as long as you want to answer.</li>
-            <li>You can pause or end early — nothing is lost.</li>
+            {preset.disclosureLines.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
           </ul>
-        </InfoBlock>
-
-        <InfoBlock title="how you're identified">
-          <p
-            className="font-sans m-0"
-            style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--ink-2)" }}
-          >
-            {config.anonymityMode === "anonymous"
-              ? "Fully anonymous — no name or role attached to what you say."
-              : config.anonymityMode === "pseudonymous"
-                ? `By label only — you'll appear as a labeled ${preset.anonymousRespondentLabel.toLowerCase()}, not by name.`
-                : "By name — the consultant will see who said what."}
-          </p>
-        </InfoBlock>
-
-        {config.metadataPrompts.length > 0 ? (
-          <InfoBlock title="a few quick questions first">
-            <ul
-              className="font-sans"
-              style={{
-                margin: 0,
-                paddingLeft: 18,
-                fontSize: 13.5,
-                lineHeight: 1.55,
-                color: "var(--ink-2)",
-              }}
-            >
-              {config.metadataPrompts.map((prompt) => (
-                <li key={prompt.id}>
-                  {prompt.label}
-                  {prompt.required ? "" : " (optional)"}
-                </li>
-              ))}
-            </ul>
-          </InfoBlock>
         ) : null}
       </div>
     </div>
   )
 }
 
-function InfoBlock({
-  title,
-  children,
+// ────────────────────────────────────────────────────────
+// NotebookControls — bottom row beneath the notebook card.
+// ────────────────────────────────────────────────────────
+
+export function NotebookControls({
+  paused,
+  elapsedSeconds,
+  durationTargetLabel,
+  onTogglePause,
+  onComplete,
 }: {
-  title: string
-  children: React.ReactNode
+  paused: boolean
+  elapsedSeconds: number
+  durationTargetLabel: string
+  onTogglePause: () => void
+  onComplete: () => void
 }) {
   return (
     <div
       style={{
-        border: "1px dashed var(--line)",
-        borderRadius: 6,
-        padding: "14px 18px",
-        background: "var(--card-2)",
+        display: "flex",
+        gap: 10,
+        marginTop: 22,
+        alignItems: "center",
+        flexWrap: "wrap",
       }}
     >
-      <div
-        className="font-hand mb-2"
-        style={{ fontSize: 18, color: "var(--clay)" }}
+      <Button variant="clay" onClick={onComplete}>
+        ◼ End conversation
+      </Button>
+      <Button variant="ghost" onClick={onTogglePause}>
+        {paused ? "Resume" : "Pause"}
+      </Button>
+      <div style={{ flex: 1 }} />
+      <span
+        className="font-hand"
+        style={{ fontSize: 22, color: "var(--ink-3)" }}
       >
-        {title}
-      </div>
-      {children}
+        {formatMinutes(elapsedSeconds)} elapsed · {durationTargetLabel} cap
+      </span>
     </div>
   )
 }
 
-export function PreStartSurface({
+// ────────────────────────────────────────────────────────
+// PreStartCard — when status is ready / connecting / error,
+// rendered inside NotebookCard's `preStart` slot. Centered CTA.
+// ────────────────────────────────────────────────────────
+
+export function PreStartCard({
   status,
   errorMessage,
   onStart,
@@ -199,8 +477,8 @@ export function PreStartSurface({
         </div>
         <div className="flex flex-wrap gap-3">
           <Button
-            size="lg"
             variant="ghost"
+            size="lg"
             onClick={() => void onRecheckMicSupport()}
           >
             I fixed it — try again
@@ -286,126 +564,23 @@ function CopyLinkButton() {
   )
 }
 
-export function LiveSurface({
-  voiceState,
-  elapsedSeconds,
-  durationTargetLabel,
-  durationAriaDescription,
-  interviewStarted,
-  paused,
-  onTogglePause,
-  onComplete,
-}: {
-  voiceState: VoiceState
-  elapsedSeconds: number
-  durationTargetLabel: string
-  durationAriaDescription: string
-  interviewStarted: boolean
-  paused: boolean
-  onTogglePause: () => void
-  onComplete: () => void
-}) {
-  const statusLabel = paused
-    ? `${PARTICIPANT_INTERVIEWER_NAME} is paused`
-    : voiceState === "idle"
-      ? interviewStarted
-        ? `${PARTICIPANT_INTERVIEWER_NAME} is waiting`
-        : `${PARTICIPANT_INTERVIEWER_NAME} is introducing the interview`
-      : `${PARTICIPANT_INTERVIEWER_NAME} is ${voiceState}`
-
-  return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3">
-          <WaveBars count={20} height={40} />
-          <span
-            className="font-serif"
-            style={{
-              fontSize: 18,
-              color: "var(--ink-2)",
-              fontStyle: "italic",
-            }}
-          >
-            {statusLabel}
-          </span>
-        </div>
-        <span
-          className="font-mono text-[12px] text-[var(--ink-3)]"
-          aria-label={`${formatMinutes(elapsedSeconds)} minutes elapsed; ${durationAriaDescription}`}
-        >
-          {formatMinutes(elapsedSeconds)} / {durationTargetLabel}
-        </span>
-      </div>
-
-      <p
-        className="font-serif"
-        style={{
-          fontSize: 18,
-          lineHeight: 1.6,
-          color: "var(--ink-2)",
-          margin: 0,
-        }}
-      >
-        {paused
-          ? "Paused. Press resume when you're ready."
-          : interviewStarted
-            ? "I'm listening. Take your time."
-            : `${PARTICIPANT_INTERVIEWER_NAME} will introduce herself first. Say ready when you'd like to begin.`}
-      </p>
-
-      <div className="flex flex-wrap gap-3">
-        <Button variant="ghost" size="lg" onClick={onTogglePause}>
-          {paused ? (
-            <PlayCircle className="size-4" />
-          ) : (
-            <PauseCircle className="size-4" />
-          )}
-          {paused ? "Resume" : "Pause"}
-        </Button>
-        <Button variant="clay" size="lg" onClick={onComplete}>
-          I&apos;m done
-        </Button>
-      </div>
-    </div>
-  )
-}
+// ────────────────────────────────────────────────────────
+// Backwards-compat exports — keep older surfaces around so
+// the shell can still render the legacy structure if needed.
+// New code should compose NotebookCard / SidebarRail directly.
+// ────────────────────────────────────────────────────────
 
 export function CompletionSurface({
   projectType,
 }: {
-  projectType: ProjectType
+  projectType: PublicInterviewConfig["projectType"]
 }) {
   const preset = getProjectTypePreset(projectType)
-
   return (
-    <div className="card flat text-center" style={{ padding: "60px 40px" }}>
-      <div className="mb-6">
-        <Stamp variant="sage">received · thank you</Stamp>
-      </div>
-      <h2
-        className="font-serif"
-        style={{
-          fontSize: 56,
-          fontWeight: 400,
-          lineHeight: 1.05,
-          letterSpacing: "-0.02em",
-          margin: "0 0 16px",
-        }}
-      >
-        {preset.completionTitle}
-      </h2>
-      <p
-        className="font-serif"
-        style={{
-          fontSize: 19,
-          lineHeight: 1.55,
-          color: "var(--ink-2)",
-          margin: "0 auto 24px",
-          maxWidth: 480,
-        }}
-      >
-        {preset.completionDescription} You can close this tab.
-      </p>
-    </div>
+    <Completion
+      headline={preset.completionTitle}
+      body={`${preset.completionDescription} You can close this tab.`}
+      smallPrint=""
+    />
   )
 }

@@ -31,7 +31,7 @@ const ANONYMITY_OPTIONS: Array<{
   {
     value: "pseudonymous",
     label: "Pseudonymous",
-    description: "Labels keep context. Names stay private.",
+    description: "Responses appear under respondent labels.",
   },
   {
     value: "anonymous",
@@ -96,7 +96,7 @@ function TypePicker({
       <h1
         className="font-serif"
         style={{
-          fontSize: 52,
+          fontSize: 56,
           fontWeight: 400,
           lineHeight: 1.05,
           letterSpacing: "-0.015em",
@@ -144,7 +144,7 @@ function TypePicker({
               <div
                 className="card flat relative"
                 style={{
-                  padding: "30px 32px 28px",
+                  padding: "28px 30px 26px",
                   minHeight: 280,
                   background: type === "feedback" ? "var(--card-2)" : "var(--card)",
                 }}
@@ -166,11 +166,10 @@ function TypePicker({
                 <h3
                   className="font-serif"
                   style={{
-                    fontSize: 28,
+                    fontSize: 30,
                     fontWeight: 400,
-                    margin: "12px 0 16px",
-                    lineHeight: 1.18,
-                    letterSpacing: "-0.005em",
+                    margin: "14px 0 18px",
+                    lineHeight: 1.2,
                   }}
                 >
                   {preset.createTitle}
@@ -291,7 +290,7 @@ function SetupForm({
             fontSize: 44,
             fontWeight: 400,
             margin: "0 0 6px",
-            letterSpacing: "-0.012em",
+            letterSpacing: "-0.01em",
           }}
         >
           {testimonialMode
@@ -567,39 +566,6 @@ function FeedbackFields({
           onChange={(event) => onObjective(event.target.value)}
         />
       </Field>
-
-      <div
-        className="flex items-center gap-3.5 rounded-md"
-        style={{
-          padding: "14px 18px",
-          background: "rgba(255,255,255,0.5)",
-        }}
-      >
-        <span
-          className="grid place-items-center"
-          style={{
-            width: 24,
-            height: 24,
-            borderRadius: "50%",
-            border: "2px solid var(--sage)",
-            background: "var(--sage)",
-          }}
-        >
-          <span style={{ color: "var(--card)", fontSize: 12 }}>✓</span>
-        </span>
-        <div>
-          <div className="font-sans" style={{ fontSize: 13, fontWeight: 600 }}>
-            Hide the live transcript from participants
-          </div>
-          <div
-            className="font-sans"
-            style={{ fontSize: 12, color: "var(--ink-2)", marginTop: 2 }}
-          >
-            They speak; we listen. They see a thank-you. Themes roll up once
-            enough have answered.
-          </div>
-        </div>
-      </div>
     </div>
   )
 }

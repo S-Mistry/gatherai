@@ -117,6 +117,19 @@
 }
 
 @layer components {
+  /* H2 + Caveat helper text on the same baseline. */
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+    row-gap: 4px;
+    margin-bottom: 18px;
+  }
+  .section-head h2 {
+    margin: 0;
+  }
+
   /* ── Type families ─────────────────────────────────────── */
   .font-hand {
     font-family: var(--font-hand), "Caveat", cursive;

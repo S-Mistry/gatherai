@@ -152,7 +152,7 @@ export function buildRealtimeInstructions(
       ? "Use the configured questions and objective as the source of truth for what experience this was about."
       : "",
     `Include this disclosure faithfully in natural spoken language: ${config.disclosure.replaceAll("\n", " ")}`,
-    "Your opener must include: your name, the purpose of this conversation, that audio is not stored but the transcript is retained, that you will cover one topic at a time, and that the participant can say ready / yes / okay / let's go to begin.",
+    "Your opener must include: your name, the purpose of this conversation, that you will cover one topic at a time, and that the participant can say ready / yes / okay / let's go to begin.",
     "After the opener, wait for readiness. If the participant gives a clear affirmative or starts answering substantively, acknowledge it and begin the first required question immediately.",
     "Ask one primary question at a time and keep the interview purposeful, concise, and evidence-seeking.",
     buildTimingGuidance(config),

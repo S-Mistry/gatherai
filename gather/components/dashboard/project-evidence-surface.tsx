@@ -406,13 +406,13 @@ function Section({
   children: ReactNode
 }) {
   return (
-    <section className="space-y-5">
-      <div className="flex items-baseline gap-3.5 flex-wrap">
-        <h2 className="font-serif" style={{ fontSize: 28, fontWeight: 400, margin: 0 }}>
+    <section style={{ marginBottom: 56 }}>
+      <div className="section-head">
+        <h2 className="font-serif" style={{ fontSize: 32, fontWeight: 400 }}>
           {title}
         </h2>
         {helper ? (
-          <span className="font-hand" style={{ fontSize: 18, color: "var(--ink-3)" }}>
+          <span className="font-hand" style={{ fontSize: 20, color: "var(--ink-3)" }}>
             {helper}
           </span>
         ) : null}

@@ -30,8 +30,9 @@ export default function Page() {
               listening, made portable —
             </div>
             <h1
-              className="font-serif text-[64px] sm:text-[72px]"
+              className="font-serif"
               style={{
+                fontSize: 64,
                 fontWeight: 400,
                 lineHeight: 1.02,
                 letterSpacing: "-0.02em",
@@ -67,7 +68,7 @@ export default function Page() {
                 <span className="dot" />
                 Browser-only
               </span>
-              <span className="chip">Words only · we don&apos;t keep audio</span>
+              <span className="chip">Transcript-backed themes</span>
               <span className="chip">Evidence drawer on every claim</span>
             </div>
           </div>
@@ -129,8 +130,8 @@ export default function Page() {
                   className="font-hand"
                   style={{ fontSize: 20, lineHeight: 1.3 }}
                 >
-                  set up in an afternoon —<br />
-                  reads itself the next morning.
+                  send one link today —<br />
+                  see patterns as responses land.
                 </div>
               </StickyNote>
             </div>
@@ -146,7 +147,7 @@ export default function Page() {
           <Pillar
             eyebrow="02 · conversation"
             title="Voice, not forms."
-            body="Respondents press a button and talk. The interviewer adapts on the fly, follows up where it matters, and never keeps the audio."
+            body="Respondents press a button and talk. The interviewer adapts on the fly, follows up where it matters, and captures the useful details."
           />
           <Pillar
             eyebrow="03 · synthesis"

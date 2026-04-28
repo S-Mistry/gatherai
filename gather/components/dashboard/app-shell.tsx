@@ -58,9 +58,7 @@ export function AppShell({
         right={right}
         avatar={<AppBarAvatar initials={initialsFor(userEmail)} />}
       />
-      <main className="mx-auto flex w-full max-w-[1320px] flex-1 flex-col gap-6 px-6 py-9 sm:px-8 lg:px-10">
-        {children}
-      </main>
+      {children}
     </div>
   )
 }
