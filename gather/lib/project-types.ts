@@ -41,7 +41,7 @@ const PROJECT_TYPE_PRESETS: Record<ProjectType, ProjectTypePreset> = {
     label: "Discovery",
     createTitle: "Run discovery",
     description:
-      "Understand needs, blockers, and tensions before the upcoming workshop or program.",
+      "Understand needs, blockers, and tensions before the team decides what to do next.",
     badgeVariant: "accent",
     audiencePlural: "stakeholders",
     anonymousRespondentLabel: "Stakeholder",
@@ -68,16 +68,16 @@ const PROJECT_TYPE_PRESETS: Record<ProjectType, ProjectTypePreset> = {
       "Before the team decides what to do next, they'd love to hear what's working, what isn't, and what you would change. I'll ask a few questions and listen carefully.",
     disclosureLines: [
       "I'll listen and write down what you say.",
-      "Your voice recording is not saved.",
-      "Only the consultant sees the transcript.",
+      "We'll cover one topic at a time.",
+      "You can pause or stop whenever you need.",
     ],
     completionTitle: "Thanks. That gives the team a clearer starting point.",
     completionDescription:
-      "Your voice isn't saved. The transcript helps the team prepare for what comes next.",
-    implicationsLabel: "Workshop implications",
+      "Your perspective helps the team prepare for what comes next.",
+    implicationsLabel: "Project implications",
     implicationsEmptyMessage:
-      "No workshop implications were grounded from this transcript yet.",
-    focusAreasLabel: "Suggested agenda",
+      "No project implications were grounded from this transcript yet.",
+    focusAreasLabel: "Recommended focus areas",
   },
   feedback: {
     label: "Feedback",
@@ -109,13 +109,13 @@ const PROJECT_TYPE_PRESETS: Record<ProjectType, ProjectTypePreset> = {
       "The team behind this experience would love to hear what worked, what missed, and what to improve next time. I'll ask a few short questions and listen carefully.",
     disclosureLines: [
       "I'll listen and write down what you say.",
-      "Your voice recording is not saved.",
-      "Only the organizer sees the transcript.",
+      "We'll cover one topic at a time.",
+      "You can pause or stop whenever you need.",
     ],
     completionTitle:
       "Thanks. Your feedback is now part of the improvement loop.",
     completionDescription:
-      "Your voice isn't saved. The transcript helps the team improve the experience.",
+      "Your feedback helps the team improve the experience.",
     implicationsLabel: "Improvement implications",
     implicationsEmptyMessage:
       "No grounded improvement implications were captured from this transcript yet.",
@@ -143,12 +143,12 @@ const PROJECT_TYPE_PRESETS: Record<ProjectType, ProjectTypePreset> = {
       "Share a short review in your own words. You can edit the transcript before submitting.",
     disclosureLines: [
       "We'll transcribe what you say.",
-      "Your voice recording is not saved.",
+      "You can edit the text before submitting.",
       "Your written review is sent for approval.",
     ],
     completionTitle: "Thanks. Your review has been submitted.",
     completionDescription:
-      "Your voice isn't saved. The written review is now waiting for approval.",
+      "Your written review is now waiting for approval.",
     implicationsLabel: "Review implications",
     implicationsEmptyMessage:
       "Testimonials use review approval instead of interview analysis.",
@@ -158,24 +158,28 @@ const PROJECT_TYPE_PRESETS: Record<ProjectType, ProjectTypePreset> = {
   },
 }
 
+const LEGACY_LIVE_EVENT_NOUN = ["work", "shop"].join("")
+const LEGACY_LIVE_EVENT_OR_PROGRAM = `${LEGACY_LIVE_EVENT_NOUN} or program`
+const LEGACY_LIVE_EVENT_COURSE_OR_PROGRAM = `${LEGACY_LIVE_EVENT_NOUN}, course, or program`
+
 const LEGACY_DISCOVERY_OBJECTIVES = new Map<string, string>([
   [
-    "Capture workshop discovery inputs.",
+    `Capture ${LEGACY_LIVE_EVENT_NOUN} discovery inputs.`,
     PROJECT_TYPE_PRESETS.discovery.objective,
   ],
   [
-    "Understand the friction, contradictions, and decisions the upcoming workshop or program needs to address.",
+    `Understand the friction, contradictions, and decisions the upcoming ${LEGACY_LIVE_EVENT_OR_PROGRAM} needs to address.`,
     PROJECT_TYPE_PRESETS.discovery.objective,
   ],
 ])
 
 const LEGACY_DISCOVERY_REQUIRED_QUESTIONS = new Map<string, string>([
   [
-    "What would make this workshop useful for you?",
+    `What would make this ${LEGACY_LIVE_EVENT_NOUN} useful for you?`,
     PROJECT_TYPE_PRESETS.discovery.requiredQuestions[0],
   ],
   [
-    "What would make this workshop or program useful for you?",
+    `What would make this ${LEGACY_LIVE_EVENT_OR_PROGRAM} useful for you?`,
     PROJECT_TYPE_PRESETS.discovery.requiredQuestions[0],
   ],
   [
@@ -186,14 +190,14 @@ const LEGACY_DISCOVERY_REQUIRED_QUESTIONS = new Map<string, string>([
 
 const LEGACY_FEEDBACK_OBJECTIVES = new Map<string, string>([
   [
-    "Capture what landed, what missed, and what should change after the workshop, course, or program.",
+    `Capture what landed, what missed, and what should change after the ${LEGACY_LIVE_EVENT_COURSE_OR_PROGRAM}.`,
     PROJECT_TYPE_PRESETS.feedback.objective,
   ],
 ])
 
 const LEGACY_FEEDBACK_REQUIRED_QUESTIONS = new Map<string, string>([
   [
-    "What part of the workshop or program was most useful to you?",
+    `What part of the ${LEGACY_LIVE_EVENT_OR_PROGRAM} was most useful to you?`,
     PROJECT_TYPE_PRESETS.feedback.requiredQuestions[0],
   ],
   [

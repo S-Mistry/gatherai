@@ -57,7 +57,7 @@ function seedConfig(projectId: string): ProjectConfigVersion {
     versionNumber: 3,
     createdAt: iso(-240),
     objective:
-      "Understand friction, alignment gaps, and decisions needed for an operating model redesign workshop.",
+      "Understand friction, alignment gaps, and decisions needed for an operating model redesign.",
     areasOfInterest: [
       "decision quality",
       "handoff friction",
@@ -68,7 +68,7 @@ function seedConfig(projectId: string): ProjectConfigVersion {
       {
         id: "q-outcomes",
         prompt:
-          "What outcomes would make this workshop feel worthwhile for you?",
+          "What outcomes would make this planning useful for you?",
         goal: "Capture success criteria.",
       },
       {
@@ -79,7 +79,7 @@ function seedConfig(projectId: string): ProjectConfigVersion {
       },
       {
         id: "q-risk",
-        prompt: "What risks or constraints should the workshop account for?",
+        prompt: "What risks or constraints should the team account for?",
         goal: "Surface guardrails and concerns.",
       },
       {
@@ -90,7 +90,7 @@ function seedConfig(projectId: string): ProjectConfigVersion {
       },
     ],
     backgroundContext:
-      "The client is consolidating regional operations into a single operating model and wants a clear workshop agenda.",
+      "The client is consolidating regional operations into a single operating model and wants clear focus areas for the next planning conversation.",
     durationCapMinutes: 15,
     interviewMode: "strict",
     anonymityMode: "pseudonymous",
@@ -126,9 +126,9 @@ function seedGeneratedOutput(sessionId: string): SessionOutputGenerated {
       {
         questionId: "q-outcomes",
         prompt:
-          "What outcomes would make this workshop feel worthwhile for you?",
+          "What outcomes would make this planning useful for you?",
         answer:
-          "A clear decision model and explicit ownership for exceptions would make the workshop worthwhile.",
+          "A clear decision model and explicit ownership for exceptions would make the planning useful.",
         confidence: 0.88,
         evidence: [
           {
@@ -144,10 +144,10 @@ function seedGeneratedOutput(sessionId: string): SessionOutputGenerated {
       {
         questionId: "q-outcomes",
         prompt:
-          "What outcomes would make this workshop feel worthwhile for you?",
+          "What outcomes would make this planning useful for you?",
         status: "answered",
         answer:
-          "A clear decision model and explicit ownership for exceptions would make the workshop worthwhile.",
+          "A clear decision model and explicit ownership for exceptions would make the planning useful.",
         confidence: 0.88,
         keyPoints: [
           "Clarify decision rights",
@@ -246,7 +246,7 @@ function seedGeneratedOutput(sessionId: string): SessionOutputGenerated {
         kind: "opportunity",
         title: "Shared escalation model",
         summary:
-          "The workshop should define when local teams escalate to central operations.",
+          "The team should define when local teams escalate to central operations.",
         priority: "medium",
         evidence: [
           {
@@ -317,7 +317,7 @@ function seedGeneratedOutput(sessionId: string): SessionOutputGenerated {
         id: "opp-escalation",
         label: "Clarify escalation paths",
         summary:
-          "The workshop should define when local teams escalate to central operations.",
+          "The team should define when local teams escalate to central operations.",
         evidence: [
           {
             sessionId,
@@ -383,8 +383,8 @@ function seedGeneratedOutput(sessionId: string): SessionOutputGenerated {
       "Push for concrete escalation examples rather than abstract governance principles.",
     ],
     recommendedActions: [
-      "Bring current exception cases into the workshop for live decision-rights mapping.",
-      "End the workshop with one delegated-approval pilot to test.",
+      "Bring current exception cases into the next planning conversation for live decision-rights mapping.",
+      "End with one delegated-approval pilot to test.",
     ],
     analysisWarnings: [],
     confidenceScore: 0.84,
@@ -555,7 +555,7 @@ function seedStore(): MockStore {
         id: "seg-amelia-1",
         sessionId: "sess-amelia",
         speaker: "agent",
-        text: "What outcomes would make this workshop feel worthwhile for you?",
+        text: "What outcomes would make this planning useful for you?",
         createdAt: iso(-89),
         orderIndex: 1,
       },
@@ -613,7 +613,7 @@ function seedStore(): MockStore {
       id: "override-sess-amelia",
       sessionId: "sess-amelia",
       editedSummary:
-        "Consultant note: emphasize duplicate approvals and unclear escalation ownership in workshop framing.",
+        "Consultant note: emphasize duplicate approvals and unclear escalation ownership in the planning framing.",
       suppressedClaimIds: [],
       consultantNotes:
         "Use this interview as a reference case when opening the contradiction map.",
@@ -627,7 +627,7 @@ function seedStore(): MockStore {
       projectId: project.id,
       includedSessionIds: ["sess-amelia", "sess-liam"],
       executiveSummary:
-        "Across the current interviews, the strongest signal is not lack of frameworks but lack of decisive ownership. Stakeholders want the workshop to resolve who decides, when to escalate, and how to avoid duplicate approvals.",
+        "Across the current interviews, the strongest signal is not lack of frameworks but lack of decisive ownership. Stakeholders want the team to resolve who decides, when to escalate, and how to avoid duplicate approvals.",
       crossInterviewThemes: [
         {
           id: "syn-theme-1",
@@ -669,7 +669,7 @@ function seedStore(): MockStore {
       ],
       alignmentSignals: [
         "Stakeholders want faster exception handling with clearer ownership.",
-        "Workshop value is tied to decision-rights clarity rather than broad ideation.",
+        "Planning value is tied to decision-rights clarity rather than broad ideation.",
       ],
       misalignmentSignals: [
         "Teams disagree on how much authority should stay regional versus central.",
@@ -742,7 +742,7 @@ function seedStore(): MockStore {
         {
           key: "decision_usefulness",
           score: 0.89,
-          rationale: "Themes are actionable for agenda design.",
+          rationale: "Themes are actionable for next-step planning.",
         },
       ],
     },
@@ -780,7 +780,7 @@ function seedStore(): MockStore {
         {
           key: "decision_usefulness",
           score: 0.35,
-          rationale: "Interview provides limited input for workshop design.",
+          rationale: "Interview provides limited input for next-step planning.",
         },
       ],
     },

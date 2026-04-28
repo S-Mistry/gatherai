@@ -9,11 +9,10 @@ import { Input } from "@/components/ui/input"
 import {
   MicRing,
   Scribble,
-  Stamp,
-  StickyNote,
   Tape,
   WaveBars,
 } from "@/components/ui/ornaments"
+import { Completion } from "@/components/participant/completion"
 import { Textarea } from "@/components/ui/textarea"
 import type { PublicTestimonialConfig } from "@/lib/domain/types"
 import { PARTICIPANT_MIC_AUDIO_CONSTRAINTS } from "@/lib/openai/realtime-config"
@@ -226,61 +225,16 @@ export function TestimonialCaptureShell({
 
   if (state === "submitted") {
     return (
-      <div className="text-center" style={{ padding: "60px 24px" }}>
-        <div className="mb-9">
-          <Stamp variant="sage">received · thank you</Stamp>
-        </div>
-        <h2
-          className="font-serif"
-          style={{
-            fontSize: 64,
-            fontWeight: 400,
-            lineHeight: 1.0,
-            letterSpacing: "-0.02em",
-            margin: "0 0 24px",
-          }}
-        >
-          Thanks — that helps.
-        </h2>
-        <div
-          className="font-hand inline-block mb-8"
-          style={{
-            fontSize: 28,
-            color: "var(--clay)",
-            transform: "rotate(-1deg)",
-          }}
-        >
-          — really.
-        </div>
-        <p
-          className="font-serif"
-          style={{
-            fontSize: 20,
-            lineHeight: 1.5,
-            color: "var(--ink-2)",
-            margin: "0 auto 36px",
-            maxWidth: 480,
-          }}
-        >
-          Your review will appear once {config.businessName} approves it. You
-          can close this tab.
-        </p>
-        <div
-          className="inline-block"
-          style={{ transform: "rotate(-2deg)" }}
-        >
-          <StickyNote tint="sage" className="max-w-[320px] text-left">
-            <div
-              className="font-hand"
-              style={{ fontSize: 20, color: "var(--ink)", lineHeight: 1.3 }}
-            >
-              when {config.businessName} reviews this,
-              <br />
-              they&apos;ll see your words — never your audio.
-            </div>
-          </StickyNote>
-        </div>
-      </div>
+      <Completion
+        body={`Your review will appear once ${config.businessName} approves it.`}
+        stickyNote={
+          <>
+            when {config.businessName} reviews this,
+            <br />
+            your edited review is ready.
+          </>
+        }
+      />
     )
   }
 
@@ -364,7 +318,7 @@ export function TestimonialCaptureShell({
         </div>
         <div
           className="card flat relative text-left mx-auto"
-          style={{ padding: "30px 36px", maxWidth: 720 }}
+          style={{ padding: "40px 50px", maxWidth: 760 }}
         >
           <Tape
             tint="green"
@@ -374,13 +328,16 @@ export function TestimonialCaptureShell({
               transform: "translateX(-50%) rotate(2deg)",
             }}
           />
-          <div className="font-hand text-[24px] text-[var(--sage)]">
+          <div
+            className="font-hand"
+            style={{ fontSize: 26, color: "var(--sage)", marginBottom: 8 }}
+          >
             one question —
           </div>
           <h1
-            className="font-serif mt-2"
+            className="font-serif"
             style={{
-              fontSize: 36,
+              fontSize: 38,
               fontWeight: 400,
               lineHeight: 1.18,
               letterSpacing: "-0.005em",
@@ -405,11 +362,11 @@ export function TestimonialCaptureShell({
         />
       </div>
 
-      <div className="flex items-center justify-center gap-4 flex-wrap">
+      <div className="flex items-center justify-center gap-[18px] flex-wrap">
         {recording && <WaveBars count={20} height={36} />}
         <span
           className="font-serif"
-          style={{ fontSize: 24, color: "var(--ink-2)", fontStyle: "italic" }}
+          style={{ fontSize: 26, color: "var(--ink-2)", fontStyle: "italic" }}
         >
           {recording
             ? `recording · ${formatSeconds(elapsedSeconds)}`

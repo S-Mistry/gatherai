@@ -33,6 +33,43 @@ export function buildParticipantRealtimeAudioConfig(options?: {
   }
 }
 
+export function buildParticipantRealtimeAudioSessionPayload(options?: {
+  voice?: string
+}) {
+  const audioConfig = buildParticipantRealtimeAudioConfig(options)
+  const input = audioConfig.input
+  const turnDetection = input?.turnDetection
+
+  return {
+    input: input
+      ? {
+          format: input.format,
+          transcription: input.transcription,
+          noise_reduction: input.noiseReduction ?? null,
+          turn_detection: turnDetection
+            ? {
+                type: turnDetection.type,
+                create_response:
+                  turnDetection.createResponse ??
+                  turnDetection.create_response,
+                interrupt_response:
+                  turnDetection.interruptResponse ??
+                  turnDetection.interrupt_response,
+                prefix_padding_ms:
+                  turnDetection.prefixPaddingMs ??
+                  turnDetection.prefix_padding_ms,
+                silence_duration_ms:
+                  turnDetection.silenceDurationMs ??
+                  turnDetection.silence_duration_ms,
+                threshold: turnDetection.threshold,
+              }
+            : turnDetection,
+        }
+      : undefined,
+    output: audioConfig.output,
+  }
+}
+
 function normalizeRealtimeLine(text: string) {
   return text
     .toLowerCase()
@@ -73,7 +110,7 @@ function buildCapturePolicy(config: PublicInterviewConfig) {
       "Feedback capture policy:",
       "Use the required questions as the backbone, not a rigid survey script.",
       "You may go deeper as soon as useful feedback appears, even before every required question is covered.",
-      "Mirror the nouns and context used in the project name, objective, topics, and required questions. Do not assume this was a workshop, course, or program unless the configuration says so.",
+      "Mirror the nouns and context used in the project name, objective, topics, and required questions. Do not impose a default event type, format, or delivery context unless the configuration says so.",
       "High-signal answers include concrete examples, strong sentiment, surprises, expectations, contradictions, unclear or missing details, behavior change, emotional reaction, or improvement requests.",
       "When an answer is high-signal, ask a focused follow-up for the example, reason, expectation, consequence, emotional impact, or next-time improvement.",
       "When an answer is thin or vague, ask for one concrete moment, example, or reason before moving on.",
@@ -115,7 +152,7 @@ export function buildRealtimeInstructions(
       ? "Use the configured questions and objective as the source of truth for what experience this was about."
       : "",
     `Include this disclosure faithfully in natural spoken language: ${config.disclosure.replaceAll("\n", " ")}`,
-    "Your opener must include: your name, the purpose of this conversation, that audio is not stored but the transcript is retained, that you will cover one topic at a time, and that the participant can say ready / yes / okay / let's go to begin.",
+    "Your opener must include: your name, the purpose of this conversation, that you will cover one topic at a time, and that the participant can say ready / yes / okay / let's go to begin.",
     "After the opener, wait for readiness. If the participant gives a clear affirmative or starts answering substantively, acknowledge it and begin the first required question immediately.",
     "Ask one primary question at a time and keep the interview purposeful, concise, and evidence-seeking.",
     buildTimingGuidance(config),

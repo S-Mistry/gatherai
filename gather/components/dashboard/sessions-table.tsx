@@ -109,14 +109,14 @@ export function SessionsTable({
                   <span
                     className={cn(
                       score?.lowQuality
-                        ? "text-amber-700 dark:text-amber-300"
-                        : "text-emerald-700 dark:text-emerald-300"
+                        ? "text-[var(--gold)]"
+                        : "text-[var(--sage)]"
                     )}
                   >
                     {overall}%
                   </span>
                 ) : (
-                  <span className="text-muted-foreground/70">—</span>
+                  <span className="text-[var(--ink-3)]">—</span>
                 )}
               </div>
 
@@ -133,7 +133,7 @@ export function SessionsTable({
                 />
                 <Link
                   href={`/app/projects/${projectId}/sessions/${session.id}`}
-                  className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/70 px-2.5 py-1 text-[11px] font-semibold text-foreground transition-colors hover:border-primary/40 hover:bg-primary/8 hover:text-primary"
+                  className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/70 px-2.5 py-1 text-[11px] font-semibold text-foreground transition-colors hover:border-primary/40 hover:bg-[var(--clay-soft)] hover:text-primary"
                 >
                   Review
                   <ArrowRight className="size-3" />

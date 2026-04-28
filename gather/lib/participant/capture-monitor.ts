@@ -53,7 +53,7 @@ const STOP_WORDS = new Set([
   "was",
   "we",
   "what",
-  "workshop",
+  "session",
   "you",
   "your",
 ])

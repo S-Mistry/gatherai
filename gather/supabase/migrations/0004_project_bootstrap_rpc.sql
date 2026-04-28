@@ -23,7 +23,7 @@ declare
   normalized_project_name text := coalesce(nullif(trim(project_name), ''), 'Untitled discovery project');
   normalized_project_slug text := nullif(trim(project_slug), '');
   normalized_client_name text := coalesce(nullif(trim(project_client_name), ''), 'Client');
-  normalized_objective text := coalesce(nullif(trim(project_objective), ''), 'Capture workshop discovery inputs.');
+  normalized_objective text := coalesce(nullif(trim(project_objective), ''), 'Capture discovery inputs.');
   normalized_duration_cap_minutes integer := coalesce(project_duration_cap_minutes, 15);
   normalized_anonymity_mode public.anonymity_mode := coalesce(
     project_anonymity_mode,
@@ -42,7 +42,7 @@ declare
     else jsonb_build_array(
       jsonb_build_object(
         'id', 'q-default-1',
-        'prompt', 'What would make this workshop useful for you?',
+        'prompt', 'What outcome would make this useful for you?',
         'goal', 'Fallback success criteria question.'
       )
     )

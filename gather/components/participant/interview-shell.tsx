@@ -2,16 +2,17 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { VoiceState } from "@/components/ui/voice-status"
+import { Completion } from "@/components/participant/completion"
 import {
-  CompletionSurface,
-  InterviewInfoSidebar,
-  InterviewObjectivePanel,
-  LiveSurface,
-  PreStartSurface,
+  NotebookCard,
+  NotebookControls,
+  PreStartCard,
+  SidebarRail,
   type InterviewShellStatus,
 } from "@/components/participant/interview-shell-surfaces"
+import type { TranscriptPayloadSegment } from "@/lib/participant/realtime-history"
+import { getProjectTypePreset } from "@/lib/project-types"
 import type { PublicInterviewConfig } from "@/lib/domain/types"
 import {
   PARTICIPANT_INTERVIEWER_NAME,
@@ -74,6 +75,9 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
   const [voiceState, setVoiceState] = useState<VoiceState>("idle")
   const [interviewStarted, setInterviewStarted] = useState(false)
   const [micSupport, setMicSupport] = useState<MicSupport | null>(null)
+  const [transcriptSegments, setTranscriptSegments] = useState<
+    TranscriptPayloadSegment[]
+  >([])
   const realtimeSessionRef = useRef<RealtimeSessionHandle | null>(null)
   const realtimeTransportRef = useRef<RealtimeTransportHandle | null>(null)
   const micStreamRef = useRef<MediaStream | null>(null)
@@ -497,6 +501,7 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
     }
 
     latestHistoryRef.current = history
+    setTranscriptSegments(extractTranscriptSegments(history))
     maybeStartInterview(history)
     const runtime = buildCaptureRuntimePatch(history)
 
@@ -726,56 +731,91 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
   }
 
   if (status === "complete") {
-    return <CompletionSurface projectType={config.projectType} />
+    const preset = getProjectTypePreset(config.projectType)
+    return (
+      <Completion
+        headline={preset.completionTitle}
+        body={`${preset.completionDescription} You can close this tab.`}
+        smallPrint=""
+      />
+    )
   }
 
   const isLive = status === "live" || status === "paused"
+  const respondentLabel =
+    config.anonymityMode === "named"
+      ? "you"
+      : getProjectTypePreset(config.projectType).anonymousRespondentLabel
+  const completedAgentTurns = transcriptSegments.filter(
+    (segment) => segment.speaker === "agent"
+  ).length
+  const totalQuestions = Math.max(config.requiredQuestions.length, 1)
+  const activeIndex = Math.min(
+    Math.max(completedAgentTurns - 1, 0),
+    totalQuestions - 1
+  )
+  const doneIndices = new Set<number>(
+    Array.from({ length: activeIndex }, (_, i) => i)
+  )
+  const activePrompt =
+    config.requiredQuestions[activeIndex]?.prompt ??
+    config.objective ??
+    "Tell me about your experience."
+
   return (
-    <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+    <div
+      className="participant-interview-layout"
+      style={{
+        padding: "32px 40px 80px",
+        maxWidth: 1320,
+        margin: "0 auto",
+        gap: 36,
+      }}
+    >
       <audio
         ref={agentAudioRef}
         autoPlay
         className="sr-only"
         aria-hidden="true"
       />
-      <Card className="space-y-6">
-        <CardHeader>
-          <CardTitle className="text-3xl">{config.projectName}</CardTitle>
-          <p className="text-sm leading-6 text-muted-foreground">
-            {durationCopy.shellLabel} One question at a time.
-          </p>
-        </CardHeader>
-        <CardContent>
-          {!isLive ? (
-            <InterviewObjectivePanel objective={config.objective} />
-          ) : null}
-
-          {isLive ? (
-            <LiveSurface
-              voiceState={voiceState}
-              elapsedSeconds={elapsedSeconds}
-              durationTargetLabel={durationCopy.timerTargetLabel}
-              durationAriaDescription={durationCopy.timerAriaDescription}
-              interviewStarted={interviewStarted}
-              paused={status === "paused"}
-              onTogglePause={handleTogglePause}
-              onComplete={handleComplete}
-            />
-          ) : (
-            <PreStartSurface
-              status={status}
-              errorMessage={errorMessage}
-              onStart={handleStart}
-              micSupport={micSupport}
-              onRecheckMicSupport={recheckMicSupport}
-            />
-          )}
-        </CardContent>
-      </Card>
-
-      {!isLive ? (
-        <InterviewInfoSidebar config={config} />
-      ) : null}
+      <div style={{ position: "relative" }}>
+        <NotebookCard
+          respondentLabel={respondentLabel}
+          activeQuestion={activePrompt}
+          questionIndex={activeIndex + 1}
+          totalQuestions={totalQuestions}
+          segments={transcriptSegments}
+          voiceState={voiceState}
+          paused={status === "paused"}
+          showLiveRow={isLive && interviewStarted}
+          preStart={
+            isLive ? null : (
+              <PreStartCard
+                status={status}
+                errorMessage={errorMessage}
+                onStart={handleStart}
+                micSupport={micSupport}
+                onRecheckMicSupport={recheckMicSupport}
+              />
+            )
+          }
+        />
+        {isLive ? (
+          <NotebookControls
+            paused={status === "paused"}
+            elapsedSeconds={elapsedSeconds}
+            durationTargetLabel={durationCopy.timerTargetLabel}
+            onTogglePause={handleTogglePause}
+            onComplete={handleComplete}
+          />
+        ) : null}
+      </div>
+      <SidebarRail
+        config={config}
+        activeIndex={activeIndex}
+        doneIndices={doneIndices}
+        respondentLabel={respondentLabel}
+      />
     </div>
   )
 }

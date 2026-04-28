@@ -45,15 +45,19 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   const configurationErrorMessage =
     authMode === null
       ? "Consultant sign-in is not configured correctly for this environment."
-      : authMode === "supabase_oauth" && oauthProvider === null
-        ? "The configured OAuth provider is not supported."
-        : null
+      : authMode === "supabase_magic_link"
+        ? "Email magic-link consultant sign-in is no longer supported. Use Google OAuth."
+        : authMode === "supabase_oauth" && oauthProvider === null
+          ? "The configured OAuth provider is not supported."
+          : null
 
   const errorMessage = queryErrorMessage ?? configurationErrorMessage
   const providerLabel =
     oauthProvider === null ? null : getSupabaseOAuthProviderLabel(oauthProvider)
   const showOAuthCta = authMode === "supabase_oauth" && providerLabel !== null
-  const showMagicLinkForm = authMode === "supabase_magic_link"
+  const showMagicLinkForm = false
+  const showDevAdminLogin =
+    isDevAdminLoginEnabled && authMode !== "supabase_oauth"
   const oauthHref =
     oauthProvider === null
       ? null
@@ -61,9 +65,9 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
 
   const description =
     showOAuthCta && providerLabel !== null
-      ? `Continue with ${providerLabel} to open your private workspace. No password to remember.`
+      ? `Continue with ${providerLabel} to open your workspace.`
       : showMagicLinkForm
-        ? "We'll email a one-tap sign-in link. No password to remember."
+        ? "We'll email a one-tap sign-in link."
         : "Sign-in is unavailable until the auth configuration is fixed."
 
   return (
@@ -135,17 +139,6 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
               <Button asChild size="lg" className="w-full">
                 <Link href={oauthHref}>Continue with {providerLabel} →</Link>
               </Button>
-              <p
-                className="font-sans"
-                style={{
-                  fontSize: 13,
-                  lineHeight: 1.55,
-                  color: "var(--ink-3)",
-                }}
-              >
-                We use your verified account email to find the right private
-                workspace.
-              </p>
             </div>
           ) : null}
 
@@ -153,7 +146,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             <MagicLinkForm action={requestMagicLinkAction} />
           ) : null}
 
-          {isDevAdminLoginEnabled ? (
+          {showDevAdminLogin ? (
             <form action={devAdminSignInAction} className="space-y-3">
               <input type="hidden" name="next" value={next} />
               <Button type="submit" variant="outline" className="w-full">
@@ -194,8 +187,8 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
               margin: "0 0 6px",
             }}
           >
-            Each workspace is private. Respondent conversations never leave it.
-            Words only — we don&apos;t keep audio.
+            Create projects, share links, and review responses from one
+            workspace.
           </p>
           <p
             className="font-sans"

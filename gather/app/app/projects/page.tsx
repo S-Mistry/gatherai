@@ -1,5 +1,6 @@
 import Link from "next/link"
 
+import { ConsultantAppBar } from "@/components/dashboard/consultant-app-bar"
 import { ProjectTile } from "@/components/dashboard/project-tile"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -80,7 +81,21 @@ export default async function ProjectsPage({
   const activeFilterConfig = activeFilter ? filterConfig[activeFilter] : null
 
   return (
-    <div className="space-y-10">
+    <>
+      <ConsultantAppBar
+        crumb={[
+          { label: "Workspace", href: "/app" },
+          { label: "Projects" },
+        ]}
+      />
+    <div
+      style={{
+        padding: "48px 48px 80px",
+        maxWidth: 1280,
+        margin: "0 auto",
+      }}
+      className="space-y-10"
+    >
       <section>
         <div className="font-hand text-[24px] text-[var(--clay)]">
           your bookshelf —
@@ -92,7 +107,7 @@ export default async function ProjectsPage({
               style={{
                 fontSize: 44,
                 fontWeight: 400,
-                letterSpacing: "-0.012em",
+                letterSpacing: "-0.01em",
                 margin: 0,
               }}
             >
@@ -140,7 +155,7 @@ export default async function ProjectsPage({
           }
         />
       ) : (
-        <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <section className="workspace-project-grid gap-5">
           {projects.map((project) => (
             <ProjectTile
               key={project.id}
@@ -159,6 +174,7 @@ export default async function ProjectsPage({
         </section>
       )}
     </div>
+    </>
   )
 }
 

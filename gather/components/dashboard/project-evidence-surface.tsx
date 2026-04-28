@@ -163,10 +163,9 @@ export function ProjectEvidenceSurface({
                 key={theme.id}
                 type="button"
                 onClick={() => openClaim(toThemeClaim(theme))}
-                className="card flat text-left grid items-center"
+                className="card flat project-evidence-theme-row grid text-left"
                 style={{
                   padding: "20px 26px",
-                  gridTemplateColumns: "320px 1fr 200px auto",
                   gap: 28,
                   cursor: "pointer",
                   border: "none",
@@ -335,8 +334,8 @@ export function ProjectEvidenceSurface({
                   </button>
                 </div>
                 <div
-                  className="grid items-center"
-                  style={{ gridTemplateColumns: "1fr 110px 1fr", gap: 20 }}
+                  className="project-evidence-contradiction-grid grid items-center"
+                  style={{ gap: 20 }}
                 >
                   <div
                     style={{
@@ -406,13 +405,13 @@ function Section({
   children: ReactNode
 }) {
   return (
-    <section className="space-y-5">
-      <div className="flex items-baseline gap-3.5 flex-wrap">
-        <h2 className="font-serif" style={{ fontSize: 28, fontWeight: 400, margin: 0 }}>
+    <section style={{ marginBottom: 56 }}>
+      <div className="section-head">
+        <h2 className="font-serif" style={{ fontSize: 32, fontWeight: 400 }}>
           {title}
         </h2>
         {helper ? (
-          <span className="font-hand" style={{ fontSize: 18, color: "var(--ink-3)" }}>
+          <span className="font-hand" style={{ fontSize: 20, color: "var(--ink-3)" }}>
             {helper}
           </span>
         ) : null}

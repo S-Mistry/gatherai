@@ -1,6 +1,6 @@
 # Technical Spec v1
 
-Last updated: April 27, 2026
+Last updated: April 28, 2026
 
 ## 1. Scope
 
@@ -64,9 +64,9 @@ Last updated: April 27, 2026
   - `/embed/testimonials/[projectId]` renders approved reviews only, plus a leave-review CTA and Gather attribution
 - Consultant path:
   - browser loads `/sign-in`
-  - page starts Supabase Google OAuth by default or exposes the magic-link fallback when the deploy-time auth flag enables it
-  - local development can expose a one-click dev admin sign-in only when `DEV_ADMIN_LOGIN_ENABLED=true`, `NODE_ENV` is not production, `NEXT_PUBLIC_APP_URL` starts with `http://localhost`, and dev admin credentials are configured
-  - Supabase redirects back through `/auth/callback`, which exchanges the auth code and establishes the consultant session
+  - page starts Supabase Google OAuth; email-only consultant sessions are rejected even if legacy email auth users exist
+  - local development can expose a one-click dev admin sign-in only outside OAuth mode, when `DEV_ADMIN_LOGIN_ENABLED=true`, `NODE_ENV` is not production, `NEXT_PUBLIC_APP_URL` starts with `http://localhost`, and dev admin credentials are configured
+  - Supabase redirects back through `/auth/callback`, which exchanges the auth code, verifies the user has a Google provider, and provisions the consultant workspace idempotently
   - browser loads `/app/...`
   - server components and server actions fetch consultant-scoped data from Supabase through route-specific repository loaders rather than one broad workspace snapshot path
   - the project synthesis surface lazily resolves transcript-backed evidence in a right-side drawer through an authenticated consultant read route
@@ -94,7 +94,7 @@ Last updated: April 27, 2026
 - `/`
   - marketing overview and entry into consultant sign-in
 - `/sign-in`
-  - consultant sign-in surface, using Google OAuth by default with a feature-flagged magic-link fallback and a localhost-only dev admin shortcut when explicitly enabled
+  - consultant sign-in surface, using Google OAuth; legacy magic-link code must not create new users and email-only sessions cannot enter the app
 - `/auth/login`
   - starts consultant Supabase OAuth and validates the requested provider/redirect target
 - `/auth/callback`
@@ -262,7 +262,7 @@ Last updated: April 27, 2026
 - allow two follow-ups by default for discovery and one follow-up by default for feedback
 - exceed two follow-ups only if novelty remains high and there is time budget remaining
 - in feedback projects, treat required questions as a backbone rather than a rigid survey script; probe high-signal answers as they appear, then return to uncovered must-ask topics
-- in feedback projects, mirror the nouns and context in the configured objective and questions instead of assuming workshop or program framing
+- in feedback projects, mirror the nouns and context in the configured objective and questions instead of assuming a specific event type or delivery format
 - move on when the participant signals completion, novelty drops, time threshold is hit, or coverage confidence is high enough
 - end the session at the configured duration cap even if some questions remain
 - discovery defaults target roughly 15 minutes and pseudonymous collection
@@ -307,6 +307,7 @@ Last updated: April 27, 2026
 ## 8. Security model
 
 - All consultant-owned tables use RLS.
+- Consultant workspace access requires Supabase Auth plus a Google provider claim; email-only JWTs fail RLS even if old workspace membership rows exist.
 - Public participant and testimonial access never uses the server secret key in the browser.
 - Server secret key access exists only in route handlers, background job execution, and setup tooling.
 - RLS helper functions run as security definers so workspace-access checks do not recurse through protected tables.
@@ -350,6 +351,7 @@ Last updated: April 27, 2026
 - completion copy mirrors the selected project type so discovery closes as planning input and feedback closes as improvement input
 - testimonial public UX uses a simpler no-agent recorder, shows recording/stop states, lets reviewers edit the transcript and star rating, and ends with a submitted-review thank-you screen
 - visual system: Instrument Serif body and headings, Caveat for handwritten margin notes and form labels, Inter Tight for sans labels and button text, JetBrains Mono for micro-eyebrows and timers; warm cream + clay paper-notebook palette is light-only (no dark mode in v1); the synthesis evidence drawer is the canonical affordance for "open the evidence behind this claim" — it slides in from the right and is rendered by `<EvidenceDrawer>` over `ProjectEvidenceSurface`; visible wordmark is `gather.` while codebase identifiers stay `GatherAI`; full surface conventions live in `STYLE_GUIDE.md`
+- design fidelity bar: every UI surface is aligned to the Studio cream/clay design at `gather/project/final/` to within ±2px on type and exact-match on ornament positions, copy, and grid templates. Page paddings live in pages, not the app shell — `<AppShell>` only renders the sticky `<AppBar>`. New shared components: `<NotebookCard>` / `<SidebarRail>` / `<NotebookControls>` / `<PreStartCard>` for the deep interview; `<Completion>` for the post-submit screen; `<MarginNote>` ornament; `.section-head` utility
 
 ## 11. Environment variables
 
@@ -382,11 +384,12 @@ Last updated: April 27, 2026
 ### 11.1 Auth bootstrap notes
 
 - `npm --prefix gather run supabase:bootstrap` patches Supabase `site_url` and `uri_allow_list` to match `NEXT_PUBLIC_APP_URL`.
-- When `CONSULTANT_AUTH_MODE=supabase_oauth` and `SUPABASE_OAUTH_PROVIDER=google`, bootstrap also validates that the Google provider is enabled and has a client ID configured.
+- When `CONSULTANT_AUTH_MODE=supabase_oauth` and `SUPABASE_OAUTH_PROVIDER=google`, bootstrap also validates that the Google provider is enabled and has a client ID configured, keeps signups open for Google, and disables Supabase Email auth.
 - If `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` and `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET` are present during bootstrap, the script enables Google in the Supabase project through the Management API before validating.
 - Google OAuth redirect URI is the Supabase-hosted callback endpoint: `${NEXT_PUBLIC_SUPABASE_URL}/auth/v1/callback`.
 - Supabase redirect allow-list entries are the application callback URLs, such as `${NEXT_PUBLIC_APP_URL}/auth/callback` and `${NEXT_PUBLIC_APP_URL}/auth/callback?next=/app`.
 - If OAuth mode is selected and the chosen provider is still disabled after bootstrap, the script fails before continuing so the misconfiguration is caught during setup instead of by end users.
+- Google OAuth consent must be External and In production for open public Google sign-in; Google Testing mode is limited to configured test users.
 
 ## 12. Delivery slices
 
@@ -405,5 +408,6 @@ Last updated: April 27, 2026
 - `npm --prefix gather run typecheck`
 - `npm --prefix gather run build`
 - verify the selected consultant auth provider is enabled in the target Supabase project
+- verify Supabase Email auth is disabled in OAuth mode and email-only sessions cannot read workspace tables
 - verify bootstrap confirms schema `app` exists and role `authenticated` has `USAGE` on it
 - schema review for RLS coverage and queue idempotency

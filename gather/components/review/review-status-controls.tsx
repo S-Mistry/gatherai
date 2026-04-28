@@ -1,13 +1,11 @@
 "use client"
 
-import Link from "next/link"
 import {
   AlertDialog as RadixAlertDialog,
   DropdownMenu as RadixDropdownMenu,
   Popover as RadixPopover,
 } from "radix-ui"
 import {
-  ArrowLeft,
   Check,
   DotsThree,
   Eye,
@@ -16,28 +14,17 @@ import {
 } from "@phosphor-icons/react"
 
 import { toggleSessionExclusionAction } from "@/app/app/actions"
-import { Badge, type BadgeProps } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { type BadgeProps } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
 import { useOptionalReviewSelectionActions } from "./review-selection-context"
 
-type StatusState = "ready" | "pending" | "failed" | "empty" | "idle"
+export type StatusState = "ready" | "pending" | "failed" | "empty" | "idle"
 
-interface StatusPill {
+export interface StatusPill {
   label: string
   status: StatusState
-}
-
-interface ReviewActionBarProps {
-  projectId: string
-  projectName: string
-  sessionId: string
-  respondentLabel: string
-  excludedFromSynthesis: boolean
-  overrideActive: boolean
-  qualityOverrideActive: boolean
-  statuses: StatusPill[]
 }
 
 const statusRank: Record<StatusState, number> = {
@@ -49,9 +36,7 @@ const statusRank: Record<StatusState, number> = {
 }
 
 function aggregateStatus(statuses: StatusPill[]): StatusState {
-  if (statuses.length === 0) {
-    return "idle"
-  }
+  if (statuses.length === 0) return "idle"
   return [...statuses].sort(
     (a, b) => statusRank[a.status] - statusRank[b.status]
   )[0].status
@@ -90,74 +75,36 @@ const POPOVER_CLASS =
   "data-[state=open]:animate-in data-[state=open]:fade-in-0 " +
   "data-[state=closed]:animate-out data-[state=closed]:fade-out-0"
 
-export function ReviewActionBar({
+export function ReviewStatusControls({
   projectId,
-  projectName,
   sessionId,
-  respondentLabel,
   excludedFromSynthesis,
-  overrideActive,
-  qualityOverrideActive,
   statuses,
-}: ReviewActionBarProps) {
+}: {
+  projectId: string
+  sessionId: string
+  excludedFromSynthesis: boolean
+  statuses: StatusPill[]
+}) {
   const aggregate = aggregateStatus(statuses)
   const selection = useOptionalReviewSelectionActions()
 
   return (
-    <div
-      className="sticky top-14 z-20 -mx-6 flex flex-col gap-3 px-6 py-3 sm:-mx-8 sm:px-8 lg:-mx-10 lg:flex-row lg:items-center lg:justify-between lg:px-10"
-      style={{
-        background: "var(--cream)",
-        borderBottom: "1px dashed var(--line)",
-      }}
-    >
-      <div className="flex min-w-0 items-center gap-3">
-        <Link
-          href={`/app/projects/${projectId}`}
-          className="font-sans inline-flex items-center gap-1.5 text-xs text-[var(--ink-3)] hover:text-[var(--ink)]"
-        >
-          <ArrowLeft className="size-3.5" />
-          <span className="truncate">{projectName}</span>
-        </Link>
-        <span aria-hidden className="text-[var(--ink-4)]">
-          /
-        </span>
-        <h1
-          className="font-serif min-w-0 truncate"
-          style={{
-            fontSize: 22,
-            fontWeight: 400,
-            margin: 0,
-            letterSpacing: "-0.005em",
-          }}
-        >
-          {respondentLabel}
-        </h1>
-        {overrideActive ? <Badge variant="clay">Override</Badge> : null}
-        {qualityOverrideActive ? (
-          <Badge variant="gold">Manual quality</Badge>
-        ) : null}
-        {excludedFromSynthesis ? (
-          <Badge variant="rose">Excluded</Badge>
-        ) : null}
-      </div>
-
-      <div className="flex items-center gap-2">
-        <StatusPopover aggregate={aggregate} statuses={statuses} />
-        <button
-          type="button"
-          onClick={() => selection?.toggleDrawer("transcript")}
-          className="chip xl:hidden"
-        >
-          <FileText className="size-3.5" />
-          Transcript
-        </button>
-        <OverflowMenu
-          projectId={projectId}
-          sessionId={sessionId}
-          excludedFromSynthesis={excludedFromSynthesis}
-        />
-      </div>
+    <div className="flex items-center gap-2">
+      <StatusPopover aggregate={aggregate} statuses={statuses} />
+      <button
+        type="button"
+        onClick={() => selection?.toggleDrawer("transcript")}
+        className="chip xl:hidden"
+      >
+        <FileText className="size-3.5" />
+        Transcript
+      </button>
+      <OverflowMenu
+        projectId={projectId}
+        sessionId={sessionId}
+        excludedFromSynthesis={excludedFromSynthesis}
+      />
     </div>
   )
 }

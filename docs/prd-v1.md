@@ -44,8 +44,8 @@ Enable any consultant to run structured, scalable post-experience voice collecti
 - Preserve evidence traceability so the consultant can trust the outputs.
 
 ## Non-goals
-- workshop artifact generation
-- automated workshop deliverables
+- artifact generation for live sessions
+- automated session deliverables
 - exports
 - video
 - multilingual support
@@ -217,7 +217,7 @@ The public landing page shows:
 - Up to two follow-ups per core question by default for discovery, and one by default for feedback.
 - More follow-ups only if novelty remains high and time allows.
 - Feedback projects use required questions as a backbone, not a rigid survey script; the interviewer may probe high-signal answers immediately and then return to uncovered required questions.
-- Feedback wording must mirror the configured experience context instead of assuming workshop or program language.
+- Feedback wording must mirror the configured experience context instead of assuming a specific event type or delivery format.
 - Default feedback framing is a soft 5-10 minute conversation; near minute 8, the interviewer should start tying off open gaps and aim to finish around minute 10 unless a longer cap is configured.
 - Summarize what was heard and allow clarification.
 - Challenge vague answers when appropriate.

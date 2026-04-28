@@ -57,6 +57,7 @@ export async function requestMagicLinkAction(
     email,
     options: {
       emailRedirectTo: `${appUrl}/auth/callback?next=/app`,
+      shouldCreateUser: false,
     },
   })
 
@@ -75,7 +76,11 @@ export async function requestMagicLinkAction(
 }
 
 export async function devAdminSignInAction(formData: FormData) {
-  if (!isDevAdminLoginEnabled || !isSupabaseConfigured) {
+  if (
+    resolveConsultantAuthMode() === "supabase_oauth" ||
+    !isDevAdminLoginEnabled ||
+    !isSupabaseConfigured
+  ) {
     throw new Error("Dev admin sign-in is not enabled for this environment.")
   }
 

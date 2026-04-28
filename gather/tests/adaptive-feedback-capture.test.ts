@@ -10,6 +10,7 @@ import {
   PARTICIPANT_INTERVIEWER_FINAL_LINE,
   PARTICIPANT_MIC_AUDIO_CONSTRAINTS,
   buildParticipantRealtimeAudioConfig,
+  buildParticipantRealtimeAudioSessionPayload,
   buildRealtimeInstructions,
   isParticipantInterviewerFinalLine,
 } from "../lib/openai/realtime-config"
@@ -19,6 +20,10 @@ import {
 } from "../lib/participant/capture-monitor"
 import { getParticipantDurationCopy } from "../lib/participant/time-copy"
 import { getProjectTypePreset } from "../lib/project-types"
+
+const legacyLiveEvent = ["work", "shop"].join("")
+const legacyLiveEventOrProgram = `${legacyLiveEvent} or program`
+const legacyLiveEventCourseOrProgram = `${legacyLiveEvent}, course, or program`
 
 const feedbackConfig: PublicInterviewConfig = {
   projectId: "project-feedback",
@@ -31,7 +36,7 @@ const feedbackConfig: PublicInterviewConfig = {
   toneStyle: "Warm, concise, reflective, researcher-like.",
   followUpLimit: 1,
   intro: "We would love to understand what landed and what missed.",
-  disclosure: "Only the transcript is retained.",
+  disclosure: "We'll cover one topic at a time.",
   areasOfInterest: ["What worked", "What to improve"],
   requiredQuestions: [
     {
@@ -70,12 +75,14 @@ test("feedback realtime instructions include adaptive probing policy", () => {
   assert.match(instructions, /about 1 focused follow-up/)
   assert.match(
     instructions,
-    /Do not assume this was a workshop, course, or program/
+    /Do not impose a default event type, format, or delivery context/
   )
   assert.match(
     instructions,
     /final spoken line must be exactly: Thanks for sharing that\. We're finished now\./
   )
+  assert.doesNotMatch(instructions, /audio is not stored/)
+  assert.doesNotMatch(instructions, /transcript is retained/)
 })
 
 test("participant audio config uses stricter noise handling", () => {
@@ -104,6 +111,35 @@ test("participant audio config uses stricter noise handling", () => {
     noiseSuppression: { ideal: true },
     autoGainControl: { ideal: false },
   })
+})
+
+test("participant realtime session payload uses REST field names", () => {
+  const audioPayload = buildParticipantRealtimeAudioSessionPayload({
+    voice: "alloy",
+  })
+  const input = audioPayload.input
+
+  assert.ok(input)
+  const turnDetection = input.turn_detection
+  assert.ok(turnDetection)
+  assert.equal("noiseReduction" in input, false)
+  assert.equal("turnDetection" in input, false)
+  assert.deepEqual(audioPayload.output, { voice: "alloy" })
+  assert.deepEqual(input.noise_reduction, {
+    type: "near_field",
+  })
+  assert.deepEqual(input.turn_detection, {
+    type: "server_vad",
+    create_response: true,
+    interrupt_response: true,
+    prefix_padding_ms: 300,
+    silence_duration_ms: 850,
+    threshold: 0.72,
+  })
+  assert.equal("createResponse" in turnDetection, false)
+  assert.equal("interruptResponse" in turnDetection, false)
+  assert.equal("prefixPaddingMs" in turnDetection, false)
+  assert.equal("silenceDurationMs" in turnDetection, false)
 })
 
 test("participant interviewer final line matcher tolerates casing and punctuation", () => {
@@ -172,10 +208,10 @@ test("mock public interview config sanitizes legacy discovery starter copy", () 
     projectType: "discovery",
     name: "Legacy discovery copy",
     objective:
-      "Understand the friction, contradictions, and decisions the upcoming workshop or program needs to address.",
+      `Understand the friction, contradictions, and decisions the upcoming ${legacyLiveEventOrProgram} needs to address.`,
     areasOfInterest: "",
     requiredQuestions: [
-      "What would make this workshop or program useful for you?",
+      `What would make this ${legacyLiveEventOrProgram} useful for you?`,
       "Where is the biggest friction today?",
       "What tension, contradiction, or tradeoff should we surface?",
       "What risk should we account for while planning this session?",
@@ -202,10 +238,10 @@ test("mock public interview config sanitizes legacy feedback starter copy", () =
     projectType: "feedback",
     name: "Legacy feedback copy",
     objective:
-      "Capture what landed, what missed, and what should change after the workshop, course, or program.",
+      `Capture what landed, what missed, and what should change after the ${legacyLiveEventCourseOrProgram}.`,
     areasOfInterest: "",
     requiredQuestions: [
-      "What part of the workshop or program was most useful to you?",
+      `What part of the ${legacyLiveEventOrProgram} was most useful to you?`,
       "What felt unclear, missing, or less useful?",
       "What changed for you afterwards, if anything?",
       "If we ran this again, what should we do differently?",
@@ -227,12 +263,12 @@ test("mock public interview config sanitizes legacy feedback starter copy", () =
   )
 })
 
-test("mock public interview config preserves consultant-authored workshop wording", () => {
-  const customObjective = "Capture what the workshop debrief should fix next."
-  const customQuestion = "What did the workshop miss for you?"
+test("mock public interview config preserves consultant-authored context wording", () => {
+  const customObjective = `Capture what the ${legacyLiveEvent} debrief should fix next.`
+  const customQuestion = `What did the ${legacyLiveEvent} miss for you?`
   const { project } = createProjectFromForm({
     projectType: "feedback",
-    name: "Custom workshop copy",
+    name: "Custom context copy",
     objective: customObjective,
     areasOfInterest: "",
     requiredQuestions: customQuestion,

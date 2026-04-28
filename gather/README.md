@@ -1,6 +1,6 @@
 # GatherAI
 
-Next.js application for the AI Workshop Discovery Interviewer MVP.
+Next.js application for the GatherAI voice feedback product.
 
 ## Scripts
 
@@ -14,6 +14,8 @@ Next.js application for the AI Workshop Discovery Interviewer MVP.
 
 Copy `.env.example` and fill in the runtime Supabase, OpenAI, Braintrust, recovery-token, and cron variables.
 
+Consultant auth is Google-only in v1. Anyone may sign in with Google when the Google OAuth app is External and In production; Google Testing mode only allows configured test users.
+
 If consultant auth stays on the default Google OAuth mode:
 
 - create a Web OAuth client in Google Auth Platform
@@ -21,9 +23,9 @@ If consultant auth stays on the default Google OAuth mode:
 - add `${NEXT_PUBLIC_SUPABASE_URL}/auth/v1/callback` as the Google OAuth redirect URI
 - add `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` and `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET` locally before running `npm run supabase:bootstrap`, or configure the same values manually in Supabase Dashboard > Auth > Providers > Google
 
-`npm run supabase:bootstrap` updates the Supabase `site_url` and redirect allow-list to include your app callback URLs such as `${NEXT_PUBLIC_APP_URL}/auth/callback`.
+`npm run supabase:bootstrap` updates the Supabase `site_url` and redirect allow-list to include your app callback URLs such as `${NEXT_PUBLIC_APP_URL}/auth/callback`, enables/validates Google, and disables Supabase Email auth for OAuth mode.
 
-For local browser testing, set `DEV_ADMIN_LOGIN_ENABLED=true` plus `DEV_ADMIN_EMAIL` and `DEV_ADMIN_PASSWORD` in `.env.local`. The shortcut is only available outside production and only when `NEXT_PUBLIC_APP_URL` starts with `http://localhost`.
+For local browser testing outside OAuth mode, set `DEV_ADMIN_LOGIN_ENABLED=true` plus `DEV_ADMIN_EMAIL` and `DEV_ADMIN_PASSWORD` in `.env.local`. The shortcut is unavailable in OAuth mode, unavailable in production, and only considered when `NEXT_PUBLIC_APP_URL` starts with `http://localhost`.
 
 ## Architecture
 

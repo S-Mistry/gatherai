@@ -21,7 +21,7 @@ GatherAI is a voice-first feedback tool with **two very different users in one p
 
 The current build has a coherent visual system (see `STYLE_GUIDE.md`) but three compounding problems:
 
-1. **Copy leaks developer internals into user surfaces.** "WebRTC + server-minted secrets," "scaffolded routes," "analysis jobs queued," "transcript-only MVP," "Supabase RLS" — all visible to users. The worst offender is a participant-facing error that reads "*Realtime credentials are not configured yet. The participant flow is scaffolded and ready for env wiring.*" (`gather/components/participant/interview-shell.tsx:114`).
+1. **Copy leaks developer internals into user surfaces.** "WebRTC + server-minted secrets," "scaffolded routes," "analysis jobs queued," technical storage disclaimers, "Supabase RLS" — all visible to users. The worst offender is a participant-facing error that reads "*Realtime credentials are not configured yet. The participant flow is scaffolded and ready for env wiring.*" (`gather/components/participant/interview-shell.tsx:114`).
 2. **UX lacks feedback loops.** No loading states during the 2–3s realtime provisioning; no confirmations after excluding a session; no empty states; no breadcrumbs between project → session; no `aria-live` on status changes; no pre-flight mic check before the participant hits "Start."
 3. **Layout is generous to the point of sparse.** Panels are 32px-radius with `p-6`; `gap-6` between every section; `max-w-7xl`. On a consultant's dashboard where density = decision speed, this reads as "early-stage demo," not "working tool."
 
@@ -64,9 +64,9 @@ These are the lenses every decision below is filtered through.
 
 | Before | After |
 |---|---|
-| "Voice-first workshop discovery" (badge) | "For teams improving real experiences" |
+| "Voice-first discovery" (badge) | "For teams improving real experiences" |
 | "Interview stakeholders at scale without losing transcript evidence." | "Collect honest feedback after any experience without running every interview yourself." |
-| "GatherAI turns pre-workshop discovery into a structured voice workflow…" | "Share one link. A thoughtful AI interviewer listens to each respondent and hands you back themes, contradictions, and improvement priorities — every line traceable to a real quote." |
+| "GatherAI turns discovery into a structured voice workflow…" | "Share one link. A thoughtful AI interviewer listens to each respondent and hands you back themes, contradictions, and improvement priorities — every line traceable to a real quote." |
 | "Open consultant workspace" / "Preview participant link" | "Go to workspace" / "See what respondents see" |
 | Card: "Realtime stance" — "WebRTC + server-minted secrets" | Card: "Runs in a browser" — "No app install. Stakeholders click a link and start talking." |
 | Card: "Governance stance" — "Generated AGENTS, frozen docs, explicit decisions" | Card: "Evidence, not vibes" — "Every theme links back to the transcript segment it came from." |
@@ -77,8 +77,8 @@ These are the lenses every decision below is filtered through.
 | Before | After |
 |---|---|
 | "Magic-link access for the solo consultant workspace" | "Sign in to your workspace" |
-| "The MVP uses Supabase email authentication and one workspace per consultant." | "Continue with Google to open your private workspace. No password to remember." |
-| "Auth boundaries in this scaffold" card | **Remove.** Replace with a 3-line reassurance: "Your data stays yours — each workspace is private, and respondent conversations never leave it." |
+| "The MVP uses Supabase email authentication and one workspace per consultant." | "Continue with Google to open your workspace. No password to remember." |
+| "Auth boundaries in this scaffold" card | **Remove.** Replace with one clear next step: "Create projects, share links, and review responses from one workspace." |
 
 #### Consultant home (`gather/app/app/page.tsx`)
 
@@ -95,7 +95,7 @@ These are the lenses every decision below is filtered through.
 
 | Before | After |
 |---|---|
-| H1: "Configure the next workshop interview project" | "New feedback project" |
+| H1: "Configure the next interview project" | "New feedback project" |
 | "The MVP prioritizes configuration that drives coverage…" | "Set the objective, pick the topics, and draft the questions. You can edit everything after sharing the link." |
 | Label: "Areas of interest" / placeholder "One per line" | "Topics to cover" / "One topic per line — e.g., 'Approval bottlenecks'" |
 | Label: "Required questions" | "Must-ask questions" |
@@ -112,7 +112,7 @@ These are the lenses every decision below is filtered through.
 | Eyebrow: "Required questions" | "Must-ask questions" |
 | Card: "Project synthesis" | "What we're hearing" |
 | Eyebrow: "Top problems" | "Top pain points" |
-| Eyebrow: "Suggested workshop agenda" | "Recommended focus areas" |
+| Eyebrow: "Suggested focus areas" | "Recommended focus areas" |
 | Card: "Cross-interview synthesis" | "Themes across interviews" |
 | Card: "Transcript-backed interviews" | "Sessions" |
 | "Refresh synthesis" button | "Re-run synthesis" + tooltip: "Includes all non-excluded interviews." |
@@ -125,9 +125,9 @@ These are the lenses every decision below is filtered through.
 | Before | After |
 |---|---|
 | Badge: "Public participant link" | "For you" |
-| H1: "Share perspective before the workshop" | "A short conversation about your experience." |
+| H1: "Share perspective before the team decides next steps" | "A short conversation about your experience." |
 | "This short AI interview helps the consultant understand pain points…" | "The team behind this experience would love to hear what worked, what missed, and what to improve next time. I'm an AI that'll ask a few questions and listen." |
-| Disclosure card: "Transcript-only MVP / Audio is not stored in this MVP" | **"What happens to my voice?"** with three plain lines: "• I'll listen and write down what you say. • Your voice recording is not saved. • Only {consultantName} sees the transcript." |
+| Disclosure card: technical storage language | **"How it works"** with three plain lines: "• I'll ask a few questions. • We'll cover one topic at a time. • You can pause or stop whenever you need." |
 
 #### Interview shell (`gather/components/participant/interview-shell.tsx`)
 
@@ -176,12 +176,12 @@ Placed above the H1, `text-xs text-muted-foreground`, with `›` separators. Imp
 
 One page, one URL. No staged UI, no progress dots, no separate mic-check screen. The flow is conversational:
 
-1. **Page loads** → user sees the project intro, the "What happens to my voice" reassurance, and one primary button: **"Start when ready"**.
+1. **Page loads** → user sees the project intro, a short "How it works" orientation, and one primary button: **"Start when ready"**.
 2. **User taps Start** → browser native mic permission prompt fires (we call `getUserMedia({ audio: true })` first thing). On grant, the realtime session connects silently.
 3. **Agent speaks first** → a short scripted opener: *"Hi — thanks for making time. We'll spend about 15 minutes on {project topic}. I'll ask one thing at a time, and you can take as long as you want. Just say 'ready' when you'd like to start."*
 4. **User says "ready"** → this implicitly proves both directions of the channel work (we heard them say it, they heard the opener). Agent acknowledges and asks the first must-ask question. **Timer starts here, not before.**
 5. **Live conversation** → `VoiceStatus` indicator shows listening / thinking / speaking. Timer in the corner ("4 / ~15 min"). Two controls only: **Pause** and **I'm done**.
-6. **End** → dedicated warm panel ("Thanks — your voice is not saved. You can close this tab.").
+6. **End** → dedicated warm panel ("Thanks — that was genuinely useful. You can close this tab.").
 
 Implementation notes:
 - The "ready" detection is a soft signal — the agent listens for affirmative intent ("ready", "yes", "let's go", "okay") and proceeds. If the participant just starts answering questions, the agent rolls with it.
@@ -264,14 +264,14 @@ Everything below **keeps** OKLCH tokens, Montserrat, terracotta primary, frosted
 #### Participant entry (`/i/[linkToken]`) — single page, agent-led
 
 - **Full-bleed single-column layout** on mobile (primary viewport). Max-w-xl on desktop.
-- **Pre-start state**: hero with `consultantName`, project name, "About 15 minutes." Below it, the rewritten **"What happens to my voice?"** card with three reassurance lines and a Phosphor `ShieldCheck` icon. One primary CTA: **"Start when ready"** — full-width pill, `size="lg"`, terracotta. No secondary buttons.
+- **Pre-start state**: hero with `consultantName`, project name, "About 15 minutes." Below it, the rewritten **"How it works"** card with three plain orientation lines and a Phosphor `ShieldCheck` icon. One primary CTA: **"Start when ready"** — full-width pill, `size="lg"`, terracotta. No secondary buttons.
 - **On Start tap**: trigger `getUserMedia({ audio: true })` immediately. While the browser permission prompt is up, the page replaces the CTA area with: *"Allow microphone access to begin."* If denied, surface a recoverable error: *"We need microphone access to talk. Open your browser settings to allow it, then try again."*
 - **On grant**: the realtime channel connects silently in the background. The hero card morphs into the **live conversation surface** (no page navigation):
   - `VoiceStatus` indicator — pulsing dot (listening), animated dots (thinking), bar (speaking).
   - Agent's current spoken text rendered above the indicator (last 1–2 sentences only, fades older lines).
   - Timer in the corner ("4 / ~15 min") that **only starts after the participant has said 'ready'** (or otherwise begun answering).
   - Two controls only: **Pause** and **I'm done**.
-- **End**: the same surface morphs into a warm completion panel — `ShieldCheck` + "Thanks — that was genuinely useful." + "Your voice isn't saved. Only the transcript helps improve the experience." + "You can close this tab." No IDs, no recovery tokens, no "jobs queued" language.
+- **End**: the same surface morphs into a warm completion panel — `ShieldCheck` + "Thanks — that was genuinely useful." + "Your feedback helps improve the experience." + "You can close this tab." No IDs, no recovery tokens, no "jobs queued" language.
 
 ### C.4 Accessibility pass
 

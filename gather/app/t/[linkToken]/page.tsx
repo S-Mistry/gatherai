@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { notFound } from "next/navigation"
 
 import { TestimonialCaptureShell } from "@/components/testimonials/testimonial-capture-shell"
@@ -21,28 +22,54 @@ export default async function TestimonialPage({
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "grid",
+        gridTemplateRows: "auto 1fr auto",
+      }}
+    >
       <AppBar
+        crumb={[{ label: `${config.businessName} feedback` }]}
         right={
           <span className="chip sage">
             <span className="dot" />
-            words only · we don&apos;t keep audio
+            voice review
           </span>
         }
       />
-      <main className="mx-auto w-full max-w-[860px] flex-1 px-6 py-12 sm:px-8">
-        <TestimonialCaptureShell config={config} />
+      <main
+        style={{
+          display: "grid",
+          placeItems: "center",
+          padding: "40px 24px",
+        }}
+      >
+        <div style={{ maxWidth: 760, width: "100%" }}>
+          <TestimonialCaptureShell config={config} />
+        </div>
       </main>
       <footer
-        className="flex items-center justify-between px-9 py-5"
-        style={{ borderTop: "1px dashed var(--line)" }}
+        style={{
+          padding: "20px 36px",
+          borderTop: "1px dashed var(--line)",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 12,
+        }}
       >
-        <span className="font-mono text-[11px] text-[var(--ink-3)]">
+        <span className="font-mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
           gather · feedback pulse · pseudonymous
         </span>
-        <span className="font-mono text-[11px] text-[var(--ink-3)]">
-          {config.businessName}
-        </span>
+        <Link
+          href="/"
+          className="font-hand"
+          style={{ fontSize: 18, color: "var(--ink-3)" }}
+        >
+          skip → I&apos;d rather not answer
+        </Link>
       </footer>
     </div>
   )
