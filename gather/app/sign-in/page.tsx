@@ -45,15 +45,19 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   const configurationErrorMessage =
     authMode === null
       ? "Consultant sign-in is not configured correctly for this environment."
-      : authMode === "supabase_oauth" && oauthProvider === null
-        ? "The configured OAuth provider is not supported."
-        : null
+      : authMode === "supabase_magic_link"
+        ? "Email magic-link consultant sign-in is no longer supported. Use Google OAuth."
+        : authMode === "supabase_oauth" && oauthProvider === null
+          ? "The configured OAuth provider is not supported."
+          : null
 
   const errorMessage = queryErrorMessage ?? configurationErrorMessage
   const providerLabel =
     oauthProvider === null ? null : getSupabaseOAuthProviderLabel(oauthProvider)
   const showOAuthCta = authMode === "supabase_oauth" && providerLabel !== null
-  const showMagicLinkForm = authMode === "supabase_magic_link"
+  const showMagicLinkForm = false
+  const showDevAdminLogin =
+    isDevAdminLoginEnabled && authMode !== "supabase_oauth"
   const oauthHref =
     oauthProvider === null
       ? null
@@ -153,7 +157,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             <MagicLinkForm action={requestMagicLinkAction} />
           ) : null}
 
-          {isDevAdminLoginEnabled ? (
+          {showDevAdminLogin ? (
             <form action={devAdminSignInAction} className="space-y-3">
               <input type="hidden" name="next" value={next} />
               <Button type="submit" variant="outline" className="w-full">

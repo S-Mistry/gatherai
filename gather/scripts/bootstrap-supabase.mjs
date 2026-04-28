@@ -148,6 +148,17 @@ function applyOptionalOAuthProviderPatch({
   return true
 }
 
+function applyConsultantAuthHardeningPatch({ authPatch, consultantAuthMode }) {
+  if (consultantAuthMode !== "supabase_oauth") {
+    return
+  }
+
+  Object.assign(authPatch, {
+    disable_signup: false,
+    external_email_enabled: false,
+  })
+}
+
 function validateConfiguredAuth({
   appUrl,
   authConfig,
@@ -177,6 +188,18 @@ function validateConfiguredAuth({
 
   if (consultantAuthMode !== "supabase_oauth" || oauthProvider === null) {
     return null
+  }
+
+  if (authConfig.disable_signup) {
+    throw new Error(
+      "Supabase signups must remain enabled for open Google consultant sign-in."
+    )
+  }
+
+  if (authConfig.external_email_enabled !== false) {
+    throw new Error(
+      "Supabase Email auth must be disabled when consultant sign-in is Google-only."
+    )
   }
 
   const providerState = getOAuthProviderState(authConfig, oauthProvider)
@@ -252,6 +275,7 @@ async function main() {
     site_url: appUrl,
     uri_allow_list: [...uriAllowList].join(","),
   }
+  applyConsultantAuthHardeningPatch({ authPatch, consultantAuthMode })
   const oauthProviderConfiguredFromEnv = applyOptionalOAuthProviderPatch({
     authPatch,
     consultantAuthMode,
@@ -365,11 +389,11 @@ async function main() {
             (select count(*) from pg_proc p
               join pg_namespace n on n.oid = p.pronamespace
              where n.nspname = 'public'
-               and p.proname in ('handle_new_user','claim_analysis_jobs','release_stale_analysis_jobs')) as public_function_count,
+               and p.proname in ('handle_new_user','ensure_consultant_workspace','claim_analysis_jobs','release_stale_analysis_jobs')) as public_function_count,
             (select count(*) from pg_proc p
               join pg_namespace n on n.oid = p.pronamespace
              where n.nspname = 'app'
-               and p.proname in ('claim_analysis_jobs','release_stale_analysis_jobs')) as app_function_count,
+               and p.proname in ('claim_analysis_jobs','release_stale_analysis_jobs','current_user_has_google_provider')) as app_function_count,
             (select count(*) from pg_policies where schemaname = 'public') as policy_count
         `,
       }),
@@ -440,6 +464,8 @@ async function main() {
         oauthProvider,
         projectAuthCallbackUrl,
         redirectUrls,
+        emailAuthEnabled: verifiedAuthConfig.external_email_enabled,
+        signupDisabled: verifiedAuthConfig.disable_signup,
         oauthProviderConfiguredFromEnv,
         oauthProviderState,
         appliedMigrations: migrationFiles,

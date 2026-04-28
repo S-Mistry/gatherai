@@ -1,6 +1,6 @@
 # Technical Spec v1
 
-Last updated: April 27, 2026
+Last updated: April 28, 2026
 
 ## 1. Scope
 
@@ -64,9 +64,9 @@ Last updated: April 27, 2026
   - `/embed/testimonials/[projectId]` renders approved reviews only, plus a leave-review CTA and Gather attribution
 - Consultant path:
   - browser loads `/sign-in`
-  - page starts Supabase Google OAuth by default or exposes the magic-link fallback when the deploy-time auth flag enables it
-  - local development can expose a one-click dev admin sign-in only when `DEV_ADMIN_LOGIN_ENABLED=true`, `NODE_ENV` is not production, `NEXT_PUBLIC_APP_URL` starts with `http://localhost`, and dev admin credentials are configured
-  - Supabase redirects back through `/auth/callback`, which exchanges the auth code and establishes the consultant session
+  - page starts Supabase Google OAuth; email-only consultant sessions are rejected even if legacy email auth users exist
+  - local development can expose a one-click dev admin sign-in only outside OAuth mode, when `DEV_ADMIN_LOGIN_ENABLED=true`, `NODE_ENV` is not production, `NEXT_PUBLIC_APP_URL` starts with `http://localhost`, and dev admin credentials are configured
+  - Supabase redirects back through `/auth/callback`, which exchanges the auth code, verifies the user has a Google provider, and provisions the consultant workspace idempotently
   - browser loads `/app/...`
   - server components and server actions fetch consultant-scoped data from Supabase through route-specific repository loaders rather than one broad workspace snapshot path
   - the project synthesis surface lazily resolves transcript-backed evidence in a right-side drawer through an authenticated consultant read route
@@ -94,7 +94,7 @@ Last updated: April 27, 2026
 - `/`
   - marketing overview and entry into consultant sign-in
 - `/sign-in`
-  - consultant sign-in surface, using Google OAuth by default with a feature-flagged magic-link fallback and a localhost-only dev admin shortcut when explicitly enabled
+  - consultant sign-in surface, using Google OAuth; legacy magic-link code must not create new users and email-only sessions cannot enter the app
 - `/auth/login`
   - starts consultant Supabase OAuth and validates the requested provider/redirect target
 - `/auth/callback`
@@ -307,6 +307,7 @@ Last updated: April 27, 2026
 ## 8. Security model
 
 - All consultant-owned tables use RLS.
+- Consultant workspace access requires Supabase Auth plus a Google provider claim; email-only JWTs fail RLS even if old workspace membership rows exist.
 - Public participant and testimonial access never uses the server secret key in the browser.
 - Server secret key access exists only in route handlers, background job execution, and setup tooling.
 - RLS helper functions run as security definers so workspace-access checks do not recurse through protected tables.
@@ -382,11 +383,12 @@ Last updated: April 27, 2026
 ### 11.1 Auth bootstrap notes
 
 - `npm --prefix gather run supabase:bootstrap` patches Supabase `site_url` and `uri_allow_list` to match `NEXT_PUBLIC_APP_URL`.
-- When `CONSULTANT_AUTH_MODE=supabase_oauth` and `SUPABASE_OAUTH_PROVIDER=google`, bootstrap also validates that the Google provider is enabled and has a client ID configured.
+- When `CONSULTANT_AUTH_MODE=supabase_oauth` and `SUPABASE_OAUTH_PROVIDER=google`, bootstrap also validates that the Google provider is enabled and has a client ID configured, keeps signups open for Google, and disables Supabase Email auth.
 - If `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` and `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET` are present during bootstrap, the script enables Google in the Supabase project through the Management API before validating.
 - Google OAuth redirect URI is the Supabase-hosted callback endpoint: `${NEXT_PUBLIC_SUPABASE_URL}/auth/v1/callback`.
 - Supabase redirect allow-list entries are the application callback URLs, such as `${NEXT_PUBLIC_APP_URL}/auth/callback` and `${NEXT_PUBLIC_APP_URL}/auth/callback?next=/app`.
 - If OAuth mode is selected and the chosen provider is still disabled after bootstrap, the script fails before continuing so the misconfiguration is caught during setup instead of by end users.
+- Google OAuth consent must be External and In production for open public Google sign-in; Google Testing mode is limited to configured test users.
 
 ## 12. Delivery slices
 
@@ -405,5 +407,6 @@ Last updated: April 27, 2026
 - `npm --prefix gather run typecheck`
 - `npm --prefix gather run build`
 - verify the selected consultant auth provider is enabled in the target Supabase project
+- verify Supabase Email auth is disabled in OAuth mode and email-only sessions cannot read workspace tables
 - verify bootstrap confirms schema `app` exists and role `authenticated` has `USAGE` on it
 - schema review for RLS coverage and queue idempotency

@@ -1,6 +1,6 @@
 # Issue Log
 
-Last updated: April 27, 2026
+Last updated: April 28, 2026
 
 Use this file for confirmed repo-specific issues only. Keep entries short and practical.
 
@@ -150,3 +150,10 @@ Use this file for confirmed repo-specific issues only. Keep entries short and pr
 - Cause: The server route sent the browser Agents SDK audio config directly to the Realtime REST client-secret endpoint. The SDK accepts camelCase fields and converts them internally, but the REST session payload expects snake_case fields such as `noise_reduction` and `turn_detection`.
 - Avoid: Keep SDK-facing config and REST session payload builders separate. Any config serialized to `/v1/realtime/client_secrets` must use API field names, not SDK convenience field names.
 - Fix/Check: Assert the client-secret audio payload contains `noise_reduction`, `turn_detection`, and snake_case VAD keys, then start a participant interview and confirm the realtime client secret is minted.
+
+## I-022 Email auth auto-created consultant workspaces
+
+- Problem: A random email address could sign in through the legacy email flow and reach a consultant workspace.
+- Cause: Supabase Email auth was enabled, `signInWithOtp` allowed implicit user creation, and the `handle_new_user` trigger created a workspace for every auth user.
+- Avoid: In OAuth mode, keep consultant access Google-only across app checks, RLS helpers, and Supabase bootstrap. Do not create workspaces from the generic auth-user trigger.
+- Fix/Check: Disable Supabase Email auth during bootstrap, set magic-link `shouldCreateUser: false`, require a Google provider claim before app/RLS access, and provision workspaces idempotently only after an accepted Google callback.

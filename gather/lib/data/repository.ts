@@ -6,6 +6,8 @@ import {
   signRecoveryToken,
   verifyRecoveryToken,
 } from "@/lib/auth/recovery-token"
+import { ensureConsultantWorkspace } from "@/lib/auth/consultant-workspace"
+import { getAllowedConsultantUser } from "@/lib/auth/session"
 import {
   buildEmptyProjectSynthesis,
   buildGeneratedOutputPlaceholder,
@@ -1262,20 +1264,12 @@ async function getConsultantContext(): Promise<ConsultantContext | null> {
     return null
   }
 
-  const {
-    data: { user },
-    error: userError,
-  } = await client.auth.getUser()
-
-  if (userError) {
-    fail(`Unable to read consultant session: ${userError.message}`)
-  }
-
+  const user = await getAllowedConsultantUser(client)
   if (!user) {
     return null
   }
 
-  const [profileResult, workspaceResult] = await Promise.all([
+  let [profileResult, workspaceResult] = await Promise.all([
     client
       .from("profiles")
       .select("*")
@@ -1290,6 +1284,30 @@ async function getConsultantContext(): Promise<ConsultantContext | null> {
 
   if (workspaceResult.error) {
     fail(`Unable to load workspace: ${workspaceResult.error.message}`)
+  }
+
+  if (!profileResult.data || !workspaceResult.data) {
+    await ensureConsultantWorkspace(client, user)
+    ;[profileResult, workspaceResult] = await Promise.all([
+      client
+        .from("profiles")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle<ProfileRow>(),
+      client
+        .from("workspaces")
+        .select("*")
+        .limit(1)
+        .maybeSingle<WorkspaceRow>(),
+    ])
+
+    if (profileResult.error) {
+      fail(`Unable to load profile: ${profileResult.error.message}`)
+    }
+
+    if (workspaceResult.error) {
+      fail(`Unable to load workspace: ${workspaceResult.error.message}`)
+    }
   }
 
   if (!workspaceResult.data) {
