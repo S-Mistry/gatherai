@@ -29,28 +29,40 @@ export function Confirm({
     <AlertDialog.Root>
       <AlertDialog.Trigger asChild>{trigger}</AlertDialog.Trigger>
       <AlertDialog.Portal>
-        <AlertDialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in data-[state=closed]:fade-out" />
+        <AlertDialog.Overlay className="drawer-backdrop data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in data-[state=closed]:fade-out" />
         <AlertDialog.Content
           className={cn(
-            "panel fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2",
+            "fixed left-1/2 top-1/2 z-[101] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 p-6",
             "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in data-[state=closed]:fade-out"
           )}
+          style={{
+            background: "var(--card)",
+            border: "1px solid var(--line)",
+            borderRadius: 8,
+            boxShadow: "var(--shadow-pop)",
+          }}
         >
-          <AlertDialog.Title className="text-lg font-semibold text-foreground">
+          <AlertDialog.Title
+            className="font-serif"
+            style={{ fontSize: 22, fontWeight: 400, margin: 0 }}
+          >
             {title}
           </AlertDialog.Title>
           {description ? (
-            <AlertDialog.Description className="mt-2 text-sm leading-6 text-muted-foreground">
+            <AlertDialog.Description className="font-sans mt-2 text-sm leading-6 text-[var(--ink-2)]">
               {description}
             </AlertDialog.Description>
           ) : null}
           <div className="mt-6 flex justify-end gap-2">
             <AlertDialog.Cancel asChild>
-              <Button variant="outline">{cancelLabel}</Button>
+              <Button variant="ghost" size="sm">
+                {cancelLabel}
+              </Button>
             </AlertDialog.Cancel>
             <AlertDialog.Action asChild>
               <Button
-                variant={destructive ? "destructive" : "default"}
+                variant={destructive ? "destructive" : "clay"}
+                size="sm"
                 onClick={() => {
                   void onConfirm()
                 }}

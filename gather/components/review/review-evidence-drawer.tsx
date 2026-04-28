@@ -86,7 +86,7 @@ export function ReviewEvidenceDrawer({
       <RadixDialog.Portal>
         <RadixDialog.Overlay
           className={cn(
-            "fixed inset-0 z-40 bg-foreground/20 backdrop-blur-[2px]",
+            "fixed inset-0 z-40 bg-[rgba(40,30,18,0.4)] ",
             "data-[state=open]:animate-in data-[state=open]:fade-in-0",
             "data-[state=closed]:animate-out data-[state=closed]:fade-out-0"
           )}
@@ -95,7 +95,7 @@ export function ReviewEvidenceDrawer({
           aria-describedby={undefined}
           className={cn(
             "fixed inset-y-0 right-0 z-50 flex w-full max-w-[520px] flex-col",
-            "border-l border-border/70 bg-background/96 shadow-[0_40px_80px_-30px_rgba(23,30,55,0.45)] backdrop-blur",
+            "border-l border-border/70 bg-background/96 shadow-[var(--shadow-pop)] backdrop-blur",
             "focus:outline-none",
             "data-[state=open]:animate-in data-[state=open]:slide-in-from-right data-[state=open]:duration-200",
             "data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right data-[state=closed]:duration-150"
@@ -159,7 +159,7 @@ export function ReviewEvidenceDrawer({
                   {selectedSegments.map((segment) => (
                     <li
                       key={segment.id}
-                      className="rounded-2xl border border-primary/15 bg-primary/8 px-4 py-3"
+                      className="rounded-2xl border border-[var(--clay-soft)] bg-[var(--clay-soft)] px-4 py-3"
                     >
                       <p className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
                         {segment.speaker}

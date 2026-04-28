@@ -24,9 +24,13 @@ export function TabsList({
   return (
     <RadixTabs.List
       className={cn(
-        "flex flex-wrap items-center gap-1 rounded-2xl border border-border/70 bg-background/70 p-1 backdrop-blur",
+        "flex flex-wrap items-center gap-2 rounded-full p-1.5",
         className
       )}
+      style={{
+        background: "var(--card)",
+        border: "1px solid var(--line)",
+      }}
       {...props}
     />
   )
@@ -39,10 +43,10 @@ export function TabsTrigger({
   return (
     <RadixTabs.Trigger
       className={cn(
-        "inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground transition-colors",
-        "hover:text-foreground",
-        "data-[state=active]:bg-primary/12 data-[state=active]:text-primary",
-        "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/40",
+        "font-sans inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-medium text-[var(--ink-3)] transition-colors",
+        "hover:text-[var(--ink)]",
+        "data-[state=active]:bg-[var(--clay-soft)] data-[state=active]:text-[var(--clay)]",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--clay)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--cream)]",
         className
       )}
       {...props}
@@ -56,10 +60,7 @@ export function TabsContent({
 }: ComponentPropsWithoutRef<typeof RadixTabs.Content>) {
   return (
     <RadixTabs.Content
-      className={cn(
-        "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/30 rounded-2xl",
-        className
-      )}
+      className={cn("focus-visible:outline-none", className)}
       {...props}
     />
   )

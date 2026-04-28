@@ -629,52 +629,7 @@
     scrollbar-width: none;
   }
 
-  /* Compatibility shims — keep older callsites readable until
-     they're individually reskinned. New code should not use these. */
-  .panel,
-  .panel-flush {
-    background: var(--card);
-    border-radius: 6px;
-    box-shadow: var(--shadow-2);
-    padding: 22px 26px;
-    position: relative;
-  }
-  .panel-flush {
-    padding: 0;
-  }
-  .panel-compact {
-    background: var(--card);
-    border-radius: 6px;
-    box-shadow: var(--shadow-1);
-    padding: 14px 18px;
-  }
-  .page-gradient {
-    background: transparent;
-  }
-  .stack {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-  .divider {
-    height: 1px;
-    width: 100%;
-    background: var(--line-soft);
-  }
-  .focus-ring {
-    outline: none;
-  }
-  .focus-ring:focus-visible {
-    outline: 2px solid var(--clay);
-    outline-offset: 2px;
-  }
-  .eyebrow-sm {
-    font-family: var(--font-mono), monospace;
-    font-size: 10px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--ink-3);
-  }
+  /* Long-form prose container kept for future reading-room styles. */
   .prose-reader {
     max-width: 68ch;
     font-size: 15px;

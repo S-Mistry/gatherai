@@ -168,7 +168,7 @@ function CompactRail({
                 className={cn(
                   " relative flex size-9 items-center justify-center rounded-full border text-[11px] font-semibold transition-all",
                   isActive
-                    ? "border-primary bg-primary/12 text-primary ring-2 ring-primary/25"
+                    ? "border-primary bg-[var(--clay-soft)] text-primary ring-2 ring-primary/25"
                     : "border-border/70 bg-background/70 text-muted-foreground hover:border-primary/40 hover:text-foreground",
                   session.excludedFromSynthesis && !isActive && "opacity-40"
                 )}
@@ -177,12 +177,12 @@ function CompactRail({
                 {session.qualityFlag ? (
                   <span
                     aria-hidden
-                    className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-rose-500 ring-2 ring-background"
+                    className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-[var(--rose)] ring-2 ring-background"
                   />
                 ) : score?.lowQuality ? (
                   <span
                     aria-hidden
-                    className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-amber-500 ring-2 ring-background"
+                    className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-[var(--gold)] ring-2 ring-background"
                   />
                 ) : null}
               </Link>
@@ -221,7 +221,7 @@ function ExpandedRail({
     >
       <div className="flex items-center justify-between px-1">
         <span className="eyebrow">Sessions</span>
-        <span className="text-[10px] tracking-[0.18em] text-muted-foreground/80 uppercase">
+        <span className="text-[10px] tracking-[0.18em] text-[var(--ink-3)] uppercase">
           j / k
         </span>
       </div>
@@ -237,9 +237,9 @@ function ExpandedRail({
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
                   " block rounded-2xl border border-border/70 bg-background/70 px-3 py-2.5 transition-colors",
-                  "hover:border-primary/40 hover:bg-primary/8",
+                  "hover:border-primary/40 hover:bg-[var(--clay-soft)]",
                   isActive &&
-                    "border-primary/40 bg-primary/12 ring-2 ring-primary/20"
+                    "border-primary/40 bg-[var(--clay-soft)] ring-2 ring-primary/20"
                 )}
               >
                 <div className="flex items-center justify-between gap-2">
@@ -256,8 +256,8 @@ function ExpandedRail({
                       className={cn(
                         "text-[11px] font-semibold tabular-nums",
                         score?.lowQuality
-                          ? "text-amber-700 dark:text-amber-300"
-                          : "text-emerald-700 dark:text-emerald-300"
+                          ? "text-[var(--gold)]"
+                          : "text-[var(--sage)]"
                       )}
                     >
                       {overall}%

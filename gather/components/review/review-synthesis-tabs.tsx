@@ -364,13 +364,13 @@ function SummarySection({
         <span className="rounded-full border border-border/70 bg-background/80 px-3 py-1">
           Confidence {Math.round(generatedOutput.confidenceScore * 100)}%
         </span>
-        <span className="rounded-full border border-emerald-500/20 bg-emerald-500/8 px-3 py-1 text-emerald-700 dark:text-emerald-300">
+        <span className="rounded-full border border-[var(--sage)] bg-[var(--sage-soft)] px-3 py-1 text-[var(--sage)]">
           Answered {coverage.answered}
         </span>
-        <span className="rounded-full border border-amber-500/20 bg-amber-500/8 px-3 py-1 text-amber-700 dark:text-amber-300">
+        <span className="rounded-full border border-[var(--gold)] bg-[var(--gold-soft)] px-3 py-1 text-[var(--gold)]">
           Partial {coverage.partial}
         </span>
-        <span className="rounded-full border border-rose-500/20 bg-rose-500/8 px-3 py-1 text-rose-700 dark:text-rose-300">
+        <span className="rounded-full border border-[var(--rose)] bg-[var(--rose-soft)] px-3 py-1 text-[var(--rose)]">
           Missing {coverage.missing}
         </span>
         <span className="rounded-full border border-border/70 bg-background/80 px-3 py-1">
@@ -382,13 +382,13 @@ function SummarySection({
       </div>
 
       {evidenceHealthMessage ? (
-        <p className="mt-4 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-foreground">
+        <p className="mt-4 rounded-2xl border border-[var(--gold)] bg-[var(--gold-soft)] px-4 py-3 text-sm leading-6 text-foreground">
           <span className="font-semibold">Evidence health:</span> {evidenceHealthMessage}
         </p>
       ) : null}
 
       {qualityOverride?.note.trim() ? (
-        <p className="mt-4 rounded-2xl border border-primary/20 bg-primary/8 px-4 py-3 text-sm leading-6 text-foreground">
+        <p className="mt-4 rounded-2xl border border-[var(--clay-soft)] bg-[var(--clay-soft)] px-4 py-3 text-sm leading-6 text-foreground">
           <span className="font-semibold">Manual quality note:</span>{" "}
           {qualityOverride.note}
         </p>
@@ -417,8 +417,8 @@ function QualityChip({
   const dotColor = !ready
     ? "bg-muted-foreground"
     : effectiveLowQuality
-      ? "bg-amber-500"
-      : "bg-emerald-500"
+      ? "bg-[var(--gold)]"
+      : "bg-[var(--sage)]"
   const label = qualityOverride
     ? `Manual ${qualityOverride.lowQuality ? "flag" : "pass"}`
     : ready
@@ -444,7 +444,7 @@ function QualityChip({
           sideOffset={8}
           align="end"
           className={cn(
-            "z-50 w-[320px] rounded-2xl border border-border/70 bg-popover/95 p-4 shadow-[0_18px_50px_-28px_rgba(23,30,55,0.4)] backdrop-blur",
+            "z-50 w-[320px] rounded-2xl border border-border/70 bg-[var(--card)] p-4 shadow-[var(--shadow-pop)] backdrop-blur",
             "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
           )}
         >
@@ -460,7 +460,7 @@ function QualityChip({
                 </Badge>
               </div>
               {qualityOverride ? (
-                <p className="rounded-2xl border border-primary/20 bg-primary/8 px-3 py-2 text-xs leading-5 text-foreground">
+                <p className="rounded-2xl border border-[var(--clay-soft)] bg-[var(--clay-soft)] px-3 py-2 text-xs leading-5 text-foreground">
                   Manual review is overriding the generated score for triage and
                   synthesis decisions.
                 </p>
@@ -655,7 +655,7 @@ function QuoteLibraryCard({
             <Badge variant="accent">{quote.label}</Badge>
             {suppressed ? <Badge variant="warning">Suppressed</Badge> : null}
           </div>
-          <blockquote className="rounded-2xl border border-primary/15 bg-primary/8 px-4 py-3 text-sm leading-6 text-foreground">
+          <blockquote className="rounded-2xl border border-[var(--clay-soft)] bg-[var(--clay-soft)] px-4 py-3 text-sm leading-6 text-foreground">
             “{quote.excerpt}”
           </blockquote>
           <p className="text-sm leading-6 text-muted-foreground">{quote.context}</p>

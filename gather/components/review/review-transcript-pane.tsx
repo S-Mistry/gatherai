@@ -61,9 +61,9 @@ function TranscriptSegmentCard({ segment }: { segment: TranscriptSegment }) {
       data-segment-id={segment.id}
       className={cn(
         "rounded-2xl border border-border/70 bg-background/70 p-4 transition-all",
-        isHovered && "border-primary/50 bg-primary/8",
+        isHovered && "border-primary/50 bg-[var(--clay-soft)]",
         isActive &&
-          "border-primary bg-primary/12 shadow-[0_0_0_3px_color-mix(in_srgb,var(--color-primary)_22%,transparent)]"
+          "border-primary bg-[var(--clay-soft)] shadow-[0_0_0_3px_color-mix(in_srgb,var(--color-primary)_22%,transparent)]"
       )}
     >
       <Badge

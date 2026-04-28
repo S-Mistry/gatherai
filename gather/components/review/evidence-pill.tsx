@@ -57,8 +57,8 @@ export function EvidencePill({ evidence, className }: EvidencePillProps) {
         }
       }}
       className={cn(
-        "group inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/8 px-2.5 py-1 text-[11px] font-semibold text-primary transition-colors",
-        "hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/40",
+        "group inline-flex items-center gap-1.5 rounded-full border border-[var(--clay-soft)] bg-[var(--clay-soft)] px-2.5 py-1 text-[11px] font-semibold text-primary transition-colors",
+        "hover:bg-[var(--clay-soft)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/40",
         className
       )}
       title={rationale ?? "Jump to transcript evidence"}
