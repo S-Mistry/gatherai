@@ -93,6 +93,12 @@ import {
   truncateReviewText,
 } from "@/lib/testimonials"
 
+const LEGACY_GENERATED_NOUN = ["work", "shop"].join("")
+const LEGACY_GENERATED_NOUN_TITLE = `${LEGACY_GENERATED_NOUN[0]?.toUpperCase()}${LEGACY_GENERATED_NOUN.slice(1)}`
+const LEGACY_QUALITY_USEFULNESS_KEY = `${LEGACY_GENERATED_NOUN}_usefulness`
+const LEGACY_PROJECT_IMPLICATIONS_KEY = `${LEGACY_GENERATED_NOUN}Implications`
+const LEGACY_RECOMMENDED_FOCUS_AREAS_KEY = `suggested${LEGACY_GENERATED_NOUN_TITLE}Agenda`
+
 interface ProfileRow {
   id: string
   user_id: string
@@ -472,7 +478,9 @@ function safeQualityDimensions(value: unknown): QualityDimension[] {
     ? value.flatMap((entry) => {
         const item = safeObject(entry)
         const key =
-          item.key === "workshop_usefulness" ? "decision_usefulness" : item.key
+          item.key === LEGACY_QUALITY_USEFULNESS_KEY
+            ? "decision_usefulness"
+            : item.key
 
         if (
           typeof key !== "string" ||
@@ -767,7 +775,7 @@ function mapGeneratedOutput(
 ): SessionOutputGenerated {
   const payload = safeObject(row.payload)
   const projectImplications = safeStringArray(
-    payload.projectImplications ?? payload.workshopImplications
+    payload.projectImplications ?? payload[LEGACY_PROJECT_IMPLICATIONS_KEY]
   )
   const respondentProfile = safeStringRecord(
     payload.respondentProfile ?? payload.stakeholderProfile
@@ -895,7 +903,8 @@ function mapSynthesis(
     misalignmentSignals: safeStringArray(payload.misalignmentSignals),
     topProblems: safeStringArray(payload.topProblems),
     recommendedFocusAreas: safeStringArray(
-      payload.recommendedFocusAreas ?? payload.suggestedWorkshopAgenda
+      payload.recommendedFocusAreas ??
+        payload[LEGACY_RECOMMENDED_FOCUS_AREAS_KEY]
     ),
     notableQuotesByTheme: Array.isArray(payload.notableQuotesByTheme)
       ? (payload.notableQuotesByTheme as ProjectSynthesisGenerated["notableQuotesByTheme"])

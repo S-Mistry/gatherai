@@ -2,6 +2,7 @@ import Link from "next/link"
 import { headers } from "next/headers"
 import { notFound } from "next/navigation"
 
+import { ConsultantAppBar } from "@/components/dashboard/consultant-app-bar"
 import { ProjectSynthesisOverrideForm } from "@/components/dashboard/project-synthesis-override-form"
 import { ProjectEvidenceSurface } from "@/components/dashboard/project-evidence-surface"
 import { ProjectVersionForm } from "@/components/dashboard/project-version-form"
@@ -58,14 +59,24 @@ export default async function ProjectDetailPage({
         : "pending"
 
     return (
-      <TestimonialProjectDetail
-        project={detail.project}
-        configVersion={detail.configVersion}
-        testimonialLinks={detail.testimonialLinks}
-        testimonialReviews={detail.testimonialReviews}
-        origin={origin}
-        activeFilter={activeFilter}
-      />
+      <>
+        <ConsultantAppBar
+          crumb={[
+            { label: "Workspace", href: "/app" },
+            { label: detail.project.name },
+          ]}
+        />
+        <div style={{ padding: "36px 40px 120px", maxWidth: 1320, margin: "0 auto" }}>
+          <TestimonialProjectDetail
+            project={detail.project}
+            configVersion={detail.configVersion}
+            testimonialLinks={detail.testimonialLinks}
+            testimonialReviews={detail.testimonialReviews}
+            origin={origin}
+            activeFilter={activeFilter}
+          />
+        </div>
+      </>
     )
   }
 
@@ -82,12 +93,18 @@ export default async function ProjectDetailPage({
   const includedTotalForSpectro = Math.max(includedSessions, 1)
 
   return (
-    <div style={{ padding: "36px 40px 120px", maxWidth: 1320, margin: "0 auto" }}>
-      {/* ── Hero ─────────────────────────────────── */}
+    <>
+      <ConsultantAppBar
+        crumb={[
+          { label: "Workspace", href: "/app" },
+          { label: detail.project.name },
+        ]}
+      />
+      <div style={{ padding: "36px 40px 120px", maxWidth: 1320, margin: "0 auto" }}>
+        {/* ── Hero ─────────────────────────────────── */}
       <section
+        className="project-detail-hero-grid"
         style={{
-          display: "grid",
-          gridTemplateColumns: "1.25fr 1fr",
           gap: 36,
           marginBottom: 56,
         }}
@@ -147,7 +164,7 @@ export default async function ProjectDetailPage({
             {synthesisOverrideActive ? (
               <Stamp variant="ink">narrative override</Stamp>
             ) : includedSessions >= 3 ? (
-              <Stamp>workshop ready</Stamp>
+              <Stamp>synthesis ready</Stamp>
             ) : null}
             <span
               className="font-mono"
@@ -175,9 +192,8 @@ export default async function ProjectDetailPage({
 
         {/* Stat tiles */}
         <div
+          className="project-detail-stat-grid"
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(2, 1fr)",
             gap: 14,
           }}
         >
@@ -283,7 +299,7 @@ export default async function ProjectDetailPage({
             topics · questions · history
           </span>
         </summary>
-        <div className="grid gap-7 mt-6" style={{ gridTemplateColumns: "1fr 1fr" }}>
+        <div className="project-detail-two-column-grid mt-6 gap-7">
           <div>
             <h3
               className="font-serif"
@@ -528,7 +544,8 @@ export default async function ProjectDetailPage({
       </details>
 
       <span className="sr-only">{projectTypePreset.label}</span>
-    </div>
+      </div>
+    </>
   )
 }
 
@@ -651,9 +668,8 @@ function SessionsAtAGlance({
 
   return (
     <div
+      className="project-sessions-glance-grid"
       style={{
-        display: "grid",
-        gridTemplateColumns: `repeat(${Math.min(sessions.length, 7)}, 1fr)`,
         gap: 12,
       }}
     >

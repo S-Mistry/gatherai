@@ -1,5 +1,6 @@
 import Link from "next/link"
 
+import { ConsultantAppBar } from "@/components/dashboard/consultant-app-bar"
 import { ProjectTile } from "@/components/dashboard/project-tile"
 import { getProjectTypePreset } from "@/lib/project-types"
 import { getWorkspaceSnapshot } from "@/lib/data/repository"
@@ -55,6 +56,9 @@ function describeFreshness(snapshot: Awaited<ReturnType<typeof getWorkspaceSnaps
   )
 }
 
+const WORKSPACE_DASHBOARD_MAX_WIDTH = 1680
+const WORKSPACE_DASHBOARD_X_PADDING = 36
+
 export default async function ConsultantHomePage() {
   const snapshot = await getWorkspaceSnapshot()
   const firstName = workspaceFirstName(snapshot.workspace.name)
@@ -80,8 +84,15 @@ export default async function ConsultantHomePage() {
 
   return (
     <>
+      <ConsultantAppBar crumb={[{ label: "Workspace" }]} />
       {/* Hero */}
-      <section style={{ padding: "48px 48px 28px", maxWidth: 1280, margin: "0 auto" }}>
+      <section
+        style={{
+          padding: `48px ${WORKSPACE_DASHBOARD_X_PADDING}px 28px`,
+          maxWidth: WORKSPACE_DASHBOARD_MAX_WIDTH,
+          margin: "0 auto",
+        }}
+      >
         <div className="font-hand" style={{ fontSize: 28, color: "var(--clay)", marginBottom: 4 }}>
           good morning, {firstName} —
         </div>
@@ -121,7 +132,13 @@ export default async function ConsultantHomePage() {
 
       {/* In motion */}
       {live.length > 0 ? (
-        <section style={{ padding: "0 48px 32px", maxWidth: 1280, margin: "0 auto" }}>
+        <section
+          style={{
+            padding: `0 ${WORKSPACE_DASHBOARD_X_PADDING}px 32px`,
+            maxWidth: WORKSPACE_DASHBOARD_MAX_WIDTH,
+            margin: "0 auto",
+          }}
+        >
           <div className="section-head">
             <h2 className="font-serif" style={{ fontSize: 26, fontWeight: 400 }}>
               In motion
@@ -139,7 +156,13 @@ export default async function ConsultantHomePage() {
       ) : null}
 
       {/* Quiet for now */}
-      <section style={{ padding: "20px 48px 80px", maxWidth: 1280, margin: "0 auto" }}>
+      <section
+        style={{
+          padding: `20px ${WORKSPACE_DASHBOARD_X_PADDING}px 80px`,
+          maxWidth: WORKSPACE_DASHBOARD_MAX_WIDTH,
+          margin: "0 auto",
+        }}
+      >
         <div className="section-head">
           <h2
             className="font-serif"
@@ -152,10 +175,7 @@ export default async function ConsultantHomePage() {
                 : "Quiet for now"}
           </h2>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 18 }}>
-          {quiet.map((p) => (
-            <ProjectTile key={p.id} project={p} />
-          ))}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 18 }}>
           <Link
             href="/app/projects/new"
             className="grid place-items-center text-center"
@@ -182,6 +202,9 @@ export default async function ConsultantHomePage() {
               </div>
             </div>
           </Link>
+          {quiet.map((p) => (
+            <ProjectTile key={p.id} project={p} />
+          ))}
         </div>
       </section>
     </>

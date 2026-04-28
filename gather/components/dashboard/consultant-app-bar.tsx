@@ -1,3 +1,5 @@
+"use client"
+
 import type { ReactNode } from "react"
 
 import { signOutAction } from "@/app/app/actions"
@@ -5,14 +7,7 @@ import { AppBar, AppBarAvatar } from "@/components/ui/app-bar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import type { CrumbItem } from "@/components/ui/crumb"
-
-interface AppShellProps {
-  children: ReactNode
-  userEmail?: string | null
-  demoMode: boolean
-  crumb?: CrumbItem[]
-  rightSlot?: ReactNode
-}
+import { useConsultantSession } from "./consultant-session-context"
 
 function initialsFor(email: string | null | undefined) {
   if (!email) return "GA"
@@ -24,13 +19,15 @@ function initialsFor(email: string | null | undefined) {
   return handle.slice(0, 2).toUpperCase() || "GA"
 }
 
-export function AppShell({
-  children,
-  userEmail,
-  demoMode,
+export function ConsultantAppBar({
   crumb,
   rightSlot,
-}: AppShellProps) {
+}: {
+  crumb?: CrumbItem[]
+  rightSlot?: ReactNode
+}) {
+  const { userEmail, demoMode } = useConsultantSession()
+
   const right = (
     <>
       {rightSlot}
@@ -52,13 +49,10 @@ export function AppShell({
   )
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <AppBar
-        crumb={crumb ?? [{ label: "Workspace" }]}
-        right={right}
-        avatar={<AppBarAvatar initials={initialsFor(userEmail)} />}
-      />
-      {children}
-    </div>
+    <AppBar
+      crumb={crumb ?? [{ label: "Workspace" }]}
+      right={right}
+      avatar={<AppBarAvatar initials={initialsFor(userEmail)} />}
+    />
   )
 }

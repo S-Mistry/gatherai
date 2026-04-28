@@ -48,10 +48,14 @@
 
 ## UI Work
 
-- Always consult [`STYLE_GUIDE.md`](STYLE_GUIDE.md) before changing styles, adding components, or building new screens. Match its color tokens, typography rules (Instrument Serif body / Caveat hand / Inter Tight sans / JetBrains Mono micro), spacing, radii, ornament conventions, and page templates.
-- Always consult [`ui-design.md`](ui-design.md) before producing any UI design mockup. Follow its output format, typography, icon, component, and interaction rules.
+- Always consult [`STYLE_GUIDE.md`](STYLE_GUIDE.md) before changing styles, adding components, or building new screens. Match its color tokens, type scale, page recipes, ornament conventions (Tape, Stamp, Pin, Scribble, WaveBars, MicRing, Spectrogram, StickyNote, MarginNote), and copy library.
+- Always consult [`ui-design.md`](ui-design.md) before producing any UI design mockup. Follow its output format, the drop-in `<style>` block, the Caveat phrase library, and component vocabulary.
+- The reference design is `gather/project/final/` in the design archive. When refactoring or adding a UI surface, port the exact paddings, grid templates, and copy strings rather than approximating them — the bar is ±2px on type and exact-match on ornament positions, copy, and grid templates.
+- Each page owns its own outer `<div style={{padding, maxWidth, margin: '0 auto'}}>` container. `<AppShell>` only renders the sticky `<AppBar>`. See `STYLE_GUIDE.md` §6.2 for canonical paddings (Dashboard 1280, Synthesis 1320, DeepInterview 1320, FeedbackInterview 760, Completion 640).
 - The visible wordmark is `gather.` (Caveat lowercase + clay dot). Repository, package, env var, and database identifiers stay `GatherAI`.
 - Dark mode is dropped in v1. Do not add `.dark` styles, `dark:` Tailwind variants, or theme toggles. The system is light-only.
+- Headings stay at `font-weight: 400` — never bold. The italic-clay one-word accent in a serif headline is the signature move; use it once per hero.
+- One `<Stamp>` per page max. One `<Tape>` per card max (exception: DeepInterview has two). One `<Scribble>` per heading max.
 
 ## Architecture Guardrails
 

@@ -262,7 +262,7 @@ Last updated: April 28, 2026
 - allow two follow-ups by default for discovery and one follow-up by default for feedback
 - exceed two follow-ups only if novelty remains high and there is time budget remaining
 - in feedback projects, treat required questions as a backbone rather than a rigid survey script; probe high-signal answers as they appear, then return to uncovered must-ask topics
-- in feedback projects, mirror the nouns and context in the configured objective and questions instead of assuming workshop or program framing
+- in feedback projects, mirror the nouns and context in the configured objective and questions instead of assuming a specific event type or delivery format
 - move on when the participant signals completion, novelty drops, time threshold is hit, or coverage confidence is high enough
 - end the session at the configured duration cap even if some questions remain
 - discovery defaults target roughly 15 minutes and pseudonymous collection
@@ -351,6 +351,7 @@ Last updated: April 28, 2026
 - completion copy mirrors the selected project type so discovery closes as planning input and feedback closes as improvement input
 - testimonial public UX uses a simpler no-agent recorder, shows recording/stop states, lets reviewers edit the transcript and star rating, and ends with a submitted-review thank-you screen
 - visual system: Instrument Serif body and headings, Caveat for handwritten margin notes and form labels, Inter Tight for sans labels and button text, JetBrains Mono for micro-eyebrows and timers; warm cream + clay paper-notebook palette is light-only (no dark mode in v1); the synthesis evidence drawer is the canonical affordance for "open the evidence behind this claim" — it slides in from the right and is rendered by `<EvidenceDrawer>` over `ProjectEvidenceSurface`; visible wordmark is `gather.` while codebase identifiers stay `GatherAI`; full surface conventions live in `STYLE_GUIDE.md`
+- design fidelity bar: every UI surface is aligned to the Studio cream/clay design at `gather/project/final/` to within ±2px on type and exact-match on ornament positions, copy, and grid templates. Page paddings live in pages, not the app shell — `<AppShell>` only renders the sticky `<AppBar>`. New shared components: `<NotebookCard>` / `<SidebarRail>` / `<NotebookControls>` / `<PreStartCard>` for the deep interview; `<Completion>` for the post-submit screen; `<MarginNote>` ornament; `.section-head` utility
 
 ## 11. Environment variables
 

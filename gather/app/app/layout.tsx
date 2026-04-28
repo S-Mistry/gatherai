@@ -1,6 +1,6 @@
-import { AppShell } from "@/components/dashboard/app-shell"
 import { redirect } from "next/navigation"
 
+import { ConsultantSessionProvider } from "@/components/dashboard/consultant-session-context"
 import { isSupabaseConfigured } from "@/lib/env"
 import { getOptionalConsultantSession } from "@/lib/auth/session"
 
@@ -18,8 +18,10 @@ export default async function ConsultantLayout({
   }
 
   return (
-    <AppShell userEmail={user.email} demoMode={false}>
-      {children}
-    </AppShell>
+    <ConsultantSessionProvider
+      value={{ userEmail: user.email ?? null, demoMode: false }}
+    >
+      <div className="flex min-h-screen flex-col">{children}</div>
+    </ConsultantSessionProvider>
   )
 }

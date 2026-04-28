@@ -1,6 +1,6 @@
 # GatherAI
 
-Next.js application for the AI Workshop Discovery Interviewer MVP.
+Next.js application for the GatherAI voice feedback product.
 
 ## Scripts
 

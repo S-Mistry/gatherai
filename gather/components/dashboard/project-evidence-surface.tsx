@@ -163,10 +163,9 @@ export function ProjectEvidenceSurface({
                 key={theme.id}
                 type="button"
                 onClick={() => openClaim(toThemeClaim(theme))}
-                className="card flat text-left grid items-center"
+                className="card flat project-evidence-theme-row grid text-left"
                 style={{
                   padding: "20px 26px",
-                  gridTemplateColumns: "320px 1fr 200px auto",
                   gap: 28,
                   cursor: "pointer",
                   border: "none",
@@ -335,8 +334,8 @@ export function ProjectEvidenceSurface({
                   </button>
                 </div>
                 <div
-                  className="grid items-center"
-                  style={{ gridTemplateColumns: "1fr 110px 1fr", gap: 20 }}
+                  className="project-evidence-contradiction-grid grid items-center"
+                  style={{ gap: 20 }}
                 >
                   <div
                     style={{

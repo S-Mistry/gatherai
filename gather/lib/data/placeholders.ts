@@ -414,7 +414,7 @@ export function buildProjectSynthesis(
       ? [
           {
             id: `contradiction-${project.id}-1`,
-            topic: "Where workshop attention should start",
+            topic: "Where attention should start",
             positions: [
               "Some stakeholders emphasize decision clarity first.",
               "Others emphasize process simplification first.",

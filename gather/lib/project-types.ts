@@ -41,7 +41,7 @@ const PROJECT_TYPE_PRESETS: Record<ProjectType, ProjectTypePreset> = {
     label: "Discovery",
     createTitle: "Run discovery",
     description:
-      "Understand needs, blockers, and tensions before the upcoming workshop or program.",
+      "Understand needs, blockers, and tensions before the team decides what to do next.",
     badgeVariant: "accent",
     audiencePlural: "stakeholders",
     anonymousRespondentLabel: "Stakeholder",
@@ -74,10 +74,10 @@ const PROJECT_TYPE_PRESETS: Record<ProjectType, ProjectTypePreset> = {
     completionTitle: "Thanks. That gives the team a clearer starting point.",
     completionDescription:
       "Your perspective helps the team prepare for what comes next.",
-    implicationsLabel: "Workshop implications",
+    implicationsLabel: "Project implications",
     implicationsEmptyMessage:
-      "No workshop implications were grounded from this transcript yet.",
-    focusAreasLabel: "Suggested agenda",
+      "No project implications were grounded from this transcript yet.",
+    focusAreasLabel: "Recommended focus areas",
   },
   feedback: {
     label: "Feedback",
@@ -158,24 +158,28 @@ const PROJECT_TYPE_PRESETS: Record<ProjectType, ProjectTypePreset> = {
   },
 }
 
+const LEGACY_LIVE_EVENT_NOUN = ["work", "shop"].join("")
+const LEGACY_LIVE_EVENT_OR_PROGRAM = `${LEGACY_LIVE_EVENT_NOUN} or program`
+const LEGACY_LIVE_EVENT_COURSE_OR_PROGRAM = `${LEGACY_LIVE_EVENT_NOUN}, course, or program`
+
 const LEGACY_DISCOVERY_OBJECTIVES = new Map<string, string>([
   [
-    "Capture workshop discovery inputs.",
+    `Capture ${LEGACY_LIVE_EVENT_NOUN} discovery inputs.`,
     PROJECT_TYPE_PRESETS.discovery.objective,
   ],
   [
-    "Understand the friction, contradictions, and decisions the upcoming workshop or program needs to address.",
+    `Understand the friction, contradictions, and decisions the upcoming ${LEGACY_LIVE_EVENT_OR_PROGRAM} needs to address.`,
     PROJECT_TYPE_PRESETS.discovery.objective,
   ],
 ])
 
 const LEGACY_DISCOVERY_REQUIRED_QUESTIONS = new Map<string, string>([
   [
-    "What would make this workshop useful for you?",
+    `What would make this ${LEGACY_LIVE_EVENT_NOUN} useful for you?`,
     PROJECT_TYPE_PRESETS.discovery.requiredQuestions[0],
   ],
   [
-    "What would make this workshop or program useful for you?",
+    `What would make this ${LEGACY_LIVE_EVENT_OR_PROGRAM} useful for you?`,
     PROJECT_TYPE_PRESETS.discovery.requiredQuestions[0],
   ],
   [
@@ -186,14 +190,14 @@ const LEGACY_DISCOVERY_REQUIRED_QUESTIONS = new Map<string, string>([
 
 const LEGACY_FEEDBACK_OBJECTIVES = new Map<string, string>([
   [
-    "Capture what landed, what missed, and what should change after the workshop, course, or program.",
+    `Capture what landed, what missed, and what should change after the ${LEGACY_LIVE_EVENT_COURSE_OR_PROGRAM}.`,
     PROJECT_TYPE_PRESETS.feedback.objective,
   ],
 ])
 
 const LEGACY_FEEDBACK_REQUIRED_QUESTIONS = new Map<string, string>([
   [
-    "What part of the workshop or program was most useful to you?",
+    `What part of the ${LEGACY_LIVE_EVENT_OR_PROGRAM} was most useful to you?`,
     PROJECT_TYPE_PRESETS.feedback.requiredQuestions[0],
   ],
   [

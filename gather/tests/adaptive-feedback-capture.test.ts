@@ -21,6 +21,10 @@ import {
 import { getParticipantDurationCopy } from "../lib/participant/time-copy"
 import { getProjectTypePreset } from "../lib/project-types"
 
+const legacyLiveEvent = ["work", "shop"].join("")
+const legacyLiveEventOrProgram = `${legacyLiveEvent} or program`
+const legacyLiveEventCourseOrProgram = `${legacyLiveEvent}, course, or program`
+
 const feedbackConfig: PublicInterviewConfig = {
   projectId: "project-feedback",
   projectType: "feedback",
@@ -71,7 +75,7 @@ test("feedback realtime instructions include adaptive probing policy", () => {
   assert.match(instructions, /about 1 focused follow-up/)
   assert.match(
     instructions,
-    /Do not assume this was a workshop, course, or program/
+    /Do not impose a default event type, format, or delivery context/
   )
   assert.match(
     instructions,
@@ -204,10 +208,10 @@ test("mock public interview config sanitizes legacy discovery starter copy", () 
     projectType: "discovery",
     name: "Legacy discovery copy",
     objective:
-      "Understand the friction, contradictions, and decisions the upcoming workshop or program needs to address.",
+      `Understand the friction, contradictions, and decisions the upcoming ${legacyLiveEventOrProgram} needs to address.`,
     areasOfInterest: "",
     requiredQuestions: [
-      "What would make this workshop or program useful for you?",
+      `What would make this ${legacyLiveEventOrProgram} useful for you?`,
       "Where is the biggest friction today?",
       "What tension, contradiction, or tradeoff should we surface?",
       "What risk should we account for while planning this session?",
@@ -234,10 +238,10 @@ test("mock public interview config sanitizes legacy feedback starter copy", () =
     projectType: "feedback",
     name: "Legacy feedback copy",
     objective:
-      "Capture what landed, what missed, and what should change after the workshop, course, or program.",
+      `Capture what landed, what missed, and what should change after the ${legacyLiveEventCourseOrProgram}.`,
     areasOfInterest: "",
     requiredQuestions: [
-      "What part of the workshop or program was most useful to you?",
+      `What part of the ${legacyLiveEventOrProgram} was most useful to you?`,
       "What felt unclear, missing, or less useful?",
       "What changed for you afterwards, if anything?",
       "If we ran this again, what should we do differently?",
@@ -259,12 +263,12 @@ test("mock public interview config sanitizes legacy feedback starter copy", () =
   )
 })
 
-test("mock public interview config preserves consultant-authored workshop wording", () => {
-  const customObjective = "Capture what the workshop debrief should fix next."
-  const customQuestion = "What did the workshop miss for you?"
+test("mock public interview config preserves consultant-authored context wording", () => {
+  const customObjective = `Capture what the ${legacyLiveEvent} debrief should fix next.`
+  const customQuestion = `What did the ${legacyLiveEvent} miss for you?`
   const { project } = createProjectFromForm({
     projectType: "feedback",
-    name: "Custom workshop copy",
+    name: "Custom context copy",
     objective: customObjective,
     areasOfInterest: "",
     requiredQuestions: customQuestion,

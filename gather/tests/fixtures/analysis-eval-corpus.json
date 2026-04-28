@@ -3,7 +3,7 @@
     {
       "id": "proj-noisy-greetings",
       "name": "Signal Hygiene Study",
-      "objective": "Understand what the workshop should fix in the approval flow.",
+      "objective": "Understand what the team should fix in the approval flow.",
       "areasOfInterest": [
         "approval speed",
         "decision ownership",
@@ -12,7 +12,7 @@
       "requiredQuestions": [
         {
           "id": "q-outcome",
-          "prompt": "What would make this workshop useful for you?",
+          "prompt": "What outcome would make this useful for you?",
           "goal": "Capture success criteria."
         },
         {
@@ -22,7 +22,7 @@
         },
         {
           "id": "q-risk",
-          "prompt": "What risk should we account for in the workshop?",
+          "prompt": "What risk should we account for in the plan?",
           "goal": "Surface implementation risk."
         }
       ],
@@ -52,7 +52,7 @@
             {
               "id": "seg-noisy-4",
               "speaker": "agent",
-              "text": "What would make this workshop useful for you?"
+              "text": "What outcome would make this useful for you?"
             },
             {
               "id": "seg-noisy-5",
@@ -67,7 +67,7 @@
             {
               "id": "seg-noisy-7",
               "speaker": "agent",
-              "text": "What risk should the workshop account for?"
+              "text": "What risk should the team account for?"
             },
             {
               "id": "seg-noisy-8",
@@ -80,7 +80,7 @@
               {
                 "questionId": "q-outcome",
                 "status": "answered",
-                "answer": "The workshop should clarify who approves urgent exceptions.",
+                "answer": "The team should clarify who approves urgent exceptions.",
                 "confidence": 0.9,
                 "keyPoints": [
                   "Clarify exception ownership",
@@ -252,8 +252,8 @@
               },
               {
                 "kind": "opportunity",
-                "title": "Workshop opportunity",
-                "summary": "The workshop could improve something.",
+                "title": "Planning opportunity",
+                "summary": "The plan could improve something.",
                 "priority": "low",
                 "signalStrength": "obvious",
                 "evidence": [
@@ -272,9 +272,9 @@
             "analysisWarnings": []
           },
           "narrative": {
-            "summary": "Avery wants the workshop to clarify exception ownership and unblock duplicate approvals.",
+            "summary": "Avery wants the team to clarify exception ownership and unblock duplicate approvals.",
             "projectImplications": [
-              "Use the workshop to map who can approve routine versus urgent exceptions."
+              "Use the next planning conversation to map who can approve routine versus urgent exceptions."
             ],
             "recommendedActions": [
               "Pressure-test whether finance and operations both need to approve the same request."
@@ -322,7 +322,7 @@
       "requiredQuestions": [
         {
           "id": "q-outcome",
-          "prompt": "What would make this workshop useful for you?",
+          "prompt": "What outcome would make this useful for you?",
           "goal": "Capture the desired outcome."
         },
         {
@@ -347,7 +347,7 @@
             {
               "id": "seg-nonlinear-1",
               "speaker": "agent",
-              "text": "What would make this workshop useful for you?"
+              "text": "What outcome would make this useful for you?"
             },
             {
               "id": "seg-nonlinear-2",
@@ -367,7 +367,7 @@
             {
               "id": "seg-nonlinear-5",
               "speaker": "participant",
-              "text": "The workshop would be useful if we left with one escalation rule and one owner."
+              "text": "The planning would be useful if we left with one escalation rule and one owner."
             }
           ],
           "grounded": {
@@ -386,7 +386,7 @@
                     "segmentIds": [
                       "seg-nonlinear-2"
                     ],
-                    "rationale": "The respondent named the risk before answering the workshop outcome question."
+                    "rationale": "The respondent named the risk before answering the outcome question."
                   }
                 ],
                 "followUpQuestions": []
@@ -412,7 +412,7 @@
               {
                 "questionId": "q-outcome",
                 "status": "answered",
-                "answer": "The workshop should produce one escalation rule and one owner.",
+                "answer": "The team should produce one escalation rule and one owner.",
                 "confidence": 0.86,
                 "keyPoints": [
                   "One escalation rule",
@@ -423,7 +423,7 @@
                     "segmentIds": [
                       "seg-nonlinear-5"
                     ],
-                    "rationale": "The respondent directly answered the workshop outcome later in the conversation."
+                    "rationale": "The respondent directly answered the desired outcome later in the conversation."
                   }
                 ],
                 "followUpQuestions": []
@@ -450,7 +450,7 @@
               },
               {
                 "label": "One owner",
-                "context": "The respondent defined the desired workshop outcome.",
+                "context": "The respondent defined the desired outcome.",
                 "questionIds": [
                   "q-outcome"
                 ],
@@ -508,7 +508,7 @@
           "narrative": {
             "summary": "Mina wants a single escalation rule and sees redundant reviews plus threshold ambiguity as the main blockers.",
             "projectImplications": [
-              "Use the workshop to define one escalation threshold and one accountable owner."
+              "Use the next planning conversation to define one escalation threshold and one accountable owner."
             ],
             "recommendedActions": [
               "Map the second-review loop and identify where authority currently stalls."
@@ -538,7 +538,7 @@
     {
       "id": "proj-governance-tension",
       "name": "Governance Tension Signals",
-      "objective": "Capture the subtle governance tensions the workshop needs to surface.",
+      "objective": "Capture the subtle governance tensions the team needs to surface.",
       "areasOfInterest": [
         "decision rights",
         "regional autonomy",
@@ -547,7 +547,7 @@
       "requiredQuestions": [
         {
           "id": "q-outcome",
-          "prompt": "What should this workshop resolve?",
+          "prompt": "What should the team resolve?",
           "goal": "Capture the desired decision."
         },
         {
@@ -572,7 +572,7 @@
             {
               "id": "seg-gov-1",
               "speaker": "participant",
-              "text": "The workshop needs to decide where routine exceptions should live."
+              "text": "The team needs to decide where routine exceptions should live."
             },
             {
               "id": "seg-gov-2",
@@ -595,7 +595,7 @@
               {
                 "questionId": "q-outcome",
                 "status": "answered",
-                "answer": "The workshop should decide where routine exceptions belong.",
+                "answer": "The team should decide where routine exceptions belong.",
                 "confidence": 0.82,
                 "keyPoints": [
                   "Resolve exception location"
@@ -605,7 +605,7 @@
                     "segmentIds": [
                       "seg-gov-1"
                     ],
-                    "rationale": "The respondent named the key workshop decision."
+                    "rationale": "The respondent named the key decision."
                   }
                 ],
                 "followUpQuestions": []
@@ -701,7 +701,7 @@
                       "seg-gov-2",
                       "seg-gov-3"
                     ],
-                    "rationale": "The respondent linked the workshop decision to the autonomy versus control split."
+                    "rationale": "The respondent linked the decision to the autonomy versus control split."
                   }
                 ]
               },
@@ -758,9 +758,9 @@
             "analysisWarnings": []
           },
           "narrative": {
-            "summary": "Jonas wants the workshop to resolve exception decision rights and expose the tension between regional speed and central control.",
+            "summary": "Jonas wants the team to resolve exception decision rights and expose the tension between regional speed and central control.",
             "projectImplications": [
-              "Design the workshop around which exception types should remain local and when central approval is still required."
+              "Design the next planning conversation around which exception types should remain local and when central approval is still required."
             ],
             "recommendedActions": [
               "Capture concrete cases where regional teams need autonomy but policy boundaries still matter."
@@ -798,7 +798,7 @@
       "requiredQuestions": [
         {
           "id": "q-outcome",
-          "prompt": "What would make this workshop useful?",
+          "prompt": "What outcome would make this useful?",
           "goal": "Capture outcome."
         },
         {
@@ -828,7 +828,7 @@
             {
               "id": "seg-thin-2",
               "speaker": "agent",
-              "text": "What would make this workshop useful?"
+              "text": "What outcome would make this useful?"
             },
             {
               "id": "seg-thin-3",
@@ -851,7 +851,7 @@
               {
                 "questionId": "q-outcome",
                 "status": "answered",
-                "answer": "The workshop should reduce confusion.",
+                "answer": "The team should reduce confusion.",
                 "confidence": 0.62,
                 "keyPoints": [
                   "Less confusion"
@@ -992,7 +992,7 @@
       "requiredQuestions": [
         {
           "id": "q-outcome",
-          "prompt": "What would make this workshop useful?",
+          "prompt": "What outcome would make this useful?",
           "goal": "Capture outcome."
         },
         {
@@ -1035,7 +1035,7 @@
               {
                 "questionId": "q-outcome",
                 "status": "answered",
-                "answer": "The workshop should name one owner for routine exceptions.",
+                "answer": "The team should name one owner for routine exceptions.",
                 "confidence": 0.9,
                 "keyPoints": [
                   "One owner"
@@ -1164,7 +1164,7 @@
           "narrative": {
             "summary": "Amelia wants one owner for routine exceptions and sees the three-approval loop as the main drag on speed.",
             "projectImplications": [
-              "Use the workshop to separate routine exception ownership from central escalation cases."
+              "Use the next planning conversation to separate routine exception ownership from central escalation cases."
             ],
             "recommendedActions": [
               "Define which approval steps are actually required for standard cases."
@@ -1214,7 +1214,7 @@
               {
                 "questionId": "q-outcome",
                 "status": "answered",
-                "answer": "The workshop should define which routine cases regional teams can decide.",
+                "answer": "The team should define which routine cases regional teams can decide.",
                 "confidence": 0.84,
                 "keyPoints": [
                   "Regional trust"
@@ -1381,7 +1381,7 @@
                   }
                 ],
                 "followUpQuestions": [
-                  "What would make this workshop useful?"
+                  "What outcome would make this useful?"
                 ]
               },
               {

@@ -73,8 +73,8 @@ declare
     nullif(trim(project_objective), ''),
     case
       when normalized_project_type = 'feedback'
-        then 'Capture what landed, what missed, and what should change after the workshop, course, or program.'
-      else 'Understand the friction, contradictions, and decisions the upcoming workshop or program needs to address.'
+        then 'Capture what landed, what missed, and what should change after the experience.'
+      else 'Understand the friction, contradictions, and decisions the team should address next.'
     end
   );
   normalized_duration_cap_minutes integer := coalesce(
@@ -139,7 +139,7 @@ declare
       then jsonb_build_array(
         jsonb_build_object(
           'id', 'q-default-1',
-          'prompt', 'What part of the workshop or program was most useful to you?',
+          'prompt', 'What part of the experience felt most useful or positive to you?',
           'goal', 'Mode starter question.'
         ),
         jsonb_build_object(
@@ -161,7 +161,7 @@ declare
     else jsonb_build_array(
       jsonb_build_object(
         'id', 'q-default-1',
-        'prompt', 'What would make this workshop or program useful for you?',
+        'prompt', 'What outcome would make this useful for you?',
         'goal', 'Mode starter question.'
       ),
       jsonb_build_object(

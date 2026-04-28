@@ -110,7 +110,7 @@ function buildCapturePolicy(config: PublicInterviewConfig) {
       "Feedback capture policy:",
       "Use the required questions as the backbone, not a rigid survey script.",
       "You may go deeper as soon as useful feedback appears, even before every required question is covered.",
-      "Mirror the nouns and context used in the project name, objective, topics, and required questions. Do not assume this was a workshop, course, or program unless the configuration says so.",
+      "Mirror the nouns and context used in the project name, objective, topics, and required questions. Do not impose a default event type, format, or delivery context unless the configuration says so.",
       "High-signal answers include concrete examples, strong sentiment, surprises, expectations, contradictions, unclear or missing details, behavior change, emotional reaction, or improvement requests.",
       "When an answer is high-signal, ask a focused follow-up for the example, reason, expectation, consequence, emotional impact, or next-time improvement.",
       "When an answer is thin or vague, ask for one concrete moment, example, or reason before moving on.",

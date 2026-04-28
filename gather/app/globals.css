@@ -70,6 +70,7 @@
     0 18px 60px rgba(60, 40, 20, 0.06);
 
   --radius: 6px;
+  --app-bar-height: 74px;
 }
 
 @layer base {
@@ -150,6 +151,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 24px;
+    min-height: var(--app-bar-height);
     padding: 18px 36px;
     border-bottom: 1px dashed var(--line);
     background: var(--cream);
@@ -165,6 +168,7 @@
     color: var(--ink);
     display: inline-flex;
     align-items: baseline;
+    flex-shrink: 0;
     gap: 2px;
   }
 
@@ -178,9 +182,19 @@
     display: inline-flex;
     align-items: center;
     gap: 10px;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
     font-family: var(--font-sans), "Inter Tight", sans-serif;
     font-size: 13px;
     color: var(--ink-2);
+  }
+  .crumb a,
+  .crumb .here {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .crumb a {
     color: var(--ink-3);
@@ -221,6 +235,78 @@
   }
   .card.flat {
     box-shadow: var(--shadow-1);
+  }
+
+  /* ── Responsive work surfaces ──────────────────────────── */
+  .workspace-project-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  }
+
+  .project-detail-hero-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(320px, 1fr);
+  }
+
+  .project-detail-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  }
+
+  .project-detail-two-column-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .project-evidence-theme-row {
+    grid-template-columns: minmax(220px, 320px) minmax(0, 1fr) minmax(150px, 200px) auto;
+  }
+
+  .project-evidence-contradiction-grid {
+    grid-template-columns: minmax(0, 1fr) 110px minmax(0, 1fr);
+  }
+
+  .project-sessions-glance-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+  }
+
+  .participant-interview-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+  }
+
+  @media (max-width: 1366px) {
+    .app-bar {
+      padding-inline: 28px;
+    }
+
+    .project-detail-hero-grid,
+    .project-detail-two-column-grid,
+    .project-evidence-theme-row,
+    .project-evidence-contradiction-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .project-evidence-theme-row {
+      align-items: start;
+    }
+
+    .participant-interview-layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  @media (max-width: 1023px) {
+    .app-bar {
+      align-items: flex-start;
+      flex-wrap: wrap;
+      padding: 16px 20px;
+    }
+
+    .review-action-bar {
+      top: 92px;
+    }
   }
 
   /* ── Tape, stamp, pin ──────────────────────────────────── */

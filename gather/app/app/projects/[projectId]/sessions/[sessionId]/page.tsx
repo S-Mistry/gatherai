@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation"
 
-import { ReviewActionBar } from "@/components/review/review-action-bar"
+import { ConsultantAppBar } from "@/components/dashboard/consultant-app-bar"
 import { ReviewEvidenceDrawer } from "@/components/review/review-evidence-drawer"
 import { ReviewSelectionProvider } from "@/components/review/review-selection-context"
 import { ReviewSiblingRail } from "@/components/review/review-sibling-rail"
+import { ReviewStatusControls } from "@/components/review/review-status-controls"
 import { ReviewSynthesisTabs } from "@/components/review/review-synthesis-tabs"
 import { ReviewTranscriptPane } from "@/components/review/review-transcript-pane"
 import { Badge } from "@/components/ui/badge"
@@ -34,26 +35,63 @@ export default async function SessionReviewPage({
     />
   )
 
+  const headerBadges: Array<{
+    variant: "clay" | "gold" | "rose"
+    label: string
+  }> = []
+  if (overrideActive) headerBadges.push({ variant: "clay", label: "Override" })
+  if (review.qualityOverride)
+    headerBadges.push({ variant: "gold", label: "Manual quality" })
+  if (review.session.excludedFromSynthesis)
+    headerBadges.push({ variant: "rose", label: "Excluded" })
+
   return (
     <ReviewSelectionProvider>
-      <div className="-mt-6 flex flex-col">
-        <ReviewActionBar
-          projectId={projectId}
-          projectName={review.project.name}
-          sessionId={sessionId}
-          respondentLabel={review.session.respondentLabel}
-          excludedFromSynthesis={review.session.excludedFromSynthesis}
-          overrideActive={overrideActive}
-          qualityOverrideActive={Boolean(review.qualityOverride)}
-          statuses={[
-            { label: "Transcript", status: review.transcriptStatus },
-            { label: "Analysis", status: review.generatedStatus },
-            { label: "Quality", status: review.qualityStatus },
-          ]}
-        />
+      <ConsultantAppBar
+        crumb={[
+          { label: "Workspace", href: "/app" },
+          { label: review.project.name, href: `/app/projects/${projectId}` },
+          { label: review.session.respondentLabel },
+        ]}
+        rightSlot={
+          <ReviewStatusControls
+            projectId={projectId}
+            sessionId={sessionId}
+            excludedFromSynthesis={review.session.excludedFromSynthesis}
+            statuses={[
+              { label: "Transcript", status: review.transcriptStatus },
+              { label: "Analysis", status: review.generatedStatus },
+              { label: "Quality", status: review.qualityStatus },
+            ]}
+          />
+        }
+      />
 
-        <div className="flex gap-5 pt-6">
-          <aside className="hidden shrink-0 lg:sticky lg:top-32 lg:block lg:self-start">
+      <div
+        style={{
+          padding: "32px 40px 80px",
+          maxWidth: 1320,
+          margin: "0 auto",
+        }}
+      >
+        {headerBadges.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-2 mb-6">
+            {headerBadges.map((badge) => (
+              <Badge key={badge.label} variant={badge.variant}>
+                {badge.label}
+              </Badge>
+            ))}
+          </div>
+        ) : null}
+
+        <div className="flex min-w-0 gap-5">
+          <aside
+            className="hidden shrink-0 lg:block lg:self-start"
+            style={{
+              position: "sticky",
+              top: "calc(var(--app-bar-height) + 24px)",
+            }}
+          >
             <ReviewSiblingRail
               variant="compact"
               projectId={projectId}
@@ -79,11 +117,22 @@ export default async function SessionReviewPage({
             />
           </section>
 
-          <aside className="hidden xl:sticky xl:top-32 xl:block xl:w-[340px] xl:shrink-0 xl:self-start">
-            <div className="flex max-h-[calc(100vh-9rem)] flex-col gap-3">
+          <aside
+            className="hidden xl:block xl:w-[clamp(280px,24vw,340px)] xl:shrink-0 xl:self-start"
+            style={{
+              position: "sticky",
+              top: "calc(var(--app-bar-height) + 24px)",
+            }}
+          >
+            <div
+              className="flex flex-col gap-3"
+              style={{
+                maxHeight: "calc(100vh - var(--app-bar-height) - 48px)",
+              }}
+            >
               <div className="flex items-center justify-between gap-2 px-1">
                 <span className="eyebrow">Transcript</span>
-                <span className="text-[10px] tracking-[0.18em] text-muted-foreground/80 uppercase">
+                <span className="text-[10px] tracking-[0.18em] text-[var(--ink-3)] uppercase">
                   {review.transcript.length} segments
                 </span>
               </div>
@@ -154,9 +203,11 @@ function NoticeCard({
   tone: "neutral" | "warning" | "danger"
 }) {
   return (
-    <div className="rounded-2xl border border-border/70 bg-background/70 p-4">
+    <div className="card flat" style={{ padding: "16px 20px" }}>
       <Badge variant={tone}>{title}</Badge>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">{message}</p>
+      <p className="font-sans mt-2 text-sm leading-6 text-[var(--ink-2)] m-0">
+        {message}
+      </p>
     </div>
   )
 }

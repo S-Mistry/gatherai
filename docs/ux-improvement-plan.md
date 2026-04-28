@@ -64,9 +64,9 @@ These are the lenses every decision below is filtered through.
 
 | Before | After |
 |---|---|
-| "Voice-first workshop discovery" (badge) | "For teams improving real experiences" |
+| "Voice-first discovery" (badge) | "For teams improving real experiences" |
 | "Interview stakeholders at scale without losing transcript evidence." | "Collect honest feedback after any experience without running every interview yourself." |
-| "GatherAI turns pre-workshop discovery into a structured voice workflow…" | "Share one link. A thoughtful AI interviewer listens to each respondent and hands you back themes, contradictions, and improvement priorities — every line traceable to a real quote." |
+| "GatherAI turns discovery into a structured voice workflow…" | "Share one link. A thoughtful AI interviewer listens to each respondent and hands you back themes, contradictions, and improvement priorities — every line traceable to a real quote." |
 | "Open consultant workspace" / "Preview participant link" | "Go to workspace" / "See what respondents see" |
 | Card: "Realtime stance" — "WebRTC + server-minted secrets" | Card: "Runs in a browser" — "No app install. Stakeholders click a link and start talking." |
 | Card: "Governance stance" — "Generated AGENTS, frozen docs, explicit decisions" | Card: "Evidence, not vibes" — "Every theme links back to the transcript segment it came from." |
@@ -95,7 +95,7 @@ These are the lenses every decision below is filtered through.
 
 | Before | After |
 |---|---|
-| H1: "Configure the next workshop interview project" | "New feedback project" |
+| H1: "Configure the next interview project" | "New feedback project" |
 | "The MVP prioritizes configuration that drives coverage…" | "Set the objective, pick the topics, and draft the questions. You can edit everything after sharing the link." |
 | Label: "Areas of interest" / placeholder "One per line" | "Topics to cover" / "One topic per line — e.g., 'Approval bottlenecks'" |
 | Label: "Required questions" | "Must-ask questions" |
@@ -112,7 +112,7 @@ These are the lenses every decision below is filtered through.
 | Eyebrow: "Required questions" | "Must-ask questions" |
 | Card: "Project synthesis" | "What we're hearing" |
 | Eyebrow: "Top problems" | "Top pain points" |
-| Eyebrow: "Suggested workshop agenda" | "Recommended focus areas" |
+| Eyebrow: "Suggested focus areas" | "Recommended focus areas" |
 | Card: "Cross-interview synthesis" | "Themes across interviews" |
 | Card: "Transcript-backed interviews" | "Sessions" |
 | "Refresh synthesis" button | "Re-run synthesis" + tooltip: "Includes all non-excluded interviews." |
@@ -125,7 +125,7 @@ These are the lenses every decision below is filtered through.
 | Before | After |
 |---|---|
 | Badge: "Public participant link" | "For you" |
-| H1: "Share perspective before the workshop" | "A short conversation about your experience." |
+| H1: "Share perspective before the team decides next steps" | "A short conversation about your experience." |
 | "This short AI interview helps the consultant understand pain points…" | "The team behind this experience would love to hear what worked, what missed, and what to improve next time. I'm an AI that'll ask a few questions and listen." |
 | Disclosure card: technical storage language | **"How it works"** with three plain lines: "• I'll ask a few questions. • We'll cover one topic at a time. • You can pause or stop whenever you need." |
 

@@ -4,12 +4,12 @@
     "projectId": "proj-1",
     "versionNumber": 1,
     "createdAt": "2026-04-16T10:00:00.000Z",
-    "objective": "Understand what should change before the workshop.",
+    "objective": "Understand what should change before the team decides next steps.",
     "areasOfInterest": ["approval speed", "decision ownership"],
     "requiredQuestions": [
       {
         "id": "q-outcomes",
-        "prompt": "What would make this workshop useful for you?",
+        "prompt": "What outcome would make this useful for you?",
         "goal": "Capture success criteria."
       },
       {
@@ -47,7 +47,7 @@
       "id": "seg-agent-2",
       "sessionId": "sess-1",
       "speaker": "agent",
-      "text": "Great. What would make this workshop useful for you?",
+      "text": "Great. What outcome would make this useful for you?",
       "createdAt": "2026-04-16T10:00:08.000Z",
       "orderIndex": 3
     },
@@ -76,8 +76,8 @@
     "questionAnswers": [
       {
         "questionId": "q-outcomes",
-        "prompt": "What would make this workshop useful for you?",
-        "answer": "The workshop should clarify who owns approvals and exceptions.",
+        "prompt": "What outcome would make this useful for you?",
+        "answer": "The team should clarify who owns approvals and exceptions.",
         "confidence": 0.88,
         "evidence": [
           {
@@ -121,7 +121,7 @@
       {
         "id": "opp-1",
         "label": "Clarify exception ownership",
-        "summary": "The workshop should decide who owns edge-case approval calls.",
+        "summary": "The team should decide who owns edge-case approval calls.",
         "evidence": [
           {
             "sessionId": "sess-1",

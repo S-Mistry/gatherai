@@ -764,12 +764,11 @@ export function InterviewShell({ linkToken, config }: InterviewShellProps) {
 
   return (
     <div
+      className="participant-interview-layout"
       style={{
         padding: "32px 40px 80px",
         maxWidth: 1320,
         margin: "0 auto",
-        display: "grid",
-        gridTemplateColumns: "1fr 340px",
         gap: 36,
       }}
     >

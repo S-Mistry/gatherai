@@ -201,7 +201,7 @@ Every font-size used in the system, with the surface(s) where it appears. **Matc
 | **Italic feedback status** | 26 / serif / italic / ink-2 | "recording · MM:SS" / "tap to resume" |
 | **Italic narrative emphasis** | inherit / italic / clay | Synthesis hero phrase ("exception decisions have no clear owner") |
 | **Eyebrow** | 10 / mono / 0.18em / uppercase / ink-3 | `.eyebrow` (BigStat label, drawer header, "POSITION A/B", "Pipeline") |
-| **Stamp** | 11 / Inter Tight / 700 / 0.28em / uppercase / rotate(-3deg) / opacity 0.82 | "Workshop ready", "received · {n}th voice" |
+| **Stamp** | 11 / Inter Tight / 700 / 0.28em / uppercase / rotate(-3deg) / opacity 0.82 | "Synthesis ready", "received · {n}th voice" |
 | **Mono date / count / quality** | 9.5–11 / mono / ink-3 (or ink-2 for highlights) | Project tile timestamp, session quality, theme frequency, contradiction voice counts |
 
 ### Rules
@@ -242,13 +242,15 @@ Every font-size used in the system, with the surface(s) where it appears. **Matc
 </div>
 ```
 
-`<AppBar>` (`components/ui/app-bar.tsx`) is sticky, dashed-bottom, padding `18px 36px`. Renders the wordmark on the left, optional `<Crumb>` next to it, optional right slot, and an optional avatar.
+`<AppBar>` (`components/ui/app-bar.tsx`) is sticky, dashed-bottom, min-height `var(--app-bar-height)` (`74px`), padding `18px 36px`. Renders the wordmark on the left, optional `<Crumb>` next to it, optional right slot, and an optional avatar. The left group must be `min-width: 0; flex: 1`; the right group must not shrink; breadcrumbs truncate instead of overlapping the right controls.
 
 ```css
 .app-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 24px;
+  min-height: var(--app-bar-height);
   padding: 18px 36px;
   border-bottom: 1px dashed var(--line);
   background: var(--cream);
@@ -258,6 +260,8 @@ Every font-size used in the system, with the surface(s) where it appears. **Matc
 }
 ```
 
+Secondary sticky bars inside authenticated pages use `top: var(--app-bar-height)`. Do not use fixed Tailwind offsets like `top-14` for app-underlay bars.
+
 ### 6.2 Page recipes (skeletons)
 
 Every page below is the canonical layout. Reproduce paddings, max-widths, and grid templates exactly.
@@ -266,11 +270,11 @@ Every page below is the canonical layout. Reproduce paddings, max-widths, and gr
 
 ```
 <>
-  <section style={{ padding: '48px 48px 28px', maxWidth: 1280, margin: '0 auto' }}>
+  <section style={{ padding: '48px 36px 28px', maxWidth: 1680, margin: '0 auto' }}>
     {/* Caveat 28 clay greeting + serif 64 hero + flex-baseline subhead (sans 14 ink-2 with bold project name + mono 11 ink-3 date) */}
   </section>
 
-  <section style={{ padding: '0 48px 32px', maxWidth: 1280, margin: '0 auto' }}>
+  <section style={{ padding: '0 36px 32px', maxWidth: 1680, margin: '0 auto' }}>
     <div className="section-head">
       <h2 className="font-serif" style={{ fontSize: 26, fontWeight: 400 }}>In motion</h2>
       <span className="font-hand" style={{ fontSize: 18, color: 'var(--ink-3)' }}>— need a look</span>
@@ -280,18 +284,18 @@ Every page below is the canonical layout. Reproduce paddings, max-widths, and gr
     </div>
   </section>
 
-  <section style={{ padding: '20px 48px 80px', maxWidth: 1280, margin: '0 auto' }}>
+  <section style={{ padding: '20px 36px 80px', maxWidth: 1680, margin: '0 auto' }}>
     <div className="section-head">
       <h2 className="font-serif" style={{ fontSize: 22, fontWeight: 400, color: 'var(--ink-2)' }}>Quiet for now</h2>
     </div>
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18 }}>
-      {/* <ProjectTile /> ×N + dashed empty tile last */}
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 18 }}>
+      {/* dashed empty tile first + <ProjectTile /> ×N */}
     </div>
   </section>
 </>
 ```
 
-Empty tile last cell: `border: 1.5px dashed var(--line); border-radius: 8; padding: 24px 26px; min-height: 180; display: grid; place-items: center; color: var(--ink-3)` with Caveat 32 clay `+ start a new one` and sans 12 ink-3 `stakeholder interviews · feedback pulse`.
+Empty tile first cell: `border: 1.5px dashed var(--line); border-radius: 8; padding: 24px 26px; min-height: 180; display: grid; place-items: center; color: var(--ink-3)` with Caveat 32 clay `+ start a new one` and sans 12 ink-3 `stakeholder interviews · feedback pulse`.
 
 #### New project (`/app/projects/new`) — TypePicker
 
@@ -355,10 +359,10 @@ Empty tile last cell: `border: 1.5px dashed var(--line); border-radius: 8; paddi
 
 #### Deep interview (`/i/[linkToken]`)
 
-The participant page renders `<AppBar>` with crumb `[{label: project.name}, {label: '{respondent} · live'}]` and a clay chip on the right (`<dot/>recording transcript only`). The `<InterviewShell>` renders the inner layout:
+The participant page renders `<AppBar>` with crumb `[{label: project.name}, {label: '{respondent} · live'}]` and a clay chip on the right. The `<InterviewShell>` renders the inner layout:
 
 ```
-<div style={{ padding: '32px 40px 80px', maxWidth: 1320, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 340px', gap: 36 }}>
+<div className="participant-interview-layout" style={{ padding: '32px 40px 80px', maxWidth: 1320, margin: '0 auto', gap: 36 }}>
   <div style={{ position: 'relative' }}>
     <NotebookCard … />
     <NotebookControls … />   {/* only when live */}
@@ -477,7 +481,7 @@ Outer wrapper `<div style={{ padding: '36px 40px 120px', maxWidth: 1320, margin:
       None of them agree on who should hold it. That's your starting line.
     </p>
     <div style={{ marginTop: 26, display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
-      <Stamp>Workshop ready</Stamp>
+      <Stamp>Synthesis ready</Stamp>
       <span className="font-mono" style={{ fontSize: 11, color: 'var(--ink-3)' }}>
         6/7 interviews · 1 excluded for low coverage
       </span>
@@ -568,7 +572,7 @@ Sizes: `sm` (`padding: 7 14; fontSize: 12`), `default` (`padding: 11 20; fontSiz
 <Badge variant="sage">collecting</Badge>
 <Badge variant="gold">scheduling</Badge>
 <Badge variant="rose">excluded</Badge>
-<Badge variant="solid">workshop ready</Badge>
+<Badge variant="solid">synthesis ready</Badge>
 ```
 
 Always `rounded-full px-3 py-1 text-xs font-medium font-sans`. Legacy variants `accent → clay`, `success → sage`, `warning → gold`, `danger → rose`.
@@ -668,7 +672,7 @@ Default placements (top-of-card):
 }
 ```
 
-One per page max. Used: synthesis hero `Workshop ready` (default stamp red); completion `received · 24th voice` (sage); narrative override badge (ink).
+One per page max. Used: synthesis hero `Synthesis ready` (default stamp red); completion `received · 24th voice` (sage); narrative override badge (ink).
 
 ### Pin — `<Pin tint="stamp|sage|gold|clay">`
 
@@ -816,7 +820,7 @@ Used inside `<NotebookCard>` for in-the-margin annotations on a transcript turn.
 - FeedbackInterview AppBar chip: sage dot + `words only · we don't keep audio`
 - Synthesis AppBar chip: `refreshed {N} min ago` (or `View live interview` ghost button)
 - Status chips (project tile): `live`, `synthesizing`, `collecting`, `scheduling`, `complete`, `excluded`
-- Hero stamp: `Workshop ready` (≥3 included sessions and no override) / `narrative override` (when override active)
+- Hero stamp: `Synthesis ready` (≥3 included sessions and no override) / `narrative override` (when override active)
 - Completion stamp: `received · {Nth} voice`
 
 ### Button labels

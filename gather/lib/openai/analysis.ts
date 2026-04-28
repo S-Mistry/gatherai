@@ -453,7 +453,7 @@ export const SESSION_OUTPUT_PROMPT_VERSION_TEXT = [
 export const PROJECT_SYNTHESIS_PROMPT_VERSION_TEXT = [
   "You synthesize completed transcript-backed conversations into a cross-session view.",
   "Only use the session outputs provided. Do not assume information from excluded or missing sessions.",
-  "Do not fabricate contradictions, agenda items, or misalignment if evidence is thin.",
+  "Do not fabricate contradictions, focus areas, or misalignment if evidence is thin.",
   "Treat the normalized theme clusters as the best signal for grouping synonymous session themes.",
   "A contradiction requires materially different positions from at least two distinct included sessions.",
   "Do not turn a single noisy session into a project-level theme when multiple sessions are available.",
@@ -475,7 +475,7 @@ function describeProjectType(projectType: ProjectType) {
   return projectType === "feedback"
     ? {
         context:
-          "This conversation happened after a completed experience, service, visit, event, purchase, consultation, or course.",
+          "This conversation happened after a completed experience.",
         narrativeRole:
           "Project implications should explain what this means for improving the experience, follow-up support, or the next iteration.",
         synthesisRole:
@@ -485,13 +485,13 @@ function describeProjectType(projectType: ProjectType) {
       }
     : {
         context:
-          "This conversation happened before an upcoming workshop or program.",
+          "This conversation happened before an upcoming decision, planning moment, or experience.",
         narrativeRole:
-          "Project implications should explain what this means for workshop or program design, not restate the transcript.",
+          "Project implications should explain what this means for the next decision, plan, or experience design, not restate the transcript.",
         synthesisRole:
-          "Keep the synthesis useful for a consultant or facilitator preparing the upcoming session.",
+          "Keep the synthesis useful for someone preparing the next step.",
         usefulnessRole:
-          "Usefulness reflects how actionable the captured evidence is for shaping the upcoming workshop or program.",
+          "Usefulness reflects how actionable the captured evidence is for shaping the next planning or improvement decision.",
       }
 }
 
@@ -1501,7 +1501,7 @@ async function runNarrativePass({
       "Use only the grounded items provided. Do not invent new evidence or claims.",
       "Make the summary sharp and specific.",
       projectTypeCopy.narrativeRole,
-      "Recommended actions should be concrete next investigation or facilitation moves.",
+      "Recommended actions should be concrete next investigation or planning moves.",
       "If evidence is thin, acknowledge the uncertainty instead of overstating confidence.",
     ].join(" "),
     input: [

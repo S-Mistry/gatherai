@@ -1,6 +1,6 @@
 # Decision Log
 
-Last updated: April 28, 2026 (D-020 Google-only consultant auth)
+Last updated: April 28, 2026 (D-021 design fidelity bar)
 
 ## Locked Decisions
 
@@ -98,7 +98,7 @@ Last updated: April 28, 2026 (D-020 Google-only consultant auth)
 
 - Status: accepted
 - Decision: keep `discovery` and `feedback` in the shared schema and runtime, but position the product around `feedback`; discovery creation stays behind a feature flag and is disabled by default.
-- Consequence: `project_type` remains immutable, existing discovery projects stay readable, normal project setup defaults to feedback while testimonials are available as a separate choice, and participant framing plus runtime guidance must not assume workshop language for feedback projects.
+- Consequence: `project_type` remains immutable, existing discovery projects stay readable, normal project setup defaults to feedback while testimonials are available as a separate choice, and participant framing plus runtime guidance must not assume a specific event type or delivery format for feedback projects.
 
 ### D-017 Project shell identity
 
@@ -123,6 +123,12 @@ Last updated: April 28, 2026 (D-020 Google-only consultant auth)
 - Status: accepted
 - Decision: open consultant signup means open Google OAuth signup only. Supabase Email auth is disabled by bootstrap in OAuth mode, magic-link requests must not create users, and RLS helpers require a Google provider claim.
 - Consequence: existing email-only rows remain in the database but cannot access consultant data. Accounts with both email and Google providers remain valid because their provider list includes Google.
+
+### D-021 Design fidelity bar
+
+- Status: accepted
+- Decision: every UI surface aligns to the Studio cream/clay design at `gather/project/final/` within ±2px on type and exact-match on ornament positions, copy, and grid templates. Page paddings live in pages, not the app shell — `<AppShell>` renders only the sticky `<AppBar>`; each page sets its own `<div style={{ padding, maxWidth, margin: '0 auto' }}>` outer container. New utilities and components: `.section-head`, `<MarginNote>`, the shared `<Completion>` screen, and `<NotebookCard>` / `<SidebarRail>` / `<NotebookControls>` / `<PreStartCard>` for the interview surface.
+- Consequence: deep interview becomes a notebook (two tapes, scribble Q heading, two-column transcript with rotated Caveat speaker tags, inline live wave row, MarginNote for highlights, right rail with project context + today's questions checklist + anonymity disclaimer). Synthesis adds a 7-col "Who we talked to" session grid above the themes/quotes/contradictions block. Feedback flow gains a footer skip link and routes its submitted state into `<Completion>` (sage stamp, 78px headline, Caveat "— really.", dot grid, sticky note). `STYLE_GUIDE.md` becomes the exhaustive 12-section spec — type scale, layout primitives, page recipes, ornament positions, copy library — such that any agent can rebuild the design from the doc alone. `ui-design.md` is amended with a drop-in `<style>` block reproducing all tokens and ornament classes verbatim.
 
 ## Reference Notes
 

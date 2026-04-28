@@ -73,7 +73,7 @@ export function ReviewSynthesisTabs({
   const preset = getProjectTypePreset(projectType)
 
   return (
-    <Tabs defaultValue="overview" className="gap-5">
+    <Tabs defaultValue="overview" className="min-w-0 gap-5">
       <TabsList>
         <TabsTrigger value="overview">
           Overview
@@ -336,7 +336,7 @@ function SummarySection({
   return (
     <section className="rounded-3xl border border-border/70 bg-background/65 p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-2">
+        <div className="min-w-0 flex-1 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-base font-semibold tracking-tight text-foreground">
               Executive summary
@@ -373,7 +373,7 @@ function SummarySection({
         <span className="rounded-full border border-[var(--rose)] bg-[var(--rose-soft)] px-3 py-1 text-[var(--rose)]">
           Missing {coverage.missing}
         </span>
-        <span className="rounded-full border border-border/70 bg-background/80 px-3 py-1">
+        <span className="max-w-full break-all rounded-full border border-border/70 bg-background/80 px-3 py-1">
           Model {generatedOutput.modelVersionId}
         </span>
         <span className="rounded-full border border-border/70 bg-background/80 px-3 py-1">
