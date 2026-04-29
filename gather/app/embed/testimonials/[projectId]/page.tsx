@@ -93,18 +93,20 @@ export default async function TestimonialEmbedPage({
               </span>
             </h1>
           </div>
-          <Link
-            href={reviewUrl}
-            target="_blank"
-            className="inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-medium text-white"
-            style={{
-              backgroundColor: embed.link.brandColor,
-              fontFamily: "var(--font-sans), sans-serif",
-              boxShadow: "0 2px 0 rgba(0,0,0,0.15)",
-            }}
-          >
-            Leave a review →
-          </Link>
+          {embed.captureEnabled ? (
+            <Link
+              href={reviewUrl}
+              target="_blank"
+              className="inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-medium text-white"
+              style={{
+                backgroundColor: embed.link.brandColor,
+                fontFamily: "var(--font-sans), sans-serif",
+                boxShadow: "0 2px 0 rgba(0,0,0,0.15)",
+              }}
+            >
+              Leave a review →
+            </Link>
+          ) : null}
         </div>
 
         {embed.reviews.length === 0 ? (

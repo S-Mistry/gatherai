@@ -232,17 +232,47 @@ Every font-size used in the system, with the surface(s) where it appears. **Matc
 
 ### 6.1 The chrome
 
-`<AppShell>` renders **only** the sticky `<AppBar>` and a flex column. **It does not paint a max-width container.** Each page is responsible for its own outer padding/maxW.
+**Every consultant page renders its own `<ConsultantAppBar>` at the top.** The consultant layout (`app/app/layout.tsx`) only provides the auth gate and `<ConsultantSessionProvider>` — it does not paint any chrome. There is no global `<AppShell>` wrapper anymore.
 
 ```tsx
-// components/dashboard/app-shell.tsx
-<div className="flex min-h-screen flex-col">
-  <AppBar … />
-  {children}
-</div>
+// app/app/layout.tsx
+return (
+  <ConsultantSessionProvider value={{ userEmail, demoMode: false }}>
+    <div className="flex min-h-screen flex-col">{children}</div>
+  </ConsultantSessionProvider>
+)
+
+// each consultant page renders its own bar
+<>
+  <ConsultantAppBar
+    crumb={[
+      { label: "Workspace", href: "/app" },
+      { label: project.name, href: `/app/projects/${project.id}` },
+      { label: respondent.label },
+    ]}
+    rightSlot={<ReviewStatusControls … />}
+  />
+  <div style={{ padding: "32px 40px 80px", maxWidth: 1320, margin: "0 auto" }}>
+    {/* page content */}
+  </div>
+</>
 ```
 
+`<ConsultantAppBar>` (`components/dashboard/consultant-app-bar.tsx`) reads `userEmail` and `demoMode` from `useConsultantSession()`, then renders `<AppBar>` with the avatar + Sign-out form preassembled into the right slot.
+
 `<AppBar>` (`components/ui/app-bar.tsx`) is sticky, dashed-bottom, min-height `var(--app-bar-height)` (`74px`), padding `18px 36px`. Renders the wordmark on the left, optional `<Crumb>` next to it, optional right slot, and an optional avatar. The left group must be `min-width: 0; flex: 1`; the right group must not shrink; breadcrumbs truncate instead of overlapping the right controls.
+
+**Breadcrumbs deepen with route depth.** Status pills and overflow menus go into the AppBar `rightSlot` — never into a second sticky row.
+
+| Route | Crumb | Right slot |
+|---|---|---|
+| `/app` | `[{Workspace}]` | (none) |
+| `/app/projects` | `[{Workspace, /app}, {Projects}]` | (none) |
+| `/app/projects/new` | `[{Workspace, /app}, {New project}]` | (none) |
+| `/app/projects/{id}` (synthesis) | `[{Workspace, /app}, {project.name}]` | `<chip>refreshed N min ago</chip>` (when applicable) |
+| `/app/projects/{id}/sessions/{id}` | `[{Workspace, /app}, {project.name, /app/projects/{id}}, {respondent.label}]` | `<ReviewStatusControls>` (status popover + transcript toggle + overflow menu) |
+| `/i/{linkToken}` (deep interview) | `[{project.name}, {respondent · live}]` | clay chip `recording transcript only` |
+| `/t/{linkToken}` (feedback) | `[{businessName} feedback]` | sage chip `words only · we don't keep audio` |
 
 ```css
 .app-bar {
@@ -523,6 +553,65 @@ Each `<StickyNote>` renders Caveat 26 ink (or 22 if `text.length > 120`) and a f
 
 Contradictions: outer `card flat`, padding 24 28. Header flex baseline-justified between serif 22 / 400 topic and ghost sm `evidence ↗`. Inner `gridTemplateColumns: 1fr 110px 1fr; gap: 20; align-items: center`. Position panels: `padding: 18 20; border-radius: 8; border: 1px solid (gold or sage)`. Background `var(--gold-soft)` or `var(--sage-soft)`. `eyebrow` POSITION A/B + mono 10 ink-3 `{N} voices` + serif 17 / 1.45 statement. Versus axis: text-center, mono 10 ink-3 `split` (uppercase letter-spaced 0.16em), 10×6 split bar with `flex: a/b`, Caveat 22 clay `{a} ↔ {b}`.
 
+#### Session review (`/app/projects/{id}/sessions/{id}`)
+
+The session review page is a consultant deep-dive on a single transcript. Single chrome bar (no second sticky row); the breadcrumb deepens to three segments and the right slot carries the pipeline status + transcript toggle + overflow menu.
+
+```
+<ReviewSelectionProvider>
+  <ConsultantAppBar
+    crumb={[
+      { label: "Workspace", href: "/app" },
+      { label: project.name, href: `/app/projects/${projectId}` },
+      { label: respondent.label },
+    ]}
+    rightSlot={
+      <ReviewStatusControls
+        projectId={…} sessionId={…}
+        excludedFromSynthesis={…}
+        statuses={[
+          { label: "Transcript", status: review.transcriptStatus },
+          { label: "Analysis",   status: review.generatedStatus  },
+          { label: "Quality",    status: review.qualityStatus    },
+        ]}
+      />
+    }
+  />
+
+  <div style={{ padding: "32px 40px 80px", maxWidth: 1320, margin: "0 auto" }}>
+    {/* Optional inline badge row: <Badge variant="clay">Override</Badge>,
+        <Badge variant="gold">Manual quality</Badge>,
+        <Badge variant="rose">Excluded</Badge> */}
+
+    <div className="flex min-w-0 gap-5">
+      <aside style={{ position: "sticky", top: "calc(var(--app-bar-height) + 24px)" }}>
+        <ReviewSiblingRail variant="compact" … />
+      </aside>
+
+      <section className="min-w-0 flex-1">
+        <ReviewSynthesisTabs … />
+      </section>
+
+      <aside style={{ position: "sticky", top: "calc(var(--app-bar-height) + 24px)" }}>
+        <div style={{ maxHeight: "calc(100vh - var(--app-bar-height) - 48px)" }}>
+          <span className="eyebrow">Transcript</span>
+          <ReviewTranscriptPane … />
+        </div>
+      </aside>
+    </div>
+
+    <ReviewEvidenceDrawer … />
+  </div>
+</ReviewSelectionProvider>
+```
+
+`<ReviewStatusControls>` (`components/review/review-status-controls.tsx`) renders three things:
+1. A `<chip>` showing the aggregate pipeline status — `Ready` (sage), `Pending` (gold), `Failed` (rose), `Empty`/`Idle` (neutral). Click opens a popover listing each pipeline stage with its individual status.
+2. A `<chip>` "Transcript" button, visible only at `xl:hidden` widths, that toggles the right transcript pane via `useOptionalReviewSelectionActions().toggleDrawer("transcript")`.
+3. A circular overflow `…` menu (8×8) with one item: "Include in synthesis" / "Exclude from synthesis…" depending on current state. Excluding requires confirmation through an alert dialog using the same drawer-backdrop + cream card surface as `<Confirm>`.
+
+Sibling rail (left) and transcript aside (right) anchor at `top: calc(var(--app-bar-height) + 24px)` — never use the legacy `top-32` / `top-14`. Both asides are hidden on small screens (`hidden lg:block` / `hidden xl:block`); on those widths the user toggles the transcript drawer via the chip in the AppBar right slot.
+
 #### Sign-in
 
 `min-h-screen` with AppBar then `mx-auto max-w-[520px] flex items-start padding 16 6`. Inner is a `card flat` with yellow tape, Caveat 24 clay `welcome —`, H1 48 / -0.018em "Sign in.", body sans 14 ink-2 description, magic-link form / OAuth button, `divider-dashed`, mono 12.5 ink-3 small print.
@@ -594,25 +683,30 @@ The notebook field. Caveat clay label above (22px), then a transparent input wit
 ### ProjectTile
 
 ```tsx
-<a className="project-tile [live]" style={{}}>
-  <TypeFlavor projectType={…} />        {/* Caveat 18 clay/sage/ink-2 */}
-  <h3 className="font-serif" 26/400/1.15/-0.005em>{name}</h3>
-  <div className="font-sans" 13 ink-3>{tagline}</div>
+<article className="project-tile has-actions [live] [archived]" style={{}}>
+  <a className="project-tile-link" href={…}>
+    <TypeFlavor projectType={…} />        {/* Caveat 18 clay/sage/ink-2 */}
+    <h3 className="font-serif" 26/400/1.15/-0.005em>{name}</h3>
+    <div className="font-sans" 13 ink-3>{tagline}</div>
 
-  {/* Progress: stakeholder = dot row 9×9, clay/line; feedback/discovery = fill bar 6h max-w 140 sage/clay */}
-  <div className="flex items-center gap-2">
-    <span className="font-mono" 11 ink-2>{done}<span ink-4>/{total}</span></span>
-    {/* dots OR bar */}
-  </div>
+    {/* Progress: testimonial = dot row 9×9, clay/line; feedback/discovery = fill bar 6h max-w 140 sage/clay */}
+    <div className="flex items-center gap-2">
+      <span className="font-mono" 11 ink-2>{done}<span ink-4>/{total}</span></span>
+      {/* dots OR bar */}
+    </div>
 
-  <div className="flex justify-between items-center">
-    <Badge variant={…} dot={…}>{statusLabel}</Badge>
-    <span className="font-mono" 10.5 ink-3>{updatedAt}</span>
-  </div>
-</a>
+    <div className="flex justify-between items-center">
+      <Badge variant={…} dot={…}>{statusLabel}</Badge>
+      <span className="font-mono" 10.5 ink-3>{updatedAt}</span>
+    </div>
+  </a>
+  <button className="project-tile-x" aria-label="Archive project"><X /></button>
+  {/* archived tiles also render a dashed restore pill at bottom right */}
+</article>
 ```
 
 `.project-tile.live::after` adds the pulsing clay dot + halo at `top: 14, right: 14` with `live-pulse 1.6s` keyframe.
+When a tile has top-right actions, use `.project-tile.has-actions.live::after { right: 52px; }` so the live dot never overlaps the archive/delete X. The X is a quiet 28×28 icon button: transparent by default, rose-soft on hover. Archived tiles use `card-2`, status label `archived`, the same X now means permanent delete after confirmation, and a small dashed `restore` pill sits at bottom right.
 
 Status chip mapping:
 - `inProgress > 0` → `clay` `dot=true` `"live"`
@@ -620,6 +714,7 @@ Status chip mapping:
 - `active && completed > 0` → `sage` `dot=true` `"collecting"`
 - `active` (no sessions yet) → `gold` `"scheduling"`
 - `complete` → `neutral` `"complete"`
+- `archivedAt` present → `neutral` `"archived"`
 
 ### EvidenceDrawer
 

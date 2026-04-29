@@ -13,6 +13,8 @@ import type {
   QualityScore,
   SessionOutputGenerated,
   SessionOutputOverride,
+  TestimonialLink,
+  TestimonialReview,
   TranscriptSegment,
   WorkspaceSummary,
 } from "@/lib/domain/types"
@@ -26,6 +28,10 @@ import {
   isProjectType,
   sanitizePublicInterviewConfig,
 } from "@/lib/project-types"
+import {
+  buildProjectMotionState,
+  buildTestimonialProjectMetrics,
+} from "@/lib/data/derived"
 import {
   signRecoveryToken,
   verifyRecoveryToken,
@@ -41,6 +47,8 @@ interface MockStore {
   outputOverrides: Record<string, SessionOutputOverride>
   syntheses: Record<string, ProjectSynthesisGenerated>
   qualityScores: Record<string, QualityScore>
+  testimonialLinks: TestimonialLink[]
+  testimonialReviews: TestimonialReview[]
   jobs: AnalysisJob[]
 }
 
@@ -803,6 +811,8 @@ function seedStore(): MockStore {
     outputOverrides,
     syntheses,
     qualityScores,
+    testimonialLinks: [],
+    testimonialReviews: [],
     jobs: buildCompletionJobs("sess-amelia", project.id),
   }
 }
@@ -819,17 +829,28 @@ function getStore() {
   return globalThis.__gatheraiMockStore
 }
 
-export function getWorkspaceSnapshot() {
-  const store = getStore()
-  const sessions = Object.values(store.sessions)
-  const projects = store.projects.map((project) => {
+function summarizeProjects(
+  store: MockStore,
+  sessions: ParticipantSession[],
+  projects: ProjectRecord[]
+) {
+  return projects.map((project) => {
     const projectSessions = sessions.filter(
       (session) => session.projectId === project.id
     )
     const completedSessions = projectSessions.filter(
       (session) =>
-        session.status === "complete" && !session.excludedFromSynthesis
+      session.status === "complete" && !session.excludedFromSynthesis
     )
+    const testimonialMetrics = buildTestimonialProjectMetrics({
+      projectUpdatedAt: project.updatedAt,
+      links: store.testimonialLinks.filter(
+        (link) => link.projectId === project.id
+      ),
+      reviews: store.testimonialReviews.filter(
+        (review) => review.projectId === project.id
+      ),
+    })
 
     return {
       ...project,
@@ -848,8 +869,26 @@ export function getWorkspaceSnapshot() {
       },
       activeThemes: store.syntheses[project.id]?.crossInterviewThemes ?? [],
       includedSessions: completedSessions.length,
+      testimonialCounts: testimonialMetrics,
+      motionState: buildProjectMotionState({
+        projectType: project.projectType,
+        status: project.status,
+        updatedAt: project.updatedAt,
+        sessions: projectSessions,
+        testimonialMetrics,
+      }),
     }
   })
+}
+
+export function getWorkspaceSnapshot() {
+  const store = getStore()
+  const sessions = Object.values(store.sessions)
+  const projects = summarizeProjects(
+    store,
+    sessions,
+    store.projects.filter((project) => !project.archivedAt)
+  )
 
   return {
     workspace: store.workspace,
@@ -857,8 +896,17 @@ export function getWorkspaceSnapshot() {
   }
 }
 
-export function listProjects() {
-  return getWorkspaceSnapshot().projects
+export function listProjects(options?: { view?: "active" | "archived" }) {
+  if (options?.view !== "archived") {
+    return getWorkspaceSnapshot().projects
+  }
+
+  const store = getStore()
+  return summarizeProjects(
+    store,
+    Object.values(store.sessions),
+    store.projects.filter((project) => project.archivedAt)
+  )
 }
 
 export function getProjectDetail(projectId: string) {
@@ -935,11 +983,7 @@ export function getPublicInterviewConfig(linkToken: string) {
     (record) => record.publicLinkToken === linkToken
   )
 
-  if (!project) {
-    return null
-  }
-
-  if (project.projectType === "testimonial") {
+  if (!project || project.archivedAt || project.projectType === "testimonial") {
     return null
   }
 
@@ -971,7 +1015,7 @@ export function createParticipantSession(
     (record) => record.publicLinkToken === linkToken
   )
 
-  if (!project) {
+  if (!project || project.archivedAt || project.projectType === "testimonial") {
     return null
   }
 
@@ -1018,6 +1062,11 @@ export function resumeParticipantSession(sessionId: string, token: string) {
     return null
   }
 
+  const project = store.projects.find((record) => record.id === session.projectId)
+  if (project?.archivedAt) {
+    return null
+  }
+
   if (!verifyRecoveryToken(token, sessionId)) {
     return null
   }
@@ -1039,6 +1088,11 @@ export function appendSessionEvents(
   const session = store.sessions[sessionId]
 
   if (!session) {
+    return null
+  }
+
+  const project = store.projects.find((record) => record.id === session.projectId)
+  if (project?.archivedAt) {
     return null
   }
 
@@ -1095,6 +1149,11 @@ export function completeParticipantSession(
   const session = store.sessions[sessionId]
 
   if (!session) {
+    return null
+  }
+
+  const project = store.projects.find((record) => record.id === session.projectId)
+  if (project?.archivedAt) {
     return null
   }
 
@@ -1255,10 +1314,193 @@ export function createProjectFromForm(input: {
     createdAt,
   }
 
+  if (projectType === "testimonial") {
+    store.testimonialLinks.unshift({
+      id: `testimonial-link-${crypto.randomUUID()}`,
+      projectId,
+      linkToken: `test-${crypto.randomUUID()}`,
+      businessName: project.name,
+      websiteUrl: "https://example.com",
+      brandColor: "#b45f3a",
+      headline: "Leave a review",
+      prompt: "Tell us about your experience.",
+      createdAt,
+      updatedAt: createdAt,
+    })
+  }
+
   return {
     project,
     configVersion,
   }
+}
+
+export function archiveProject(projectId: string) {
+  const project = getStore().projects.find((record) => record.id === projectId)
+
+  if (!project || project.archivedAt) {
+    return null
+  }
+
+  const archivedAt = new Date().toISOString()
+  project.archivedAt = archivedAt
+  project.archivedByUserId = "mock-user"
+  project.updatedAt = archivedAt
+  return project
+}
+
+export function restoreArchivedProject(projectId: string) {
+  const project = getStore().projects.find((record) => record.id === projectId)
+
+  if (!project?.archivedAt) {
+    return null
+  }
+
+  const restoredAt = new Date().toISOString()
+  project.archivedAt = undefined
+  project.archivedByUserId = undefined
+  project.updatedAt = restoredAt
+  return project
+}
+
+export function permanentlyDeleteArchivedProject(projectId: string) {
+  const store = getStore()
+  const project = store.projects.find((record) => record.id === projectId)
+
+  if (!project?.archivedAt) {
+    return null
+  }
+
+  deleteProjectGraph(store, projectId)
+  return { id: projectId }
+}
+
+export function permanentlyDeleteArchivedProjects() {
+  const store = getStore()
+  const archivedIds = store.projects
+    .filter((project) => project.archivedAt)
+    .map((project) => project.id)
+
+  archivedIds.forEach((projectId) => deleteProjectGraph(store, projectId))
+  return { count: archivedIds.length }
+}
+
+export function getPublicTestimonialConfig(linkToken: string) {
+  const store = getStore()
+  const link = store.testimonialLinks.find(
+    (record) => record.linkToken === linkToken && !record.revokedAt
+  )
+
+  if (!link) {
+    return null
+  }
+
+  const project = store.projects.find((record) => record.id === link.projectId)
+
+  if (!project || project.projectType !== "testimonial" || project.archivedAt) {
+    return null
+  }
+
+  return {
+    projectId: link.projectId,
+    linkId: link.id,
+    linkToken: link.linkToken,
+    businessName: link.businessName,
+    websiteUrl: link.websiteUrl,
+    brandColor: link.brandColor,
+    headline: link.headline,
+    prompt: link.prompt,
+  }
+}
+
+export function submitTestimonialReview(
+  linkToken: string,
+  input: {
+    transcript: string
+    reviewerName?: string
+    rating: number
+    suggestedRating?: number | null
+  }
+) {
+  const config = getPublicTestimonialConfig(linkToken)
+
+  if (!config) {
+    return null
+  }
+
+  const createdAt = new Date().toISOString()
+  const review: TestimonialReview = {
+    id: `review-${crypto.randomUUID()}`,
+    projectId: config.projectId,
+    testimonialLinkId: config.linkId,
+    transcript: input.transcript,
+    reviewerName: input.reviewerName,
+    suggestedRating: input.suggestedRating ?? undefined,
+    rating: input.rating,
+    status: "pending",
+    createdAt,
+    updatedAt: createdAt,
+  }
+
+  getStore().testimonialReviews.unshift(review)
+  return review
+}
+
+export function getPublicTestimonialEmbed(projectId: string, limit = 20) {
+  const store = getStore()
+  const project = store.projects.find((record) => record.id === projectId)
+
+  if (!project || project.projectType !== "testimonial") {
+    return null
+  }
+
+  const link = store.testimonialLinks.find(
+    (record) => record.projectId === projectId && !record.revokedAt
+  )
+
+  if (!link) {
+    return null
+  }
+
+  const boundedLimit = Math.max(1, Math.min(20, Math.round(limit)))
+
+  return {
+    project,
+    link,
+    captureEnabled: !project.archivedAt,
+    reviews: store.testimonialReviews
+      .filter(
+        (review) =>
+          review.projectId === projectId && review.status === "approved"
+      )
+      .slice(0, boundedLimit),
+  }
+}
+
+function deleteProjectGraph(store: MockStore, projectId: string) {
+  store.projects = store.projects.filter((project) => project.id !== projectId)
+  Object.keys(store.configVersions).forEach((configId) => {
+    if (store.configVersions[configId]?.projectId === projectId) {
+      delete store.configVersions[configId]
+    }
+  })
+  Object.values(store.sessions)
+    .filter((session) => session.projectId === projectId)
+    .forEach((session) => {
+      delete store.sessions[session.id]
+      delete store.transcripts[session.id]
+      delete store.generatedOutputs[session.id]
+      delete store.outputOverrides[session.id]
+      delete store.qualityScores[session.id]
+    })
+  delete store.syntheses[projectId]
+  store.jobs = store.jobs.filter((job) => job.projectId !== projectId)
+  store.testimonialLinks = store.testimonialLinks.filter(
+    (link) => link.projectId !== projectId
+  )
+  store.testimonialReviews = store.testimonialReviews.filter(
+    (review) => review.projectId !== projectId
+  )
 }
 
 export function enqueueSynthesisRefresh(projectId: string) {

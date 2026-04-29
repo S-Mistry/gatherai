@@ -1,6 +1,7 @@
 import Link from "next/link"
 
 import { ConsultantAppBar } from "@/components/dashboard/consultant-app-bar"
+import { DeleteArchivedProjectsButton } from "@/components/dashboard/project-archive-actions"
 import { ProjectTile } from "@/components/dashboard/project-tile"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -14,7 +15,7 @@ type ProjectsPageProps = {
   searchParams?: Promise<SearchParams> | SearchParams
 }
 
-type ProjectFilter = "live" | "completed" | "needs-review"
+type ProjectFilter = "live" | "completed" | "needs-review" | "archived"
 type ProjectSummary = Awaited<ReturnType<typeof listProjects>>[number]
 
 const filterConfig: Record<
@@ -51,6 +52,15 @@ const filterConfig: Record<
       "Flagged sessions land here when quality checks find issues.",
     predicate: (project) => project.sessionCounts.flagged > 0,
   },
+  archived: {
+    label: "Archived",
+    description:
+      "Archived projects are hidden from the workspace, but can be restored.",
+    emptyTitle: "Archive is empty.",
+    emptyDescription:
+      "Projects you archive will land here before permanent deletion.",
+    predicate: (project) => Boolean(project.archivedAt),
+  },
 }
 
 function normalizeFilter(
@@ -60,7 +70,8 @@ function normalizeFilter(
   if (
     candidate === "live" ||
     candidate === "completed" ||
-    candidate === "needs-review"
+    candidate === "needs-review" ||
+    candidate === "archived"
   ) {
     return candidate
   }
@@ -72,13 +83,21 @@ export default async function ProjectsPage({
 }: ProjectsPageProps) {
   const resolvedSearchParams = (await searchParams) ?? {}
   const activeFilter = normalizeFilter(resolvedSearchParams.filter)
-  const allProjects = await listProjects()
-  const projects = activeFilter
-    ? allProjects.filter((project) =>
-        filterConfig[activeFilter].predicate(project)
-      )
-    : allProjects
+  const [activeProjects, archivedProjects] = await Promise.all([
+    listProjects(),
+    listProjects({ view: "archived" }),
+  ])
+  const allProjects =
+    activeFilter === "archived" ? archivedProjects : activeProjects
+  const projects =
+    activeFilter && activeFilter !== "archived"
+      ? activeProjects.filter((project) =>
+          filterConfig[activeFilter].predicate(project)
+        )
+      : allProjects
   const activeFilterConfig = activeFilter ? filterConfig[activeFilter] : null
+  const displayCount =
+    activeFilter === "archived" ? archivedProjects.length : activeProjects.length
 
   return (
     <>
@@ -114,14 +133,21 @@ export default async function ProjectsPage({
               Projects
             </h1>
             <span className="font-mono text-[12px] text-[var(--ink-3)]">
-              {allProjects.length}
+              {displayCount}
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-2.5">
-            <FilterChips activeFilter={activeFilter} />
-            <Button asChild variant="clay" size="sm">
-              <Link href="/app/projects/new">+ New project</Link>
-            </Button>
+            <FilterChips
+              activeFilter={activeFilter}
+              archivedCount={archivedProjects.length}
+            />
+            {activeFilter === "archived" ? (
+              <DeleteArchivedProjectsButton count={archivedProjects.length} />
+            ) : (
+              <Button asChild variant="clay" size="sm">
+                <Link href="/app/projects/new">+ New project</Link>
+              </Button>
+            )}
           </div>
         </div>
         {activeFilterConfig ? (
@@ -133,12 +159,21 @@ export default async function ProjectsPage({
 
       {allProjects.length === 0 ? (
         <EmptyState
-          title="No projects yet."
-          description="Create one to share a link with respondents."
+          title={activeFilterConfig?.emptyTitle ?? "No projects yet."}
+          description={
+            activeFilterConfig?.emptyDescription ??
+            "Create one to share a link with respondents."
+          }
           action={
-            <Button asChild variant="clay">
-              <Link href="/app/projects/new">New project</Link>
-            </Button>
+            activeFilter === "archived" ? (
+              <Button asChild variant="ghost">
+                <Link href="/app/projects">Back to active projects</Link>
+              </Button>
+            ) : (
+              <Button asChild variant="clay">
+                <Link href="/app/projects/new">New project</Link>
+              </Button>
+            )
           }
         />
       ) : projects.length === 0 ? (
@@ -167,6 +202,9 @@ export default async function ProjectsPage({
                 sessionCounts: project.sessionCounts,
                 includedSessions: project.includedSessions,
                 updatedAt: project.updatedAt,
+                archivedAt: project.archivedAt,
+                testimonialCounts: project.testimonialCounts,
+                motionState: project.motionState,
                 tagline: getProjectTypePreset(project.projectType).audiencePlural,
               }}
             />
@@ -178,12 +216,19 @@ export default async function ProjectsPage({
   )
 }
 
-function FilterChips({ activeFilter }: { activeFilter: ProjectFilter | null }) {
+function FilterChips({
+  activeFilter,
+  archivedCount,
+}: {
+  activeFilter: ProjectFilter | null
+  archivedCount: number
+}) {
   const filters: Array<{ key: ProjectFilter | null; label: string }> = [
     { key: null, label: "All" },
     { key: "live", label: "Live" },
     { key: "completed", label: "Completed" },
     { key: "needs-review", label: "Needs review" },
+    { key: "archived", label: `Archive (${archivedCount})` },
   ]
   return (
     <div
