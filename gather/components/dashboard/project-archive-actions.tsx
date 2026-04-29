@@ -37,7 +37,7 @@ export function ProjectTileArchiveActions({
     ? `Permanently delete ${projectName}`
     : `Archive ${projectName}`
   const description = isArchived
-    ? `${projectName} will be permanently removed, including responses, transcripts, generated outputs, testimonial reviews, links, and overrides. This cannot be undone.`
+    ? `${projectName} will be permanently removed, including responses, transcripts, generated outputs, testimonial reviews, and links. This cannot be undone.`
     : liveSessionCount > 0
       ? `${projectName} has ${liveSessionCount} live ${liveSessionCount === 1 ? "session" : "sessions"}. Archiving will hide the project and stop public capture links immediately, so active respondents may be interrupted. You can restore it from the archive.`
       : `${projectName} will move to the archive and public capture links will stop working until you restore it. Testimonial embeds keep showing approved reviews.`
@@ -55,9 +55,9 @@ export function ProjectTileArchiveActions({
           </button>
         </RadixAlertDialog.Trigger>
         <RadixAlertDialog.Portal>
-          <RadixAlertDialog.Overlay className="drawer-backdrop data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in data-[state=closed]:fade-out" />
+          <RadixAlertDialog.Overlay className="drawer-backdrop data-[state=closed]:animate-out data-[state=closed]:fade-out data-[state=open]:animate-in data-[state=open]:fade-in" />
           <RadixAlertDialog.Content
-            className="fixed left-1/2 top-1/2 z-[101] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 p-6 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in data-[state=closed]:fade-out"
+            className="fixed top-1/2 left-1/2 z-[101] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 p-6 data-[state=closed]:animate-out data-[state=closed]:fade-out data-[state=open]:animate-in data-[state=open]:fade-in"
             style={{
               background: "var(--card)",
               border: "1px solid var(--line)",
@@ -71,7 +71,7 @@ export function ProjectTileArchiveActions({
             >
               {title}
             </RadixAlertDialog.Title>
-            <RadixAlertDialog.Description className="font-sans mt-2 text-sm leading-6 text-[var(--ink-2)]">
+            <RadixAlertDialog.Description className="mt-2 font-sans text-sm leading-6 text-[var(--ink-2)]">
               {description}
             </RadixAlertDialog.Description>
             <form action={action} className="mt-6 flex justify-end gap-2">
@@ -94,7 +94,10 @@ export function ProjectTileArchiveActions({
       </RadixAlertDialog.Root>
 
       {isArchived ? (
-        <form action={restoreArchivedProjectAction} className="project-tile-restore">
+        <form
+          action={restoreArchivedProjectAction}
+          className="project-tile-restore"
+        >
           <input type="hidden" name="projectId" value={projectId} />
           <RestoreButton />
         </form>
@@ -116,9 +119,9 @@ export function DeleteArchivedProjectsButton({ count }: { count: number }) {
         </Button>
       </RadixAlertDialog.Trigger>
       <RadixAlertDialog.Portal>
-        <RadixAlertDialog.Overlay className="drawer-backdrop data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in data-[state=closed]:fade-out" />
+        <RadixAlertDialog.Overlay className="drawer-backdrop data-[state=closed]:animate-out data-[state=closed]:fade-out data-[state=open]:animate-in data-[state=open]:fade-in" />
         <RadixAlertDialog.Content
-          className="fixed left-1/2 top-1/2 z-[101] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 p-6 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in data-[state=closed]:fade-out"
+          className="fixed top-1/2 left-1/2 z-[101] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 p-6 data-[state=closed]:animate-out data-[state=closed]:fade-out data-[state=open]:animate-in data-[state=open]:fade-in"
           style={{
             background: "var(--card)",
             border: "1px solid var(--line)",
@@ -132,11 +135,11 @@ export function DeleteArchivedProjectsButton({ count }: { count: number }) {
           >
             Delete all archived projects?
           </RadixAlertDialog.Title>
-          <RadixAlertDialog.Description className="font-sans mt-2 text-sm leading-6 text-[var(--ink-2)]">
+          <RadixAlertDialog.Description className="mt-2 font-sans text-sm leading-6 text-[var(--ink-2)]">
             This permanently removes {count} archived{" "}
             {count === 1 ? "project" : "projects"}, including responses,
-            transcripts, generated outputs, testimonial reviews, links, and
-            overrides. This cannot be undone.
+            transcripts, generated outputs, testimonial reviews, and links. This
+            cannot be undone.
           </RadixAlertDialog.Description>
           <form
             action={permanentlyDeleteArchivedProjectsAction}

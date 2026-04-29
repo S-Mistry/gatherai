@@ -27,7 +27,6 @@ export default async function SessionReviewPage({
     notFound()
   }
 
-  const overrideActive = Boolean(review.override?.editedSummary?.trim())
   const transcriptEmpty = (
     <TranscriptEmptyState
       status={review.transcriptStatus}
@@ -39,9 +38,6 @@ export default async function SessionReviewPage({
     variant: "clay" | "gold" | "rose"
     label: string
   }> = []
-  if (overrideActive) headerBadges.push({ variant: "clay", label: "Override" })
-  if (review.qualityOverride)
-    headerBadges.push({ variant: "gold", label: "Manual quality" })
   if (review.session.excludedFromSynthesis)
     headerBadges.push({ variant: "rose", label: "Excluded" })
 
@@ -75,7 +71,7 @@ export default async function SessionReviewPage({
         }}
       >
         {headerBadges.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-2 mb-6">
+          <div className="mb-6 flex flex-wrap items-center gap-2">
             {headerBadges.map((badge) => (
               <Badge key={badge.label} variant={badge.variant}>
                 {badge.label}
@@ -103,16 +99,11 @@ export default async function SessionReviewPage({
 
           <section className="min-w-0 flex-1">
             <ReviewSynthesisTabs
-              projectId={projectId}
-              sessionId={sessionId}
               projectType={review.project.projectType}
               generatedStatus={review.generatedStatus}
               generatedOutput={review.generatedOutput}
-              effectiveOutput={review.effectiveOutput}
-              override={review.override}
               qualityScore={review.qualityScore}
               qualityStatus={review.qualityStatus}
-              qualityOverride={review.qualityOverride}
               analysisFailure={review.analysisFailure}
             />
           </section>
@@ -205,7 +196,7 @@ function NoticeCard({
   return (
     <div className="card flat" style={{ padding: "16px 20px" }}>
       <Badge variant={tone}>{title}</Badge>
-      <p className="font-sans mt-2 text-sm leading-6 text-[var(--ink-2)] m-0">
+      <p className="m-0 mt-2 font-sans text-sm leading-6 text-[var(--ink-2)]">
         {message}
       </p>
     </div>

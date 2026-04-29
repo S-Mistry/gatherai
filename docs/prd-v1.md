@@ -286,9 +286,7 @@ Scoring dimensions include:
 - decision usefulness
 
 ### Consultant controls
-- edit structured outputs
 - exclude interviews from synthesis
-- mark or unmark low quality
 
 ## Non-functional requirements
 - Low-latency participant experience.
@@ -371,9 +369,7 @@ MVP policy:
 - project_link_copied
 - synthesis_viewed
 - session_reviewed
-- output_edited
 - session_excluded
-- quality_flag_overridden
 
 ### Participant-side
 - landing_viewed
@@ -401,7 +397,7 @@ MVP policy:
 - transcript is stored and viewable
 - per-session outputs are generated and reviewable
 - cross-interview synthesis is generated
-- consultant can edit or exclude outputs
+- consultant can exclude submissions from synthesis
 - low-quality sessions can be flagged
 - core data is isolated correctly between users
 
@@ -409,7 +405,7 @@ MVP policy:
 - Shallow interviews: follow-up policy, vague-answer challenge prompts, quality scoring, strict mode first.
 - Repetitive conversations: warm interviewer persona, controlled follow-up counts, novelty heuristics.
 - Missed required questions: explicit queue in app state, strict mode first, coverage scoring.
-- Untrustworthy synthesis: evidence-backed outputs, faithfulness scoring, editable outputs.
+- Untrustworthy synthesis: evidence-backed outputs, faithfulness scoring, and submission exclusion controls.
 - Distrust around anonymity: clear disclosure, configurable identity mode, low-friction entry.
 - Too much complexity too early: defer exports, collaborators, reminders, arbitrary templates, and custom survey-builder workflows.
 

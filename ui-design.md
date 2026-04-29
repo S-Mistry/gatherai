@@ -183,7 +183,7 @@ Reuse these strings as-is. Parameters in `{braces}`.
 
 - `good morning, {firstName} —`, `— need a look`, `+ start a new one`, `your bookshelf —`
 - `what kind of conversation —`, `you can edit any of this later —`, `keep it open enough to surprise you —`
-- `questions —`, `+ add a question`, `you'll get a link to share with each person`
+- `questions —`, `must-ask questions —`, `+ add a question`, `you'll get a link to share with each person`, `you'll get a link to share`
 - `conversation with {label} —`, `gather →`, `you →`, `hello —`, `today's questions`
 - `for {sponsor} · {estTime}`, `one question —`, `recording · {MM:SS}`, `tap to resume`, `tap to record`
 - `skip → I'd rather not answer`, `— really.`, `received · {Nth} voice`, `That's it. You can close this tab.`

@@ -82,10 +82,10 @@ Last updated: April 29, 2026
     - deterministic post-processing drops generic claim titles, empty or untraceable evidence, and over-reused single-segment evidence, and keeps required questions as `partial` or `missing` when transcript support is thin
     - narrative pass consumes only grounded artifacts to write summary, project implications, recommended actions, and unresolved questions
     - hard sessions may escalate to a larger synthesis-grade model when the grounding pass is too thin for the available transcript, quote support is sparse, or most evidence is concentrated in one segment
-  - session outputs are append-only generated runs; read paths resolve the latest successful run and layer consultant overrides on top
-  - quality scoring combines deterministic structural checks with a cheap model-assisted faithfulness and decision-usefulness pass, using the cleaned transcript plus a compact generated-analysis payload, while manual consultant quality overrides remain separate from generated scores
+  - session outputs are append-only generated runs; read paths resolve the latest successful run without consultant-written narrative edits
+  - quality scoring combines deterministic structural checks with a cheap model-assisted faithfulness and decision-usefulness pass, using the cleaned transcript plus a compact generated-analysis payload
   - the completion route immediately claims and processes that session's queued jobs in deterministic order, reusing one preloaded session analysis context through extraction, quality scoring, and async trace logging, then enqueues and runs project synthesis
-  - project synthesis uses only completed, non-excluded effective session outputs, consumes the latest generated run per session through a SQL helper instead of scanning append-only history in application code, normalizes synonymous session themes into shared clusters before prompting, computes theme frequency from distinct included sessions, and rejects claims without valid cited evidence
+  - project synthesis uses only completed, non-excluded generated session outputs, consumes the latest generated run per session through a SQL helper instead of scanning append-only history in application code, normalizes synonymous session themes into shared clusters before prompting, computes theme frequency from distinct included sessions, and rejects claims without valid cited evidence
   - internal dispatch routes and cron sweeps remain recovery paths for queued or stuck jobs
   - Braintrust traces and online scores are stored asynchronously
 
@@ -119,7 +119,7 @@ Last updated: April 29, 2026
 - `/app/projects/[projectId]`
   - project dashboard; feedback/discovery show config, synthesis, and sessions, while testimonials show review links, review moderation, and embed builder
 - `/app/projects/[projectId]/sessions/[sessionId]`
-  - transcript-backed review and override surface
+  - transcript-backed review surface with a submission include/exclude control
 
 ### 4.3 Public APIs
 
@@ -156,10 +156,6 @@ Last updated: April 29, 2026
 - project create bootstraps the project row, immutable `project_type`, initial config version, and initial public link atomically, applying mode-specific starter defaults when fields are omitted and rejecting discovery creation when `ENABLE_DISCOVERY_PROJECTS=false`
 - project archive/restore/permanent-delete; permanent delete is allowed only after archive, and delete-all archived is scoped to the authenticated consultant workspace
 - session include/exclude toggle
-- session claim suppress/restore
-- session quality override
-- session output override save
-- project synthesis override save
 - manual synthesis refresh
 
 ## 5. Shared domain model
@@ -184,10 +180,6 @@ Last updated: April 29, 2026
   - claim provenance linking `sessionId` and `segmentIds`
 - `SessionOutputGenerated`
   - immutable generated extraction artifact containing cleaned transcript text, question reviews, quote library items, insight cards, and narrative outputs
-- `SessionOutputOverride`
-  - consultant-written corrections or suppressions
-- `SessionQualityOverride`
-  - consultant-written override for the effective low-quality flag and review note
 - `ProjectSynthesisGenerated`
   - immutable synthesis artifact
 - `ProjectEvidenceClaimKind`
@@ -198,8 +190,6 @@ Last updated: April 29, 2026
   - one resolved evidence card with respondent label, rationale, cited segment IDs, and a session-review link
 - `ProjectEvidenceSegment`
   - one exact resolved transcript segment rendered inside a project-level evidence excerpt
-- `ProjectSynthesisOverride`
-  - consultant-written synthesis changes
 - `QualityScore`
   - per-session quality dimensions and flag state
 - `AnalysisJob`
@@ -218,8 +208,7 @@ Last updated: April 29, 2026
 - Transcript persistence is idempotent by `session_id + source_item_id` when a realtime source item ID is present.
 - Generated artifacts are immutable.
 - Session extraction runs are append-only; UI and synthesis consume the latest run for each session.
-- Overrides are layered separately and merged at read time.
-- Manual quality overrides never overwrite generated quality score rows.
+- Consultants can exclude an entire submission from synthesis; they do not edit generated analysis or generated quality scores.
 - Evidence references are required for major generated claims.
 - Testimonial reviews are transcript text only; audio is temporary request data and is not stored.
 - Only `approved` testimonial reviews render in embeds.
@@ -290,9 +279,7 @@ Last updated: April 29, 2026
 - `participant_sessions`
 - `transcript_segments`
 - `session_outputs_generated`
-- `session_output_overrides`
 - `project_syntheses_generated`
-- `project_synthesis_overrides`
 - `quality_scores`
 - `analysis_jobs`
 - `testimonial_links`
@@ -341,7 +328,7 @@ Last updated: April 29, 2026
 - new-project setup offers `Get feedback` and `Gather testimonials`; discovery cards appear only when `ENABLE_DISCOVERY_PROJECTS=true`
 - feedback/discovery project detail includes config version history, session table, quality flags, synthesis summary, and a share-timing hint for feedback projects
 - testimonial project detail includes review links, pending/approved/rejected moderation, and an iframe embed builder with live preview
-- session review page with evidence-backed claims, editable overrides, answered or partial or missing required-question counts, and thin-evidence warnings when confidence is limited by transcript depth
+- session review page with evidence-backed claims, answered or partial or missing required-question counts, submission include/exclude controls, and thin-evidence warnings when confidence is limited by transcript depth
 - session review page distinguishes transcript and analysis `pending`, `failed`, and `ready` states instead of showing placeholder copy as persisted content
 - authenticated app chrome stays server-rendered except for a small active-nav island, and review selection state updates are localized so transcript hover or focus does not rerender the full review surface
 

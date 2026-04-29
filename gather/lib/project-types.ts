@@ -87,7 +87,7 @@ const PROJECT_TYPE_PRESETS: Record<ProjectType, ProjectTypePreset> = {
     audiencePlural: "respondents",
     anonymousRespondentLabel: "Respondent",
     objective:
-      "Capture what landed, what missed, and what should change after the experience.",
+      "Gather what went well, what is not working, and what could be improved.",
     areasOfInterest: [
       "What worked well",
       "What felt unclear, frustrating, or missing",

@@ -296,7 +296,7 @@ function SetupForm({
           {testimonialMode
             ? "One link. One review."
             : feedbackMode
-              ? "One question, sent wide."
+              ? "Questions, sent wide."
               : "Set up the interviews."}
         </h1>
         <div
@@ -400,7 +400,7 @@ function SetupForm({
           {testimonialMode
             ? "you'll get a link to embed on your site"
             : feedbackMode
-              ? "you'll get a link to share with your team"
+              ? "you'll get a link to share"
               : "you'll get a link to share with each person"}
         </span>
       </div>
@@ -526,12 +526,6 @@ function FeedbackFields({
   objective: string
   onObjective: (v: string) => void
 }) {
-  const oneQuestion = requiredQuestions[0] ?? ""
-
-  function handleQuestion(value: string) {
-    onRequiredQuestions([value])
-  }
-
   return (
     <div className="grid gap-7">
       <Field label="project name" htmlFor="name">
@@ -545,18 +539,6 @@ function FeedbackFields({
         />
       </Field>
 
-      <Field label="the one question" htmlFor="requiredQuestions">
-        <Textarea
-          id="requiredQuestions"
-          name="requiredQuestions"
-          rows={2}
-          required
-          value={oneQuestion}
-          onChange={(event) => handleQuestion(event.target.value)}
-          style={{ fontSize: 24, lineHeight: 1.35 }}
-        />
-      </Field>
-
       <Field label="what you want to learn" htmlFor="objective">
         <Textarea
           id="objective"
@@ -566,6 +548,16 @@ function FeedbackFields({
           onChange={(event) => onObjective(event.target.value)}
         />
       </Field>
+
+      <NotebookList
+        eyebrow="must-ask questions —"
+        name="requiredQuestions"
+        items={requiredQuestions}
+        onChange={onRequiredQuestions}
+        addLabel="+ add a question"
+        placeholder="e.g. what would make this better?"
+        numbered
+      />
     </div>
   )
 }

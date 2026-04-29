@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-import { Star, WarningCircle } from "@phosphor-icons/react"
+import { type ChangeEvent, useEffect, useRef, useState } from "react"
+import { Star, Stop, WarningCircle } from "@phosphor-icons/react"
 
 import { Button } from "@/components/ui/button"
 import { Field } from "@/components/ui/field"
@@ -59,6 +59,7 @@ export function TestimonialCaptureShell({
   const streamRef = useRef<MediaStream | null>(null)
   const recorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
+  const transcriptTextareaRef = useRef<HTMLTextAreaElement | null>(null)
 
   useEffect(() => {
     if (state !== "recording") return
@@ -73,6 +74,26 @@ export function TestimonialCaptureShell({
       streamRef.current?.getTracks().forEach((track) => track.stop())
     }
   }, [])
+
+  useEffect(() => {
+    const textarea = transcriptTextareaRef.current
+    if (!textarea) return
+    textarea.style.height = "auto"
+    textarea.style.height = `${textarea.scrollHeight}px`
+  }, [state, transcript])
+
+  function resizeReviewTextarea(
+    textarea: HTMLTextAreaElement | null = transcriptTextareaRef.current
+  ) {
+    if (!textarea) return
+    textarea.style.height = "auto"
+    textarea.style.height = `${textarea.scrollHeight}px`
+  }
+
+  function handleTranscriptChange(event: ChangeEvent<HTMLTextAreaElement>) {
+    resizeReviewTextarea(event.currentTarget)
+    setTranscript(event.currentTarget.value)
+  }
 
   async function transcribe(blob: Blob) {
     setState("transcribing")
@@ -226,14 +247,8 @@ export function TestimonialCaptureShell({
   if (state === "submitted") {
     return (
       <Completion
-        body={`Your review will appear once ${config.businessName} approves it.`}
-        stickyNote={
-          <>
-            when {config.businessName} reviews this,
-            <br />
-            your edited review is ready.
-          </>
-        }
+        stickyNote="your review will appear once gather approves it."
+        stickyNotePlacement="beforeSmallPrint"
       />
     )
   }
@@ -276,9 +291,11 @@ export function TestimonialCaptureShell({
         <Field label="your review" htmlFor="transcript">
           <Textarea
             id="transcript"
+            ref={transcriptTextareaRef}
             value={transcript}
-            onChange={(event) => setTranscript(event.target.value)}
-            rows={6}
+            onChange={handleTranscriptChange}
+            rows={3}
+            className="min-h-0 resize-none overflow-hidden"
           />
         </Field>
 
@@ -298,7 +315,6 @@ export function TestimonialCaptureShell({
           variant="clay"
           onClick={() => void submitReview()}
           disabled={state === "submitting" || !transcript.trim() || rating < 1}
-          style={{ backgroundColor: config.brandColor }}
         >
           {state === "submitting" ? "Submitting…" : "Submit review →"}
         </Button>
@@ -352,6 +368,8 @@ export function TestimonialCaptureShell({
       <div className="grid place-items-center">
         <MicRing
           active={recording}
+          disabled={transcribingState}
+          ariaLabel={recording ? "Stop recording" : "Start recording"}
           onClick={() => {
             if (recording) {
               stopRecording()
@@ -359,7 +377,11 @@ export function TestimonialCaptureShell({
               void startRecording()
             }
           }}
-        />
+        >
+          {recording ? (
+            <Stop size={56} weight="fill" color="var(--card)" />
+          ) : undefined}
+        </MicRing>
       </div>
 
       <div className="flex items-center justify-center gap-[18px] flex-wrap">
@@ -385,7 +407,7 @@ export function TestimonialCaptureShell({
           lineHeight: 1.5,
         }}
       >
-        Take your time. There&apos;s no live transcript — just speak. When
+        Take your time. Tap the mic and speak in your own words. When
         you&apos;re done, you&apos;ll see the text and can edit it before
         submitting.
       </p>
@@ -396,23 +418,6 @@ export function TestimonialCaptureShell({
         </div>
       ) : null}
 
-      <div className="flex justify-center">
-        {recording ? (
-          <Button size="lg" variant="ghost" onClick={stopRecording}>
-            ◼ Stop recording
-          </Button>
-        ) : (
-          <Button
-            size="lg"
-            variant="clay"
-            onClick={() => void startRecording()}
-            disabled={transcribingState}
-            style={{ backgroundColor: config.brandColor }}
-          >
-            {transcribingState ? "Transcribing…" : "Record review"}
-          </Button>
-        )}
-      </div>
     </div>
   )
 }

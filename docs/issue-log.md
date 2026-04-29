@@ -50,8 +50,8 @@ Use this file for confirmed repo-specific issues only. Keep entries short and pr
 
 - Problem: Consultant summary overrides saved on a respondent review did not influence regenerated project synthesis.
 - Cause: Project synthesis consumed only raw generated outputs and never merged `session_output_overrides` back into the effective per-session analysis.
-- Avoid: Merge overrides at read time and use the same effective session output when regenerating synthesis.
-- Fix/Check: Save a session summary override, rerun synthesis, and confirm the synthesis reflects the overridden respondent summary.
+- Avoid: Superseded April 29, 2026. Consultant-written output overrides were removed; use submission include/exclude controls instead.
+- Fix/Check: Confirm project synthesis uses latest generated session outputs from completed, non-excluded sessions only.
 
 ## I-008 Participant realtime session stayed active after completion
 
@@ -178,3 +178,10 @@ Use this file for confirmed repo-specific issues only. Keep entries short and pr
 - Cause: The deployed database was missing `projects.archived_at` and `projects.archived_by_user_id`, while the workspace dashboard immediately filtered projects by `archived_at`.
 - Avoid: Before diagnosing OAuth again, check schema drift when the callback succeeds but the signed-in app page crashes.
 - Fix/Check: Run `NEXT_PUBLIC_APP_URL=https://<production-domain> npm --prefix gather run supabase:bootstrap`, then verify `information_schema.columns` contains both archive columns and `/auth/login?provider=google&next=/app` redirects to the production `/auth/callback`.
+
+## I-026 Testimonial CTAs drifted from light-only design system
+
+- Problem: Public testimonial buttons could become unreadable when a pale custom brand colour was used, and the embed builder still exposed a dark widget option after v1 dropped dark mode.
+- Cause: Testimonial capture and embed CTAs used unvalidated `brandColor` as the button fill, and the embed route still rendered `theme=dark`.
+- Avoid: Keep custom testimonial brand colours as accent text only. Public CTAs should use design-system button variants, and embed routes should ignore stale dark theme params rather than reintroducing dark styling.
+- Fix/Check: Verify `/t/[linkToken]` and `/embed/testimonials/[projectId]` CTAs use `.btn.clay`, generated iframe code has no `theme=` param, and `/embed/testimonials/[projectId]?theme=dark` renders the same light widget.

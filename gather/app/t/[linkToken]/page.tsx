@@ -61,7 +61,7 @@ export default async function TestimonialPage({
         }}
       >
         <span className="font-mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
-          gather · feedback pulse · pseudonymous
+          gather · review
         </span>
         <Link
           href="/"

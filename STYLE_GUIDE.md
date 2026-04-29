@@ -357,7 +357,7 @@ Empty tile first cell: `width: var(--workspace-dashboard-tile-width); height: va
       <div className="card flat" style={{ padding: '28px 30px 26px', minHeight: 280, background: 'var(--card-2)' }}>
         <Tape tint="green" style={{ top: -11, right: 32, transform: 'rotate(3deg)' }} />
         <div className="font-hand" style={{ fontSize: 30, color: 'var(--sage)' }}>✶ feedback pulse</div>
-        <h3 className="font-serif" style={{ fontSize: 30, fontWeight: 400, lineHeight: 1.2, margin: '14px 0 18px' }}>One question, sent wide. Answers in under two minutes each.</h3>
+        <h3 className="font-serif" style={{ fontSize: 30, fontWeight: 400, lineHeight: 1.2, margin: '14px 0 18px' }}>Questions, sent wide. Answers in under two minutes each.</h3>
         <p className="font-sans" style={{ fontSize: 14, lineHeight: 1.55, color: 'var(--ink-2)' }}>For everyone after a launch, retro, or change. No live transcript shown to the participant — just record, thank, and roll into themes when enough have answered.</p>
         <div className="mt-6 flex flex-wrap gap-[10px]">
           <span className="chip">Unlimited responses</span>
@@ -382,10 +382,10 @@ Empty tile first cell: `width: var(--workspace-dashboard-tile-width); height: va
 
 #### New project — FeedbackSetup
 
-- H1 44 / 400 / -0.01em "One question, sent wide."
+- H1 44 / 400 / -0.01em "Questions, sent wide."
 - Caveat 22 sage below: "keep it open enough to surprise you —"
 - Wrapper: `<div className="card flat" style={{ padding: '30px 36px 36px', background: 'var(--card-2)' }}>` + green `<Tape>` `top: -11, left: 60, rotate(-2deg)`.
-- Fields: `project name`, `the one question` (textarea fontSize 24 lh 1.35), grid 1fr 1fr for `send to` / `close after`.
+- Fields: `project name`, `what you want to learn`, `must-ask questions —` using numbered notebook rows and `+ add a question`.
 - Confirm row at the bottom: `padding: 14px 18px; background: rgba(255,255,255,0.5); border-radius: 6`. Sage circle ✓ + bold sans 13 + sans 12 ink-2.
 - Footer row: sage lg "Preview & send →" + ghost "Save as draft".
 
@@ -439,7 +439,9 @@ NotebookControls = below the card with `marginTop: 22; gap: 10`. Clay "◼ End c
 </div>
 
 <div className="grid place-items-center" style={{ marginTop: 56, marginBottom: 36 }}>
-  <MicRing active={recording} onClick={…} />
+  <MicRing active={recording} disabled={transcribing} ariaLabel={recording ? 'Stop recording' : 'Start recording'} onClick={…}>
+    {recording ? <Stop size={56} weight="fill" color="var(--card)" /> : undefined}
+  </MicRing>
 </div>
 
 <div className="flex items-center justify-center gap-[18px] flex-wrap">
@@ -450,16 +452,11 @@ NotebookControls = below the card with `marginTop: 22; gap: 10`. Clay "◼ End c
 </div>
 
 <p className="font-sans" style={{ fontSize: 13, color: 'var(--ink-3)', maxWidth: 460, lineHeight: 1.5, margin: '24px auto 0', textAlign: 'center' }}>
-  Take your time. There's no transcript shown — just speak. When you're done, tap below.
+  Take your time. Tap the mic and speak in your own words. When you're done, you'll see the text and can edit it before submitting.
 </p>
-
-<div className="flex justify-center gap-3" style={{ marginTop: 36 }}>
-  <Button variant="sage" size="lg">I'm done — submit</Button>
-  <Button variant="ghost" size="lg">Start over</Button>
-</div>
 ```
 
-Footer: `padding: 20px 36px; border-top: 1px dashed var(--line); flex justify-between flex-wrap gap-3`. Left: mono 11 ink-3 `gather · feedback pulse · pseudonymous`. Right: Caveat 18 ink-3 link `skip → I'd rather not answer`.
+Footer: `padding: 20px 36px; border-top: 1px dashed var(--line); flex justify-between flex-wrap gap-3`. Left: mono 11 ink-3 `gather · review`. Right: Caveat 18 ink-3 link `skip → I'd rather not answer`.
 
 #### Completion
 
@@ -581,9 +578,7 @@ The session review page is a consultant deep-dive on a single transcript. Single
   />
 
   <div style={{ padding: "32px 40px 80px", maxWidth: 1320, margin: "0 auto" }}>
-    {/* Optional inline badge row: <Badge variant="clay">Override</Badge>,
-        <Badge variant="gold">Manual quality</Badge>,
-        <Badge variant="rose">Excluded</Badge> */}
+    {/* Optional inline badge row: <Badge variant="rose">Excluded</Badge> */}
 
     <div className="flex min-w-0 gap-5">
       <aside style={{ position: "sticky", top: "calc(var(--app-bar-height) + 24px)" }}>
@@ -769,7 +764,7 @@ Default placements (top-of-card):
 }
 ```
 
-One per page max. Used: synthesis hero `Synthesis ready` (default stamp red); completion `received · 24th voice` (sage); narrative override badge (ink).
+One per page max. Used: synthesis hero `Synthesis ready` (default stamp red); completion `received · 24th voice` (sage).
 
 ### Pin — `<Pin tint="stamp|sage|gold|clay">`
 
@@ -868,7 +863,7 @@ Used inside `<NotebookCard>` for in-the-margin annotations on a transcript turn.
 - `questions —` (StakeholderSetup section, 22)
 - `+ add a question` (StakeholderSetup affordance, 22)
 - `you'll get a link to share with each person` (StakeholderSetup trailing hint, 20, ink-3)
-- `you'll get a link to share with your team` (FeedbackSetup trailing hint, 20, ink-3)
+- `you'll get a link to share` (FeedbackSetup trailing hint, 20, ink-3)
 - `conversation with {label} —` (DeepInterview greeting, 28, rotate(-1.5deg))
 - `gather →` / `you →` (DeepInterview transcript speaker tags, 20)
 - `hello —` (sidebar context header, 24)
@@ -898,7 +893,7 @@ Used inside `<NotebookCard>` for in-the-margin annotations on a transcript turn.
 - "Quiet for now" (22, ink-2)
 - "Two ways to listen. *Pick one.*" (56, italic ink-3 on second clause)
 - "Set up the interviews." (44)
-- "One question, sent wide." (44)
+- "Questions, sent wide." (44)
 - "Sign in." (48)
 - "Projects" (44)
 - "Who we talked to" (32)
@@ -917,7 +912,7 @@ Used inside `<NotebookCard>` for in-the-margin annotations on a transcript turn.
 - FeedbackInterview AppBar chip: sage dot + `words only · we don't keep audio`
 - Synthesis AppBar chip: `refreshed {N} min ago` (or `View live interview` ghost button)
 - Status chips (project tile): `live`, `synthesizing`, `collecting`, `scheduling`, `complete`, `excluded`
-- Hero stamp: `Synthesis ready` (≥3 included sessions and no override) / `narrative override` (when override active)
+- Hero stamp: `Synthesis ready` (≥3 included sessions)
 - Completion stamp: `received · {Nth} voice`
 
 ### Button labels

@@ -66,7 +66,7 @@
 - Browser and SSR clients use Supabase publishable keys; server-only workflows use the Supabase secret key.
 - `feedback` and `testimonial` are visible creation paths. `discovery` remains feature-flagged for legacy or experimental use.
 - Transcript and testimonial review storage is text-only. Do not introduce audio persistence in v1; testimonial audio is temporary request data for transcription only.
-- Generated outputs and consultant overrides remain separate records. Never overwrite raw generated artifacts.
+- Generated outputs remain immutable. Consultants can exclude entire submissions from synthesis, but they do not edit generated analysis or generated quality scores.
 - The interview loop is hybrid: application state owns coverage, timing, and stop conditions; the realtime model owns phrasing and follow-up generation.
 - Testimonials do not use the realtime interview loop, Mia, analysis jobs, or synthesis. They use simple recording, transcription, editable text, star rating, moderation, and embed rendering.
 - MVP ships `strict` mode first. `adaptive` stays behind a future flag.

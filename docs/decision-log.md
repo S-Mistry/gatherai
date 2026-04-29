@@ -1,6 +1,6 @@
 # Decision Log
 
-Last updated: April 29, 2026 (D-024 workspace in-motion semantics)
+Last updated: April 29, 2026 (D-025 consultant override removal)
 
 ## Locked Decisions
 
@@ -44,7 +44,7 @@ Last updated: April 29, 2026 (D-024 workspace in-motion semantics)
 
 - Status: accepted
 - Decision: run synthesis automatically after each completed interview and allow manual refresh.
-- Consequence: consultant exclusions and overrides must be respected on every regeneration.
+- Consequence: consultant submission exclusions must be respected on every regeneration.
 
 ### D-008 Async jobs
 
@@ -62,7 +62,7 @@ Last updated: April 29, 2026 (D-024 workspace in-motion semantics)
 
 - Status: accepted
 - Decision: every major generated claim stores transcript evidence references by `session_id` and `segment_id`.
-- Consequence: raw generations remain immutable, and consultant edits are represented as overrides.
+- Consequence: raw generations remain immutable, and consultants suppress problematic material by excluding an entire submission from synthesis.
 
 ### D-011 Storage policy
 
@@ -147,6 +147,12 @@ Last updated: April 29, 2026 (D-024 workspace in-motion semantics)
 - Status: accepted
 - Decision: workspace `In motion` means unresolved work or fresh activity, not only live sessions. Testimonial projects stay in motion while any review is `pending`; otherwise testimonial activity, feedback/discovery completed-session activity, and project edits age out after a rolling 7 × 24 hour window.
 - Consequence: the workspace home screen derives motion state from existing project, session, testimonial review, and testimonial link timestamps. No new schema is required, and pending testimonial moderation cannot disappear into `Quiet for now` because of age alone.
+
+### D-025 Consultant override removal
+
+- Status: accepted
+- Decision: remove consultant-written narrative edits, claim suppression, and manual quality overrides. Keep only the submission-level include/exclude control for synthesis.
+- Consequence: generated analysis, generated synthesis, and generated quality scores are the displayed source of truth. Existing override tables and manual quality columns are dropped by migration.
 
 ## Reference Notes
 

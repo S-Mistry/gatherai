@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import type { CSSProperties, ReactNode } from "react"
 
 import { Stamp, StickyNote } from "@/components/ui/ornaments"
 
@@ -23,14 +23,16 @@ interface CompletionProps {
   headline?: string
   /** Caveat clay accent under the headline. Default: "— really." */
   caveatAccent?: string
-  /** Body paragraph in serif 22 ink-2. */
-  body: string
+  /** Optional body paragraph in serif 22 ink-2. */
+  body?: string
   /** Optional total response count (renders the dot grid). */
   total?: number
   /** Index of the latest response (1-based) — highlighted sage in the grid. */
   latest?: number
   /** Optional sticky-note copy. Pass two lines via children for the manual break. */
   stickyNote?: ReactNode
+  /** Where the sticky note appears relative to the small print. */
+  stickyNotePlacement?: "afterSmallPrint" | "beforeSmallPrint"
   /** Override the stamp text. Default uses ordinal of `latest`. */
   stampLabel?: string
   /** Final small-print under the body. Default: "That's it. You can close this tab." */
@@ -44,12 +46,40 @@ export function Completion({
   total = 0,
   latest = 0,
   stickyNote,
+  stickyNotePlacement = "afterSmallPrint",
   stampLabel,
   smallPrint = "That's it. You can close this tab.",
 }: CompletionProps) {
   const dotCount = Math.max(total, latest, 0)
   const stampText =
     stampLabel ?? (latest > 0 ? `received · ${ordinal(latest)} voice` : "received · thank you")
+
+  function renderStickyNote(style?: CSSProperties) {
+    if (!stickyNote) return null
+
+    return (
+      <div
+        className="inline-block"
+        style={{ transform: "rotate(-2deg)", marginTop: 16, ...style }}
+      >
+        <StickyNote
+          tint="sage"
+          className="text-left"
+          style={{ maxWidth: 320, padding: "20px 22px" }}
+        >
+          <div
+            className="font-hand"
+            style={{ fontSize: 20, color: "var(--ink)", lineHeight: 1.3 }}
+          >
+            {stickyNote}
+          </div>
+        </StickyNote>
+      </div>
+    )
+  }
+
+  const stickyNoteBeforeSmallPrint =
+    stickyNotePlacement === "beforeSmallPrint"
 
   return (
     <div className="grid place-items-center" style={{ minHeight: "100vh", padding: "80px 24px" }}>
@@ -88,18 +118,20 @@ export function Completion({
           </div>
         ) : null}
 
-        <p
-          className="font-serif"
-          style={{
-            fontSize: 22,
-            lineHeight: 1.5,
-            color: "var(--ink-2)",
-            margin: "0 auto 40px",
-            maxWidth: 480,
-          }}
-        >
-          {body}
-        </p>
+        {body ? (
+          <p
+            className="font-serif"
+            style={{
+              fontSize: 22,
+              lineHeight: 1.5,
+              color: "var(--ink-2)",
+              margin: "0 auto 40px",
+              maxWidth: 480,
+            }}
+          >
+            {body}
+          </p>
+        ) : null}
 
         {dotCount > 0 ? (
           <div
@@ -129,6 +161,10 @@ export function Completion({
           </div>
         ) : null}
 
+        {stickyNoteBeforeSmallPrint
+          ? renderStickyNote({ marginTop: 0, marginBottom: 28 })
+          : null}
+
         {smallPrint ? (
           <div
             className="font-sans"
@@ -138,25 +174,7 @@ export function Completion({
           </div>
         ) : null}
 
-        {stickyNote ? (
-          <div
-            className="inline-block"
-            style={{ transform: "rotate(-2deg)", marginTop: 16 }}
-          >
-            <StickyNote
-              tint="sage"
-              className="text-left"
-              style={{ maxWidth: 320, padding: "20px 22px" }}
-            >
-              <div
-                className="font-hand"
-                style={{ fontSize: 20, color: "var(--ink)", lineHeight: 1.3 }}
-              >
-                {stickyNote}
-              </div>
-            </StickyNote>
-          </div>
-        ) : null}
+        {!stickyNoteBeforeSmallPrint ? renderStickyNote() : null}
       </div>
     </div>
   )

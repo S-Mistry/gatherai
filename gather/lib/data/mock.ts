@@ -12,7 +12,6 @@ import type {
   ProjectSynthesisGenerated,
   QualityScore,
   SessionOutputGenerated,
-  SessionOutputOverride,
   TestimonialLink,
   TestimonialReview,
   TranscriptSegment,
@@ -44,7 +43,6 @@ interface MockStore {
   sessions: Record<string, ParticipantSession>
   transcripts: Record<string, TranscriptSegment[]>
   generatedOutputs: Record<string, SessionOutputGenerated>
-  outputOverrides: Record<string, SessionOutputOverride>
   syntheses: Record<string, ProjectSynthesisGenerated>
   qualityScores: Record<string, QualityScore>
   testimonialLinks: TestimonialLink[]
@@ -75,8 +73,7 @@ function seedConfig(projectId: string): ProjectConfigVersion {
     requiredQuestions: [
       {
         id: "q-outcomes",
-        prompt:
-          "What outcomes would make this planning useful for you?",
+        prompt: "What outcomes would make this planning useful for you?",
         goal: "Capture success criteria.",
       },
       {
@@ -133,8 +130,7 @@ function seedGeneratedOutput(sessionId: string): SessionOutputGenerated {
     questionAnswers: [
       {
         questionId: "q-outcomes",
-        prompt:
-          "What outcomes would make this planning useful for you?",
+        prompt: "What outcomes would make this planning useful for you?",
         answer:
           "A clear decision model and explicit ownership for exceptions would make the planning useful.",
         confidence: 0.88,
@@ -151,8 +147,7 @@ function seedGeneratedOutput(sessionId: string): SessionOutputGenerated {
     questionReviews: [
       {
         questionId: "q-outcomes",
-        prompt:
-          "What outcomes would make this planning useful for you?",
+        prompt: "What outcomes would make this planning useful for you?",
         status: "answered",
         answer:
           "A clear decision model and explicit ownership for exceptions would make the planning useful.",
@@ -616,19 +611,6 @@ function seedStore(): MockStore {
     "sess-amelia": seedGeneratedOutput("sess-amelia"),
   }
 
-  const outputOverrides: Record<string, SessionOutputOverride> = {
-    "sess-amelia": {
-      id: "override-sess-amelia",
-      sessionId: "sess-amelia",
-      editedSummary:
-        "Consultant note: emphasize duplicate approvals and unclear escalation ownership in the planning framing.",
-      suppressedClaimIds: [],
-      consultantNotes:
-        "Use this interview as a reference case when opening the contradiction map.",
-      updatedAt: iso(-25),
-    },
-  }
-
   const syntheses: Record<string, ProjectSynthesisGenerated> = {
     "proj-riverstone": {
       id: "syn-riverstone",
@@ -808,7 +790,6 @@ function seedStore(): MockStore {
     },
     transcripts,
     generatedOutputs,
-    outputOverrides,
     syntheses,
     qualityScores,
     testimonialLinks: [],
@@ -840,7 +821,7 @@ function summarizeProjects(
     )
     const completedSessions = projectSessions.filter(
       (session) =>
-      session.status === "complete" && !session.excludedFromSynthesis
+        session.status === "complete" && !session.excludedFromSynthesis
     )
     const testimonialMetrics = buildTestimonialProjectMetrics({
       projectUpdatedAt: project.updatedAt,
@@ -950,14 +931,6 @@ export function getSessionReview(projectId: string, sessionId: string) {
 
   const store = getStore()
   const generatedOutput = store.generatedOutputs[sessionId]
-  const override = store.outputOverrides[sessionId]
-  const effectiveOutput =
-    generatedOutput && override?.editedSummary
-      ? {
-          ...generatedOutput,
-          summary: override.editedSummary,
-        }
-      : generatedOutput
 
   return {
     project: detail.project,
@@ -971,8 +944,6 @@ export function getSessionReview(projectId: string, sessionId: string) {
     analysisFailure: undefined,
     analysisJobs: store.jobs.filter((job) => job.sessionId === sessionId),
     generatedOutput,
-    effectiveOutput: effectiveOutput ?? generatedOutput,
-    override,
     qualityScore: store.qualityScores[sessionId],
   }
 }
@@ -1062,7 +1033,9 @@ export function resumeParticipantSession(sessionId: string, token: string) {
     return null
   }
 
-  const project = store.projects.find((record) => record.id === session.projectId)
+  const project = store.projects.find(
+    (record) => record.id === session.projectId
+  )
   if (project?.archivedAt) {
     return null
   }
@@ -1091,7 +1064,9 @@ export function appendSessionEvents(
     return null
   }
 
-  const project = store.projects.find((record) => record.id === session.projectId)
+  const project = store.projects.find(
+    (record) => record.id === session.projectId
+  )
   if (project?.archivedAt) {
     return null
   }
@@ -1152,7 +1127,9 @@ export function completeParticipantSession(
     return null
   }
 
-  const project = store.projects.find((record) => record.id === session.projectId)
+  const project = store.projects.find(
+    (record) => record.id === session.projectId
+  )
   if (project?.archivedAt) {
     return null
   }
@@ -1490,7 +1467,6 @@ function deleteProjectGraph(store: MockStore, projectId: string) {
       delete store.sessions[session.id]
       delete store.transcripts[session.id]
       delete store.generatedOutputs[session.id]
-      delete store.outputOverrides[session.id]
       delete store.qualityScores[session.id]
     })
   delete store.syntheses[projectId]
@@ -1533,24 +1509,4 @@ export function setSessionExcludedFromSynthesis(
 
   session.excludedFromSynthesis = excluded
   return session
-}
-
-export function saveSessionOverride(
-  sessionId: string,
-  editedSummary: string,
-  consultantNotes: string
-) {
-  const store = getStore()
-  const existing = store.outputOverrides[sessionId]
-
-  store.outputOverrides[sessionId] = {
-    id: existing?.id ?? `override-${sessionId}`,
-    sessionId,
-    editedSummary,
-    suppressedClaimIds: existing?.suppressedClaimIds ?? [],
-    consultantNotes,
-    updatedAt: new Date().toISOString(),
-  }
-
-  return store.outputOverrides[sessionId]
 }

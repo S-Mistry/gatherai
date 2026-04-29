@@ -44,10 +44,10 @@ const WAVE_LEVELS: Record<VoiceState, number[]> = {
 }
 
 const WAVE_TONES: Record<VoiceState, string> = {
-  idle: "bg-slate-400/55 dark:bg-slate-300/45",
+  idle: "bg-[var(--ink-4)]",
   listening: "bg-primary",
-  thinking: "bg-amber-500 dark:bg-amber-300",
-  speaking: "bg-emerald-500 dark:bg-emerald-300",
+  thinking: "bg-[var(--gold)]",
+  speaking: "bg-[var(--sage)]",
 }
 
 function Waveform({ state }: { state: VoiceState }) {

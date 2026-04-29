@@ -11,6 +11,7 @@ import { Field } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Tape } from "@/components/ui/ornaments"
 import { RelativeTime } from "@/components/ui/relative-time"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import type {
   ProjectConfigVersion,
@@ -110,171 +111,212 @@ export function TestimonialProjectDetail({
         </div>
       </section>
 
-      {/* Review links */}
-      <section className="space-y-5">
-        <div className="flex items-baseline gap-3.5 flex-wrap">
-          <h2 className="font-serif" style={{ fontSize: 28, fontWeight: 400, margin: 0 }}>
-            Review links
-          </h2>
-          <span className="font-hand" style={{ fontSize: 18, color: "var(--ink-3)" }}>
-            — {testimonialLinks.length}{" "}
-            {testimonialLinks.length === 1 ? "link" : "links"}
-          </span>
-        </div>
+      <Tabs defaultValue="reviews" className="gap-7">
+        <TabsList aria-label="Testimonial project sections">
+          <TabsTrigger value="reviews">Reviews</TabsTrigger>
+          <TabsTrigger value="embed">Embed</TabsTrigger>
+        </TabsList>
 
-        {testimonialLinks.length === 0 ? (
-          <p
-            className="font-sans"
-            style={{
-              border: "1.5px dashed var(--line)",
-              borderRadius: 8,
-              padding: "18px 20px",
-              fontSize: 14,
-              color: "var(--ink-3)",
-            }}
-          >
-            No testimonial links have been created for this project yet.
-          </p>
-        ) : (
-          <div className="grid gap-4 lg:grid-cols-2">
-            {testimonialLinks.map((link) => {
-              const reviewUrl = `${origin}/t/${link.linkToken}`
-              return (
-                <article
-                  key={link.id}
-                  className="card flat"
-                  style={{ padding: "22px 24px" }}
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="sage">{link.businessName}</Badge>
-                        <span className="font-sans inline-flex items-center gap-1 text-xs text-[var(--ink-3)]">
-                          <Globe className="size-3" />
-                          {new URL(link.websiteUrl).hostname}
-                        </span>
+        <TabsContent value="reviews" className="space-y-14">
+          {/* Review links */}
+          <section className="space-y-5">
+            <div className="flex flex-wrap items-baseline gap-3.5">
+              <h2
+                className="font-serif"
+                style={{ fontSize: 28, fontWeight: 400, margin: 0 }}
+              >
+                Review links
+              </h2>
+              <span
+                className="font-hand"
+                style={{ fontSize: 18, color: "var(--ink-3)" }}
+              >
+                — {testimonialLinks.length}{" "}
+                {testimonialLinks.length === 1 ? "link" : "links"}
+              </span>
+            </div>
+
+            {testimonialLinks.length === 0 ? (
+              <p
+                className="font-sans"
+                style={{
+                  border: "1.5px dashed var(--line)",
+                  borderRadius: 8,
+                  padding: "18px 20px",
+                  fontSize: 14,
+                  color: "var(--ink-3)",
+                }}
+              >
+                No testimonial links have been created for this project yet.
+              </p>
+            ) : (
+              <div className="grid gap-4 lg:grid-cols-2">
+                {testimonialLinks.map((link) => {
+                  const reviewUrl = `${origin}/t/${link.linkToken}`
+                  return (
+                    <article
+                      key={link.id}
+                      className="card flat"
+                      style={{ padding: "22px 24px" }}
+                    >
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="sage">{link.businessName}</Badge>
+                            <span className="inline-flex items-center gap-1 font-sans text-xs text-[var(--ink-3)]">
+                              <Globe className="size-3" />
+                              {new URL(link.websiteUrl).hostname}
+                            </span>
+                          </div>
+                          <h3
+                            className="mt-2 font-serif"
+                            style={{
+                              fontSize: 22,
+                              fontWeight: 400,
+                              margin: "8px 0 6px",
+                            }}
+                          >
+                            {link.headline}
+                          </h3>
+                          <p
+                            className="font-sans"
+                            style={{
+                              fontSize: 13.5,
+                              lineHeight: 1.55,
+                              color: "var(--ink-2)",
+                              margin: 0,
+                            }}
+                          >
+                            {link.prompt} Takes 10 seconds.
+                          </p>
+                        </div>
+                        <Button asChild variant="ghost" size="sm">
+                          <Link href={`/t/${link.linkToken}`}>Preview →</Link>
+                        </Button>
                       </div>
-                      <h3
-                        className="font-serif mt-2"
-                        style={{ fontSize: 22, fontWeight: 400, margin: "8px 0 6px" }}
-                      >
-                        {link.headline}
-                      </h3>
-                      <p
-                        className="font-sans"
-                        style={{ fontSize: 13.5, lineHeight: 1.55, color: "var(--ink-2)", margin: 0 }}
-                      >
-                        {link.prompt} Takes 10 seconds.
-                      </p>
-                    </div>
-                    <Button asChild variant="ghost" size="sm">
-                      <Link href={`/t/${link.linkToken}`}>Preview →</Link>
-                    </Button>
-                  </div>
-                  <CopyLink value={reviewUrl} label="Copy" className="mt-4" />
-                </article>
-              )
-            })}
-          </div>
-        )}
+                      <CopyLink
+                        value={reviewUrl}
+                        label="Copy"
+                        className="mt-4"
+                      />
+                    </article>
+                  )
+                })}
+              </div>
+            )}
 
-        <details
-          style={{
-            border: "1px dashed var(--line)",
-            borderRadius: 8,
-            padding: "18px 22px",
-          }}
-        >
-          <summary
-            className="font-hand cursor-pointer"
-            style={{ fontSize: 22, color: "var(--clay)", listStyle: "none" }}
-          >
-            + create another review link
-          </summary>
-          <form
-            action={createTestimonialLinkAction}
-            className="mt-5 grid gap-6 md:grid-cols-2"
-          >
-            <input type="hidden" name="projectId" value={project.id} />
-            <Field label="business name" htmlFor="businessName">
-              <Input
-                id="businessName"
-                name="businessName"
-                required
-                defaultValue={activeLink?.businessName ?? project.name}
+            <details
+              style={{
+                border: "1px dashed var(--line)",
+                borderRadius: 8,
+                padding: "18px 22px",
+              }}
+            >
+              <summary
+                className="cursor-pointer font-hand"
+                style={{
+                  fontSize: 22,
+                  color: "var(--clay)",
+                  listStyle: "none",
+                }}
+              >
+                + create another review link
+              </summary>
+              <form
+                action={createTestimonialLinkAction}
+                className="mt-5 grid gap-6 md:grid-cols-2"
+              >
+                <input type="hidden" name="projectId" value={project.id} />
+                <Field label="business name" htmlFor="businessName">
+                  <Input
+                    id="businessName"
+                    name="businessName"
+                    required
+                    defaultValue={activeLink?.businessName ?? project.name}
+                  />
+                </Field>
+                <Field label="website URL" htmlFor="websiteUrl">
+                  <Input
+                    id="websiteUrl"
+                    name="websiteUrl"
+                    required
+                    defaultValue={activeLink?.websiteUrl ?? ""}
+                    placeholder="https://example.com"
+                  />
+                </Field>
+                <Field label="brand colour" htmlFor="brandColor">
+                  <input
+                    id="brandColor"
+                    name="brandColor"
+                    type="color"
+                    defaultValue={activeLink?.brandColor ?? "#b45f3a"}
+                    className="h-10 w-full rounded-md border border-[var(--line)] bg-transparent"
+                  />
+                </Field>
+                <Field label="headline" htmlFor="headline">
+                  <Input
+                    id="headline"
+                    name="headline"
+                    defaultValue={activeLink?.headline ?? "Leave a review"}
+                  />
+                </Field>
+                <div className="md:col-span-2">
+                  <Field label="prompt" htmlFor="prompt">
+                    <Textarea
+                      id="prompt"
+                      name="prompt"
+                      rows={3}
+                      defaultValue={
+                        activeLink?.prompt ?? "Tell us about your experience."
+                      }
+                    />
+                  </Field>
+                </div>
+                <div className="md:col-span-2">
+                  <Button type="submit" variant="clay" size="sm">
+                    Create review link
+                  </Button>
+                </div>
+              </form>
+            </details>
+          </section>
+
+          {/* Reviews */}
+          <section className="space-y-5">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-baseline lg:justify-between">
+              <div className="flex flex-wrap items-baseline gap-3.5">
+                <h2
+                  className="font-serif"
+                  style={{ fontSize: 28, fontWeight: 400, margin: 0 }}
+                >
+                  In their words
+                </h2>
+                <span
+                  className="font-hand"
+                  style={{ fontSize: 18, color: "var(--ink-3)" }}
+                >
+                  — approve the ones you want on your site
+                </span>
+              </div>
+              <ReviewFilterChips
+                projectId={project.id}
+                activeFilter={activeFilter}
               />
-            </Field>
-            <Field label="website URL" htmlFor="websiteUrl">
-              <Input
-                id="websiteUrl"
-                name="websiteUrl"
-                required
-                defaultValue={activeLink?.websiteUrl ?? ""}
-                placeholder="https://example.com"
-              />
-            </Field>
-            <Field label="brand colour" htmlFor="brandColor">
-              <input
-                id="brandColor"
-                name="brandColor"
-                type="color"
-                defaultValue={activeLink?.brandColor ?? "#b45f3a"}
-                className="h-10 w-full rounded-md border border-[var(--line)] bg-transparent"
-              />
-            </Field>
-            <Field label="headline" htmlFor="headline">
-              <Input
-                id="headline"
-                name="headline"
-                defaultValue={activeLink?.headline ?? "Leave a review"}
-              />
-            </Field>
-            <div className="md:col-span-2">
-              <Field label="prompt" htmlFor="prompt">
-                <Textarea
-                  id="prompt"
-                  name="prompt"
-                  rows={3}
-                  defaultValue={
-                    activeLink?.prompt ?? "Tell us about your experience."
-                  }
-                />
-              </Field>
             </div>
-            <div className="md:col-span-2">
-              <Button type="submit" variant="clay" size="sm">
-                Create review link
-              </Button>
-            </div>
-          </form>
-        </details>
-      </section>
 
-      {/* Reviews */}
-      <section className="space-y-5">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-baseline lg:justify-between">
-          <div className="flex items-baseline gap-3.5 flex-wrap">
-            <h2 className="font-serif" style={{ fontSize: 28, fontWeight: 400, margin: 0 }}>
-              In their words
-            </h2>
-            <span className="font-hand" style={{ fontSize: 18, color: "var(--ink-3)" }}>
-              — approve the ones you want on your site
-            </span>
-          </div>
-          <ReviewFilterChips projectId={project.id} activeFilter={activeFilter} />
-        </div>
+            <ReviewsList projectId={project.id} reviews={filteredReviews} />
+          </section>
+        </TabsContent>
 
-        <ReviewsList projectId={project.id} reviews={filteredReviews} />
-      </section>
-
-      {activeLink ? (
-        <section>
-          <TestimonialEmbedBuilder
-            embedBaseUrl={embedBaseUrl}
-            approvedCount={approvedCount}
-          />
-        </section>
-      ) : null}
+        <TabsContent value="embed">
+          {activeLink ? (
+            <TestimonialEmbedBuilder
+              embedBaseUrl={embedBaseUrl}
+              approvedCount={approvedCount}
+            />
+          ) : null}
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
@@ -343,7 +385,7 @@ function ReviewsList({
           className="card flat"
           style={{ padding: "20px 22px" }}
         >
-          <div className="flex items-start gap-4 flex-col lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex flex-col items-start gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <StarDisplay rating={review.rating} />
@@ -363,12 +405,17 @@ function ReviewsList({
                 </span>
               </div>
               <blockquote
-                className="font-serif mt-3"
-                style={{ fontSize: 18, lineHeight: 1.5, color: "var(--ink)", margin: 0 }}
+                className="mt-3 font-serif"
+                style={{
+                  fontSize: 18,
+                  lineHeight: 1.5,
+                  color: "var(--ink)",
+                  margin: 0,
+                }}
               >
                 &ldquo;{review.transcript}&rdquo;
               </blockquote>
-              <p className="font-sans mt-3 text-xs font-medium text-[var(--ink-3)]">
+              <p className="mt-3 font-sans text-xs font-medium text-[var(--ink-3)]">
                 {review.reviewerName || "Name not provided"}
               </p>
             </div>

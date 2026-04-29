@@ -150,7 +150,6 @@ export interface ParticipantSession {
   resumeExpiresAt: string
   metadata: Record<string, string>
   qualityFlag: boolean
-  qualityOverride?: SessionQualityOverride
   excludedFromSynthesis: boolean
   runtimeState: SessionRuntimeState
 }
@@ -284,15 +283,6 @@ export interface SessionOutputGenerated {
   createdAt: string
 }
 
-export interface SessionOutputOverride {
-  id: string
-  sessionId: string
-  editedSummary: string
-  suppressedClaimIds: string[]
-  consultantNotes: string
-  updatedAt: string
-}
-
 export interface ContradictionItem {
   id: string
   topic: string
@@ -354,20 +344,6 @@ export interface ProjectEvidenceDrawerPayload {
   totalEvidenceCount: number
   displayedEvidenceCount: number
   excerpts: ProjectEvidenceExcerpt[]
-}
-
-export interface ProjectSynthesisOverride {
-  id: string
-  projectId: string
-  editedNarrative: string
-  consultantNotes: string
-  updatedAt: string
-}
-
-export interface SessionQualityOverride {
-  lowQuality: boolean
-  note: string
-  updatedAt: string
 }
 
 export interface QualityDimension {

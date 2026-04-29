@@ -19,19 +19,17 @@ export function TestimonialEmbedBuilder({
   embedBaseUrl,
   approvedCount,
 }: TestimonialEmbedBuilderProps) {
-  const [columns, setColumns] = useState<(typeof COLUMN_OPTIONS)[number]>(2)
-  const [limit, setLimit] = useState<(typeof LIMIT_OPTIONS)[number]>(10)
-  const [height, setHeight] = useState<(typeof HEIGHT_OPTIONS)[number]>(500)
-  const [theme, setTheme] = useState<"light" | "dark">("light")
+  const [columns, setColumns] = useState<(typeof COLUMN_OPTIONS)[number]>(3)
+  const [limit, setLimit] = useState<(typeof LIMIT_OPTIONS)[number]>(3)
+  const [height, setHeight] = useState<(typeof HEIGHT_OPTIONS)[number]>(300)
   const [copied, setCopied] = useState(false)
 
   const src = useMemo(() => {
     const url = new URL(embedBaseUrl)
     url.searchParams.set("columns", String(columns))
     url.searchParams.set("limit", String(limit))
-    url.searchParams.set("theme", theme)
     return url.toString()
-  }, [columns, embedBaseUrl, limit, theme])
+  }, [columns, embedBaseUrl, limit])
 
   const code = `<iframe src="${src}" width="100%" height="${height}" frameborder="0" style="border:0;border-radius:8px;max-width:100%;" loading="lazy"></iframe>`
   const previewSrc = useMemo(() => {
@@ -56,12 +54,12 @@ export function TestimonialEmbedBuilder({
         <div>
           <span className="eyebrow">Embed</span>
           <h2
-            className="font-serif mt-2"
+            className="mt-2 font-serif"
             style={{ fontSize: 24, fontWeight: 400, margin: "8px 0 6px" }}
           >
             Website widget
           </h2>
-          <p className="font-sans text-sm leading-6 text-[var(--ink-2)] m-0">
+          <p className="m-0 font-sans text-sm leading-6 text-[var(--ink-2)]">
             Approved reviews only. Currently {approvedCount} approved.
           </p>
         </div>
@@ -71,7 +69,7 @@ export function TestimonialEmbedBuilder({
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4 mt-5">
+      <div className="mt-5 grid gap-4 md:grid-cols-3">
         <OptionGroup
           label="columns"
           value={columns}
@@ -91,45 +89,12 @@ export function TestimonialEmbedBuilder({
           onChange={setHeight}
           suffix="px"
         />
-        <div>
-          <span
-            className="font-hand block mb-2"
-            style={{ fontSize: 22, color: "var(--clay)" }}
-          >
-            theme
-          </span>
-          <div
-            className="flex"
-            style={{
-              border: "1px solid var(--line)",
-              borderRadius: 999,
-              padding: 4,
-              background: "var(--card)",
-            }}
-          >
-            {(["light", "dark"] as const).map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => setTheme(option)}
-                className={cn(
-                  "flex-1 font-sans text-xs font-medium px-3 py-1.5 rounded-full transition-colors",
-                  theme === option
-                    ? "bg-[var(--clay-soft)] text-[var(--clay)]"
-                    : "text-[var(--ink-3)] hover:text-[var(--ink)]"
-                )}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
 
       <textarea
         readOnly
         value={code}
-        className="font-mono mt-5 min-h-24 w-full resize-none px-4 py-3 text-xs leading-5 text-[var(--ink)] outline-none"
+        className="mt-5 min-h-24 w-full resize-none px-4 py-3 font-mono text-xs leading-5 text-[var(--ink)] outline-none"
         style={{
           background: "var(--card-2)",
           border: "1px solid var(--line)",
@@ -174,7 +139,7 @@ function OptionGroup<T extends number>({
   return (
     <div>
       <span
-        className="font-hand block mb-2"
+        className="mb-2 block font-hand"
         style={{ fontSize: 22, color: "var(--clay)" }}
       >
         {label}
@@ -194,7 +159,7 @@ function OptionGroup<T extends number>({
             type="button"
             onClick={() => onChange(option)}
             className={cn(
-              "font-sans px-2.5 py-1.5 text-xs font-semibold rounded-full transition-colors",
+              "rounded-full px-2.5 py-1.5 font-sans text-xs font-semibold transition-colors",
               value === option
                 ? "bg-[var(--clay-soft)] text-[var(--clay)]"
                 : "text-[var(--ink-3)] hover:text-[var(--ink)]"

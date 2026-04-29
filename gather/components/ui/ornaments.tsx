@@ -128,12 +128,14 @@ export function WaveBars({
 
 export function MicRing({
   active = true,
+  disabled = false,
   onClick,
   className,
   children,
   ariaLabel,
 }: {
   active?: boolean
+  disabled?: boolean
   onClick?: () => void
   className?: string
   children?: ReactNode
@@ -145,6 +147,7 @@ export function MicRing({
       className={cn("mic-ring", className)}
       style={{ animationPlayState: active ? "running" : "paused" }}
       onClick={onClick}
+      disabled={disabled}
       aria-label={ariaLabel ?? (active ? "Pause recording" : "Start recording")}
     >
       {children ?? (

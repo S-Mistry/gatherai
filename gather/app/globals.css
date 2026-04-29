@@ -595,6 +595,10 @@
   .mic-ring::after {
     animation-delay: 1.2s;
   }
+  .mic-ring:disabled {
+    cursor: default;
+    opacity: 0.72;
+  }
   @keyframes mic-pulse {
     0%,
     100% {

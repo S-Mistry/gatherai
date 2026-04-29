@@ -1,6 +1,5 @@
 "use client"
 
-import { CaretRight } from "@phosphor-icons/react"
 import { Popover as RadixPopover } from "radix-ui"
 
 import { Badge } from "@/components/ui/badge"
@@ -12,49 +11,36 @@ import type {
   QuestionReview,
   QuoteLibraryItem,
   SessionOutputGenerated,
-  SessionOutputOverride,
-  SessionQualityOverride,
 } from "@/lib/domain/types"
 import { getProjectTypePreset } from "@/lib/project-types"
 import { cn } from "@/lib/utils"
 
 import { EvidencePill } from "./evidence-pill"
-import { ReviewClaimToggle } from "./review-claim-toggle"
-import { ReviewOverrideForm } from "./review-override-form"
-import { ReviewQualityOverrideForm } from "./review-quality-override-form"
 import { ReviewTranscriptDrawerButton } from "./review-transcript-drawer-button"
 
 interface ReviewSynthesisTabsProps {
-  projectId: string
-  sessionId: string
   projectType: ProjectType
   generatedStatus: "ready" | "pending" | "failed" | "idle"
   generatedOutput: SessionOutputGenerated
-  effectiveOutput: SessionOutputGenerated
-  override?: SessionOutputOverride
   qualityScore?: QualityScore
   qualityStatus: "ready" | "pending" | "failed" | "idle"
-  qualityOverride?: SessionQualityOverride
   analysisFailure?: string
 }
 
 export function ReviewSynthesisTabs({
-  projectId,
-  sessionId,
   projectType,
   generatedStatus,
   generatedOutput,
-  effectiveOutput,
-  override,
   qualityScore,
   qualityStatus,
-  qualityOverride,
   analysisFailure,
 }: ReviewSynthesisTabsProps) {
   if (generatedStatus !== "ready") {
     return (
       <Notice
-        title={generatedStatus === "failed" ? "Analysis failed" : "Analysis pending"}
+        title={
+          generatedStatus === "failed" ? "Analysis failed" : "Analysis pending"
+        }
         message={
           generatedStatus === "failed"
             ? (analysisFailure ??
@@ -66,10 +52,12 @@ export function ReviewSynthesisTabs({
     )
   }
 
-  const overrideActive = Boolean(override?.editedSummary.trim())
-  const suppressedIds = new Set(override?.suppressedClaimIds ?? [])
-  const themeCards = generatedOutput.insightCards.filter((card) => card.kind === "theme")
-  const signalCards = generatedOutput.insightCards.filter((card) => card.kind !== "theme")
+  const themeCards = generatedOutput.insightCards.filter(
+    (card) => card.kind === "theme"
+  )
+  const signalCards = generatedOutput.insightCards.filter(
+    (card) => card.kind !== "theme"
+  )
   const preset = getProjectTypePreset(projectType)
 
   return (
@@ -77,7 +65,7 @@ export function ReviewSynthesisTabs({
       <TabsList>
         <TabsTrigger value="overview">
           Overview
-          <CountChip count={countFilledSections(effectiveOutput)} />
+          <CountChip count={countFilledSections(generatedOutput)} />
         </TabsTrigger>
         <TabsTrigger value="questions">
           Questions
@@ -100,67 +88,37 @@ export function ReviewSynthesisTabs({
 
       <TabsContent value="overview" className="flex flex-col gap-6">
         <SummarySection
-          effectiveSummary={effectiveOutput.summary}
-          overrideActive={overrideActive}
           generatedOutput={generatedOutput}
           qualityScore={qualityScore}
           qualityStatus={qualityStatus}
-          qualityOverride={qualityOverride}
           analysisFailure={analysisFailure}
         />
 
         <div className="grid gap-4 lg:grid-cols-2">
           <ListPanel
             title={preset.implicationsLabel}
-            items={effectiveOutput.projectImplications}
+            items={generatedOutput.projectImplications}
             emptyMessage={preset.implicationsEmptyMessage}
           />
           <ListPanel
             title="Recommended actions"
-            items={effectiveOutput.recommendedActions}
+            items={generatedOutput.recommendedActions}
             emptyMessage="No follow-on actions were suggested yet."
           />
           <ListPanel
             title="Unresolved questions"
-            items={effectiveOutput.unresolvedQuestions}
+            items={generatedOutput.unresolvedQuestions}
             emptyMessage="No unresolved questions were flagged."
           />
           <ListPanel
             title="Analysis warnings"
-            items={effectiveOutput.analysisWarnings}
+            items={generatedOutput.analysisWarnings}
             emptyMessage="No analysis warnings were raised."
             tone="warning"
           />
         </div>
 
-        <RespondentProfilePanel profile={effectiveOutput.respondentProfile} />
-
-        <Disclosure
-          title="Edit summary used in synthesis"
-          active={overrideActive}
-          defaultOpen={overrideActive}
-        >
-          <ReviewOverrideForm
-            projectId={projectId}
-            sessionId={sessionId}
-            defaultSummary={override?.editedSummary ?? ""}
-            defaultNotes={override?.consultantNotes ?? ""}
-            generatedSummary={generatedOutput.summary}
-            overrideActive={overrideActive}
-          />
-        </Disclosure>
-
-        <Disclosure
-          title="Manual quality review"
-          active={Boolean(qualityOverride)}
-          defaultOpen={Boolean(qualityOverride)}
-        >
-          <ReviewQualityOverrideForm
-            projectId={projectId}
-            sessionId={sessionId}
-            qualityOverride={qualityOverride}
-          />
-        </Disclosure>
+        <RespondentProfilePanel profile={generatedOutput.respondentProfile} />
       </TabsContent>
 
       <TabsContent value="questions" className="flex flex-col gap-3">
@@ -178,13 +136,7 @@ export function ReviewSynthesisTabs({
           <EmptyHint message="No grounded themes were extracted for this respondent yet." />
         ) : (
           themeCards.map((card) => (
-            <InsightCardPanel
-              key={card.id}
-              card={card}
-              projectId={projectId}
-              sessionId={sessionId}
-              suppressed={suppressedIds.has(card.id)}
-            />
+            <InsightCardPanel key={card.id} card={card} />
           ))
         )}
       </TabsContent>
@@ -194,13 +146,7 @@ export function ReviewSynthesisTabs({
           <EmptyHint message="No verbatim quote library was extracted for this respondent." />
         ) : (
           generatedOutput.quoteLibrary.map((quote) => (
-            <QuoteLibraryCard
-              key={quote.id}
-              quote={quote}
-              projectId={projectId}
-              sessionId={sessionId}
-              suppressed={suppressedIds.has(quote.id)}
-            />
+            <QuoteLibraryCard key={quote.id} quote={quote} />
           ))
         )}
       </TabsContent>
@@ -209,39 +155,29 @@ export function ReviewSynthesisTabs({
         <SignalGroup
           title="Pain points"
           cards={signalCards.filter((card) => card.kind === "pain_point")}
-          projectId={projectId}
-          sessionId={sessionId}
-          suppressedIds={suppressedIds}
           emptyMessage="No grounded pain points were extracted."
         />
         <SignalGroup
           title="Opportunities"
           cards={signalCards.filter((card) => card.kind === "opportunity")}
-          projectId={projectId}
-          sessionId={sessionId}
-          suppressedIds={suppressedIds}
           emptyMessage="No grounded opportunities were extracted."
         />
         <SignalGroup
           title="Risks"
           cards={signalCards.filter((card) => card.kind === "risk")}
-          projectId={projectId}
-          sessionId={sessionId}
-          suppressedIds={suppressedIds}
           emptyMessage="No grounded risks were extracted."
         />
         <SignalGroup
           title="Tensions"
           cards={signalCards.filter((card) => card.kind === "tension")}
-          projectId={projectId}
-          sessionId={sessionId}
-          suppressedIds={suppressedIds}
           emptyMessage="No grounded tensions were extracted."
         />
       </TabsContent>
 
       <TabsContent value="transcript">
-        <TranscriptTabPanel segmentCount={generatedOutput.cleanedTranscript.length} />
+        <TranscriptTabPanel
+          segmentCount={generatedOutput.cleanedTranscript.length}
+        />
       </TabsContent>
     </Tabs>
   )
@@ -295,7 +231,11 @@ function deriveEvidenceHealthMessage({
     (dimension) => dimension.key === "question_coverage"
   )
 
-  if (output.analysisWarnings.length > 0 && specificity && specificity.score < 0.45) {
+  if (
+    output.analysisWarnings.length > 0 &&
+    specificity &&
+    specificity.score < 0.45
+  ) {
     return "Low confidence here comes from limited concrete transcript detail, not from an analysis pipeline failure."
   }
 
@@ -311,20 +251,14 @@ function deriveEvidenceHealthMessage({
 }
 
 function SummarySection({
-  effectiveSummary,
-  overrideActive,
   generatedOutput,
   qualityScore,
   qualityStatus,
-  qualityOverride,
   analysisFailure,
 }: {
-  effectiveSummary: string
-  overrideActive: boolean
   generatedOutput: SessionOutputGenerated
   qualityScore?: QualityScore
   qualityStatus: "ready" | "pending" | "failed" | "idle"
-  qualityOverride?: SessionQualityOverride
   analysisFailure?: string
 }) {
   const coverage = summarizeQuestionCoverage(generatedOutput.questionReviews)
@@ -341,21 +275,14 @@ function SummarySection({
             <h2 className="text-base font-semibold tracking-tight text-foreground">
               Executive summary
             </h2>
-            {overrideActive ? <Badge variant="accent">Override active</Badge> : null}
-            {qualityOverride ? (
-              <Badge variant={qualityOverride.lowQuality ? "warning" : "success"}>
-                Manual quality
-              </Badge>
-            ) : null}
           </div>
           <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-            {effectiveSummary}
+            {generatedOutput.summary}
           </p>
         </div>
         <QualityChip
           qualityScore={qualityScore}
           qualityStatus={qualityStatus}
-          qualityOverride={qualityOverride}
           analysisFailure={analysisFailure}
         />
       </div>
@@ -373,7 +300,7 @@ function SummarySection({
         <span className="rounded-full border border-[var(--rose)] bg-[var(--rose-soft)] px-3 py-1 text-[var(--rose)]">
           Missing {coverage.missing}
         </span>
-        <span className="max-w-full break-all rounded-full border border-border/70 bg-background/80 px-3 py-1">
+        <span className="max-w-full rounded-full border border-border/70 bg-background/80 px-3 py-1 break-all">
           Model {generatedOutput.modelVersionId}
         </span>
         <span className="rounded-full border border-border/70 bg-background/80 px-3 py-1">
@@ -383,14 +310,8 @@ function SummarySection({
 
       {evidenceHealthMessage ? (
         <p className="mt-4 rounded-2xl border border-[var(--gold)] bg-[var(--gold-soft)] px-4 py-3 text-sm leading-6 text-foreground">
-          <span className="font-semibold">Evidence health:</span> {evidenceHealthMessage}
-        </p>
-      ) : null}
-
-      {qualityOverride?.note.trim() ? (
-        <p className="mt-4 rounded-2xl border border-[var(--clay-soft)] bg-[var(--clay-soft)] px-4 py-3 text-sm leading-6 text-foreground">
-          <span className="font-semibold">Manual quality note:</span>{" "}
-          {qualityOverride.note}
+          <span className="font-semibold">Evidence health:</span>{" "}
+          {evidenceHealthMessage}
         </p>
       ) : null}
     </section>
@@ -400,39 +321,32 @@ function SummarySection({
 function QualityChip({
   qualityScore,
   qualityStatus,
-  qualityOverride,
   analysisFailure,
 }: {
   qualityScore?: QualityScore
   qualityStatus: "ready" | "pending" | "failed" | "idle"
-  qualityOverride?: SessionQualityOverride
   analysisFailure?: string
 }) {
   const ready = Boolean(qualityScore)
   const overall = ready ? Math.round((qualityScore?.overall ?? 0) * 100) : null
-  const effectiveLowQuality =
-    typeof qualityOverride?.lowQuality === "boolean"
-      ? qualityOverride.lowQuality
-      : (qualityScore?.lowQuality ?? false)
+  const lowQuality = qualityScore?.lowQuality ?? false
   const dotColor = !ready
     ? "bg-muted-foreground"
-    : effectiveLowQuality
+    : lowQuality
       ? "bg-[var(--gold)]"
       : "bg-[var(--sage)]"
-  const label = qualityOverride
-    ? `Manual ${qualityOverride.lowQuality ? "flag" : "pass"}`
-    : ready
-      ? `Quality ${overall}%`
-      : qualityStatus === "failed"
-        ? "Quality failed"
-        : "Quality pending"
+  const label = ready
+    ? `Quality ${overall}%`
+    : qualityStatus === "failed"
+      ? "Quality failed"
+      : "Quality pending"
 
   return (
     <RadixPopover.Root>
       <RadixPopover.Trigger asChild>
         <button
           type="button"
-          className=" chip gap-2 hover:border-primary/40"
+          className="chip gap-2 hover:border-primary/40"
           aria-label={`Quality ${label}`}
         >
           <span className={cn("size-1.5 rounded-full", dotColor)} />
@@ -455,26 +369,20 @@ function QualityChip({
                   {overall}
                   <span className="text-base text-muted-foreground">%</span>
                 </p>
-                <Badge variant={effectiveLowQuality ? "warning" : "success"}>
-                  {effectiveLowQuality ? "Low quality" : "Healthy"}
+                <Badge variant={lowQuality ? "warning" : "success"}>
+                  {lowQuality ? "Low quality" : "Healthy"}
                 </Badge>
               </div>
-              {qualityOverride ? (
-                <p className="rounded-2xl border border-[var(--clay-soft)] bg-[var(--clay-soft)] px-3 py-2 text-xs leading-5 text-foreground">
-                  Manual review is overriding the generated score for triage and
-                  synthesis decisions.
-                </p>
-              ) : null}
               <dl className="divide-y divide-border/60">
                 {qualityScore.dimensions.map((dimension) => (
                   <div
                     key={dimension.key}
                     className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 py-2"
                   >
-                    <dt className="text-xs font-medium capitalize text-foreground">
+                    <dt className="text-xs font-medium text-foreground capitalize">
                       {dimension.key.replaceAll("_", " ")}
                     </dt>
-                    <dd className="text-xs font-semibold tabular-nums text-foreground">
+                    <dd className="text-xs font-semibold text-foreground tabular-nums">
                       {Math.round(dimension.score * 100)}%
                     </dd>
                     <p className="col-span-2 text-xs leading-5 text-muted-foreground">
@@ -519,7 +427,9 @@ function ListPanel({
         ) : null}
       </div>
       {items.length === 0 ? (
-        <p className="mt-3 text-sm leading-6 text-muted-foreground">{emptyMessage}</p>
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">
+          {emptyMessage}
+        </p>
       ) : (
         <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-foreground marker:text-muted-foreground">
           {items.map((item) => (
@@ -536,7 +446,9 @@ function RespondentProfilePanel({
 }: {
   profile: Record<string, string>
 }) {
-  const entries = Object.entries(profile).filter(([, value]) => value.trim().length > 0)
+  const entries = Object.entries(profile).filter(
+    ([, value]) => value.trim().length > 0
+  )
 
   if (entries.length === 0) {
     return null
@@ -544,7 +456,9 @@ function RespondentProfilePanel({
 
   return (
     <section className="rounded-3xl border border-border/70 bg-background/60 p-5">
-      <h3 className="text-sm font-semibold text-foreground">Respondent profile</h3>
+      <h3 className="text-sm font-semibold text-foreground">
+        Respondent profile
+      </h3>
       <dl className="mt-4 grid gap-3 sm:grid-cols-2">
         {entries.map(([key, value]) => (
           <div
@@ -583,9 +497,11 @@ function QuestionReviewCard({ review }: { review: QuestionReview }) {
               {review.prompt}
             </span>
           </div>
-          <p className="text-sm leading-6 text-muted-foreground">{review.answer}</p>
+          <p className="text-sm leading-6 text-muted-foreground">
+            {review.answer}
+          </p>
         </div>
-        <span className="text-xs font-semibold tabular-nums text-muted-foreground">
+        <span className="text-xs font-semibold text-muted-foreground tabular-nums">
           {Math.round(review.confidence * 100)}%
         </span>
       </div>
@@ -631,41 +547,21 @@ function QuestionReviewCard({ review }: { review: QuestionReview }) {
   )
 }
 
-function QuoteLibraryCard({
-  quote,
-  projectId,
-  sessionId,
-  suppressed,
-}: {
-  quote: QuoteLibraryItem
-  projectId: string
-  sessionId: string
-  suppressed: boolean
-}) {
+function QuoteLibraryCard({ quote }: { quote: QuoteLibraryItem }) {
   return (
-    <article
-      className={cn(
-        "rounded-3xl border border-border/70 bg-background/60 p-5",
-        suppressed && "border-dashed bg-muted/35"
-      )}
-    >
+    <article className="rounded-3xl border border-border/70 bg-background/60 p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="accent">{quote.label}</Badge>
-            {suppressed ? <Badge variant="warning">Suppressed</Badge> : null}
           </div>
           <blockquote className="rounded-2xl border border-[var(--clay-soft)] bg-[var(--clay-soft)] px-4 py-3 text-sm leading-6 text-foreground">
             “{quote.excerpt}”
           </blockquote>
-          <p className="text-sm leading-6 text-muted-foreground">{quote.context}</p>
+          <p className="text-sm leading-6 text-muted-foreground">
+            {quote.context}
+          </p>
         </div>
-        <ReviewClaimToggle
-          projectId={projectId}
-          sessionId={sessionId}
-          claimId={quote.id}
-          suppressed={suppressed}
-        />
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -694,38 +590,28 @@ function QuoteLibraryCard({
 function SignalGroup({
   title,
   cards,
-  projectId,
-  sessionId,
-  suppressedIds,
   emptyMessage,
 }: {
   title: string
   cards: InsightCard[]
-  projectId: string
-  sessionId: string
-  suppressedIds: ReadonlySet<string>
   emptyMessage: string
 }) {
   return (
     <section className="rounded-3xl border border-border/70 bg-background/60 p-5">
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-        <span className="text-[11px] font-semibold tabular-nums text-muted-foreground">
+        <span className="text-[11px] font-semibold text-muted-foreground tabular-nums">
           {cards.length}
         </span>
       </div>
       {cards.length === 0 ? (
-        <p className="mt-3 text-sm leading-6 text-muted-foreground">{emptyMessage}</p>
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">
+          {emptyMessage}
+        </p>
       ) : (
         <div className="mt-4 flex flex-col gap-3">
           {cards.map((card) => (
-            <InsightCardPanel
-              key={card.id}
-              card={card}
-              projectId={projectId}
-              sessionId={sessionId}
-              suppressed={suppressedIds.has(card.id)}
-            />
+            <InsightCardPanel key={card.id} card={card} />
           ))}
         </div>
       )}
@@ -733,24 +619,9 @@ function SignalGroup({
   )
 }
 
-function InsightCardPanel({
-  card,
-  projectId,
-  sessionId,
-  suppressed,
-}: {
-  card: InsightCard
-  projectId: string
-  sessionId: string
-  suppressed: boolean
-}) {
+function InsightCardPanel({ card }: { card: InsightCard }) {
   return (
-    <article
-      className={cn(
-        "rounded-2xl border border-border/60 bg-background/70 p-4",
-        suppressed && "border-dashed bg-muted/35"
-      )}
-    >
+    <article className="rounded-2xl border border-border/60 bg-background/70 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -765,17 +636,14 @@ function InsightCardPanel({
             >
               {card.priority}
             </Badge>
-            {suppressed ? <Badge variant="warning">Suppressed</Badge> : null}
-            <h4 className="text-sm font-semibold text-foreground">{card.title}</h4>
+            <h4 className="text-sm font-semibold text-foreground">
+              {card.title}
+            </h4>
           </div>
-          <p className="text-sm leading-6 text-muted-foreground">{card.summary}</p>
+          <p className="text-sm leading-6 text-muted-foreground">
+            {card.summary}
+          </p>
         </div>
-        <ReviewClaimToggle
-          projectId={projectId}
-          sessionId={sessionId}
-          claimId={card.id}
-          suppressed={suppressed}
-        />
       </div>
 
       <QuoteExcerptList quotes={card.evidenceQuotes} className="mt-4" />
@@ -838,38 +706,6 @@ function TranscriptTabPanel({ segmentCount }: { segmentCount: number }) {
         </span>
       </div>
     </section>
-  )
-}
-
-function Disclosure({
-  title,
-  active,
-  defaultOpen,
-  children,
-}: {
-  title: string
-  active: boolean
-  defaultOpen: boolean
-  children: React.ReactNode
-}) {
-  return (
-    <details className="group [&_summary::-webkit-details-marker]:hidden" open={defaultOpen}>
-      <summary className=" flex cursor-pointer list-none items-center justify-between gap-3 rounded-md py-1 text-sm font-semibold text-foreground outline-none">
-        <span className="flex items-center gap-2">
-          <CaretRight
-            className="size-3.5 text-muted-foreground transition-transform group-open:rotate-90"
-            weight="bold"
-          />
-          {title}
-        </span>
-        {active ? (
-          <span className="text-[10px] font-semibold tracking-[0.18em] text-primary uppercase">
-            Active
-          </span>
-        ) : null}
-      </summary>
-      <div className="pt-4">{children}</div>
-    </details>
   )
 }
 

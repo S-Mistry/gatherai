@@ -50,7 +50,6 @@ import type {
   ProjectRecord,
   ProjectType,
   ProjectSynthesisGenerated,
-  ProjectSynthesisOverride,
   PublicTestimonialConfig,
   QualityDimension,
   QualityScore,
@@ -58,8 +57,6 @@ import type {
   QuestionReview,
   QuoteLibraryItem,
   SessionOutputGenerated,
-  SessionOutputOverride,
-  SessionQualityOverride,
   SessionRuntimeState,
   SessionStatus,
   TestimonialLink,
@@ -170,9 +167,6 @@ interface ParticipantSessionRow {
   status: SessionStatus
   metadata: unknown
   quality_flag: boolean
-  manual_quality_flag: boolean | null
-  quality_override_note: string
-  quality_override_updated_at: string | null
   excluded_from_synthesis: boolean
   runtime_state: unknown
   started_at: string
@@ -213,15 +207,6 @@ interface SessionOutputGeneratedRow {
   created_at: string
 }
 
-interface SessionOutputOverrideRow {
-  id: string
-  session_id: string
-  edited_summary: string
-  consultant_notes: string
-  suppressed_claim_ids: unknown
-  updated_at: string
-}
-
 interface ProjectSynthesisGeneratedRow {
   id: string
   project_id: string
@@ -230,14 +215,6 @@ interface ProjectSynthesisGeneratedRow {
   prompt_version_id: string | null
   model_version_id: string | null
   created_at: string
-}
-
-interface ProjectSynthesisOverrideRow {
-  id: string
-  project_id: string
-  edited_narrative: string
-  consultant_notes: string
-  updated_at: string
 }
 
 interface QualityScoreRow {
@@ -693,15 +670,6 @@ function mapSession(
   publicLinkToken: string
 ): ParticipantSession {
   const runtimeState = safeObject(row.runtime_state)
-  const qualityOverride: SessionQualityOverride | undefined =
-    typeof row.manual_quality_flag === "boolean" &&
-    typeof row.quality_override_updated_at === "string"
-      ? {
-          lowQuality: row.manual_quality_flag,
-          note: row.quality_override_note,
-          updatedAt: row.quality_override_updated_at,
-        }
-      : undefined
 
   return {
     id: row.id,
@@ -716,7 +684,6 @@ function mapSession(
     resumeExpiresAt: row.resume_expires_at,
     metadata: safeStringRecord(row.metadata),
     qualityFlag: row.quality_flag,
-    qualityOverride,
     excludedFromSynthesis: row.excluded_from_synthesis,
     runtimeState: {
       state:
@@ -847,60 +814,6 @@ function mapGeneratedOutput(
   }
 }
 
-function mapOutputOverride(
-  row: SessionOutputOverrideRow
-): SessionOutputOverride {
-  return {
-    id: row.id,
-    sessionId: row.session_id,
-    editedSummary: row.edited_summary,
-    suppressedClaimIds: safeStringArray(row.suppressed_claim_ids),
-    consultantNotes: row.consultant_notes,
-    updatedAt: row.updated_at,
-  }
-}
-
-function mergeSessionOutputWithOverride(
-  generatedOutput: SessionOutputGenerated,
-  override?: SessionOutputOverride
-): SessionOutputGenerated {
-  if (!override) {
-    return generatedOutput
-  }
-
-  const suppressedClaimIds = new Set(override.suppressedClaimIds)
-  const summary = override.editedSummary.trim() || generatedOutput.summary
-
-  return {
-    ...generatedOutput,
-    summary,
-    themes: generatedOutput.themes.filter(
-      (theme) => !suppressedClaimIds.has(theme.id)
-    ),
-    painPoints: generatedOutput.painPoints.filter(
-      (claim) => !suppressedClaimIds.has(claim.id)
-    ),
-    opportunities: generatedOutput.opportunities.filter(
-      (claim) => !suppressedClaimIds.has(claim.id)
-    ),
-    risks: generatedOutput.risks.filter(
-      (claim) => !suppressedClaimIds.has(claim.id)
-    ),
-    keyQuotes: generatedOutput.keyQuotes.filter(
-      (claim) => !suppressedClaimIds.has(claim.id)
-    ),
-    quoteLibrary: generatedOutput.quoteLibrary.filter(
-      (quote) => !suppressedClaimIds.has(quote.id)
-    ),
-    insightCards: generatedOutput.insightCards.filter(
-      (card) => !suppressedClaimIds.has(card.id)
-    ),
-    tensions: generatedOutput.tensions.filter(
-      (claim) => !suppressedClaimIds.has(claim.id)
-    ),
-  }
-}
-
 function mapSynthesis(
   row: ProjectSynthesisGeneratedRow
 ): ProjectSynthesisGenerated {
@@ -935,32 +848,6 @@ function mapSynthesis(
     promptVersionId: row.prompt_version_id ?? "pending",
     modelVersionId: row.model_version_id ?? "pending",
     createdAt: row.created_at,
-  }
-}
-
-function mapSynthesisOverride(
-  row: ProjectSynthesisOverrideRow
-): ProjectSynthesisOverride {
-  return {
-    id: row.id,
-    projectId: row.project_id,
-    editedNarrative: row.edited_narrative,
-    consultantNotes: row.consultant_notes,
-    updatedAt: row.updated_at,
-  }
-}
-
-function mergeSynthesisWithOverride(
-  generated: ProjectSynthesisGenerated,
-  override?: ProjectSynthesisOverride
-): ProjectSynthesisGenerated {
-  if (!override?.editedNarrative.trim()) {
-    return generated
-  }
-
-  return {
-    ...generated,
-    executiveSummary: override.editedNarrative.trim(),
   }
 }
 
@@ -2191,10 +2078,6 @@ async function persistQualityScore(
     transcript,
     output: generatedOutput,
   })
-  const effectiveLowQuality =
-    typeof session.qualityOverride?.lowQuality === "boolean"
-      ? session.qualityOverride.lowQuality
-      : quality.lowQuality
 
   const [qualityResult, sessionResult] = await Promise.all([
     client
@@ -2214,7 +2097,7 @@ async function persistQualityScore(
     client
       .from("participant_sessions")
       .update({
-        quality_flag: effectiveLowQuality,
+        quality_flag: quality.lowQuality,
         last_activity_at: new Date().toISOString(),
       })
       .eq("id", session.id),
@@ -2277,30 +2160,8 @@ async function persistProjectSynthesis(projectId: string) {
   ).map((row) =>
     mapSession(row as ParticipantSessionRow, linkRow?.link_token ?? "")
   )
-  const sessionIds = sessions.map((session) => session.id)
-  const [outputRows, overrideRows] = await Promise.all([
-    getLatestProjectSessionOutputRows(client, projectId),
-    sessionIds.length === 0
-      ? Promise.resolve({
-          data: [] as SessionOutputOverrideRow[],
-          error: null,
-        })
-      : client
-          .from("session_output_overrides")
-          .select("*")
-          .in("session_id", sessionIds),
-  ])
-  const overridesBySessionId = new Map(
-    expectRows(overrideRows, "Unable to load session output overrides")
-      .map((row) => mapOutputOverride(row as SessionOutputOverrideRow))
-      .map((override) => [override.sessionId, override] as const)
-  )
-  const outputs = outputRows.map((row) =>
-    mergeSessionOutputWithOverride(
-      mapGeneratedOutput(row),
-      overridesBySessionId.get(row.session_id)
-    )
-  )
+  const outputRows = await getLatestProjectSessionOutputRows(client, projectId)
+  const outputs = outputRows.map((row) => mapGeneratedOutput(row))
   const promptVersionId = await ensurePromptVersion(
     client,
     workspaceId,
@@ -2805,7 +2666,6 @@ export async function getProjectDetail(projectId: string) {
     linkResult,
     sessionsResult,
     synthesesResult,
-    synthesisOverrideResult,
     testimonialLinksResult,
     testimonialReviewsResult,
   ] = await Promise.all([
@@ -2831,11 +2691,6 @@ export async function getProjectDetail(projectId: string) {
       .eq("project_id", projectId)
       .order("created_at", { ascending: false })
       .limit(1),
-    client
-      .from("project_synthesis_overrides")
-      .select("*")
-      .eq("project_id", projectId)
-      .maybeSingle<ProjectSynthesisOverrideRow>(),
     client
       .from("testimonial_links")
       .select("*")
@@ -2893,10 +2748,7 @@ export async function getProjectDetail(projectId: string) {
       .map((row) => mapQualityScore(row as QualityScoreRow))
       .map((score) => [score.sessionId, score])
   )
-  const synthesisOverride = synthesisOverrideResult.data
-    ? mapSynthesisOverride(synthesisOverrideResult.data)
-    : undefined
-  const generatedSynthesis = synthesis
+  const projectSynthesis = synthesis
     ? mapSynthesis(synthesis)
     : buildEmptyProjectSynthesis(project.id, "pending", "pending")
 
@@ -2905,12 +2757,7 @@ export async function getProjectDetail(projectId: string) {
     configVersion,
     configHistory,
     sessions,
-    synthesis: mergeSynthesisWithOverride(
-      generatedSynthesis,
-      synthesisOverride
-    ),
-    generatedSynthesis,
-    synthesisOverride,
+    synthesis: projectSynthesis,
     qualityScores,
     testimonialLinks: expectRows(
       testimonialLinksResult,
@@ -3057,7 +2904,6 @@ export async function getSessionReview(projectId: string, sessionId: string) {
     siblingSessionsResult,
     transcriptResult,
     generatedResult,
-    overrideResult,
     jobsResult,
   ] = await Promise.all([
     client
@@ -3090,11 +2936,6 @@ export async function getSessionReview(projectId: string, sessionId: string) {
       .order("created_at", { ascending: false })
       .limit(1),
     client
-      .from("session_output_overrides")
-      .select("*")
-      .eq("session_id", sessionId)
-      .maybeSingle<SessionOutputOverrideRow>(),
-    client
       .from("analysis_jobs")
       .select("*")
       .eq("session_id", sessionId)
@@ -3103,10 +2944,6 @@ export async function getSessionReview(projectId: string, sessionId: string) {
 
   if (generatedResult.error) {
     fail(`Unable to load generated output: ${generatedResult.error.message}`)
-  }
-
-  if (overrideResult.error) {
-    fail(`Unable to load session override: ${overrideResult.error.message}`)
   }
 
   const configRow = expectRows(
@@ -3163,16 +3000,9 @@ export async function getSessionReview(projectId: string, sessionId: string) {
     generatedResult,
     "Unable to load generated output rows"
   )[0] as SessionOutputGeneratedRow | undefined
-  const override = overrideResult.data
-    ? mapOutputOverride(overrideResult.data)
-    : undefined
   const generatedOutput = latestGeneratedRow
     ? mapGeneratedOutput(latestGeneratedRow)
     : buildGeneratedOutputPlaceholder(session, configVersion)
-  const effectiveOutput = mergeSessionOutputWithOverride(
-    generatedOutput,
-    override
-  )
   const sessionJobFailures = analysisJobs.filter(
     (job) =>
       (job.type === "transcript_cleaning" ||
@@ -3227,7 +3057,6 @@ export async function getSessionReview(projectId: string, sessionId: string) {
     project,
     configVersion,
     session,
-    qualityOverride: session.qualityOverride,
     transcript,
     transcriptStatus,
     generatedStatus,
@@ -3235,8 +3064,6 @@ export async function getSessionReview(projectId: string, sessionId: string) {
     analysisFailure,
     analysisJobs,
     generatedOutput,
-    effectiveOutput,
-    override,
     qualityScore: qualityScoresBySessionId[sessionId],
     siblingSessions,
     siblingQualityScores: qualityScoresBySessionId,
@@ -4008,203 +3835,6 @@ export async function setSessionExcludedFromSynthesis(
   return mapSession(
     expectData(sessionResult, "Unable to update session synthesis exclusion"),
     expectData(publicLinkResult, "Unable to load public link token").link_token
-  )
-}
-
-export async function saveSessionOverride(
-  sessionId: string,
-  editedSummary: string,
-  consultantNotes: string
-) {
-  const client = await createServerSupabaseClient()
-
-  if (!client) {
-    fail("Supabase publishable-key environment is not configured.")
-  }
-
-  const existingResult = await client
-    .from("session_output_overrides")
-    .select("suppressed_claim_ids")
-    .eq("session_id", sessionId)
-    .maybeSingle<{ suppressed_claim_ids: unknown }>()
-
-  if (existingResult.error) {
-    fail(
-      `Unable to inspect existing session override: ${existingResult.error.message}`
-    )
-  }
-
-  const result = await client
-    .from("session_output_overrides")
-    .upsert(
-      {
-        session_id: sessionId,
-        edited_summary: editedSummary,
-        consultant_notes: consultantNotes,
-        suppressed_claim_ids: safeStringArray(
-          existingResult.data?.suppressed_claim_ids
-        ),
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "session_id" }
-    )
-    .select("*")
-    .single<SessionOutputOverrideRow>()
-
-  return mapOutputOverride(
-    expectData(result, "Unable to save session override")
-  )
-}
-
-export async function saveSessionClaimSuppression(
-  sessionId: string,
-  claimId: string,
-  suppressed: boolean
-) {
-  const client = await createServerSupabaseClient()
-
-  if (!client) {
-    fail("Supabase publishable-key environment is not configured.")
-  }
-
-  const existingResult = await client
-    .from("session_output_overrides")
-    .select("*")
-    .eq("session_id", sessionId)
-    .maybeSingle<SessionOutputOverrideRow>()
-
-  if (existingResult.error) {
-    fail(
-      `Unable to inspect existing session override: ${existingResult.error.message}`
-    )
-  }
-
-  const existingSuppressedIds = safeStringArray(
-    existingResult.data?.suppressed_claim_ids
-  )
-  const nextSuppressedIds = suppressed
-    ? Array.from(new Set([...existingSuppressedIds, claimId]))
-    : existingSuppressedIds.filter((id) => id !== claimId)
-
-  const result = await client
-    .from("session_output_overrides")
-    .upsert(
-      {
-        session_id: sessionId,
-        edited_summary: existingResult.data?.edited_summary ?? "",
-        consultant_notes: existingResult.data?.consultant_notes ?? "",
-        suppressed_claim_ids: nextSuppressedIds,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "session_id" }
-    )
-    .select("*")
-    .single<SessionOutputOverrideRow>()
-
-  return mapOutputOverride(
-    expectData(result, "Unable to update suppressed session claims")
-  )
-}
-
-export async function saveSessionQualityOverride(input: {
-  sessionId: string
-  mode: "generated" | "manual"
-  lowQuality?: boolean
-  note: string
-}) {
-  const client = await createServerSupabaseClient()
-
-  if (!client) {
-    fail("Supabase publishable-key environment is not configured.")
-  }
-
-  const [latestQualityResult, sessionLinkResult] = await Promise.all([
-    client
-      .from("quality_scores")
-      .select("low_quality")
-      .eq("session_id", input.sessionId)
-      .maybeSingle<{ low_quality: boolean }>(),
-    client
-      .from("participant_sessions")
-      .select("public_link_id")
-      .eq("id", input.sessionId)
-      .single<{ public_link_id: string }>(),
-  ])
-
-  if (latestQualityResult.error) {
-    fail(
-      `Unable to inspect generated quality score: ${latestQualityResult.error.message}`
-    )
-  }
-
-  const now = new Date().toISOString()
-  const updatePayload =
-    input.mode === "manual"
-      ? {
-          manual_quality_flag: Boolean(input.lowQuality),
-          quality_override_note: input.note.trim(),
-          quality_override_updated_at: now,
-          quality_flag: Boolean(input.lowQuality),
-          last_activity_at: now,
-        }
-      : {
-          manual_quality_flag: null,
-          quality_override_note: "",
-          quality_override_updated_at: null,
-          quality_flag: latestQualityResult.data?.low_quality ?? false,
-          last_activity_at: now,
-        }
-
-  const sessionResult = await client
-    .from("participant_sessions")
-    .update(updatePayload)
-    .eq("id", input.sessionId)
-    .select("*")
-    .single<ParticipantSessionRow>()
-
-  const publicLinkId = expectData(
-    sessionLinkResult,
-    "Unable to inspect participant session link"
-  ).public_link_id
-  const publicLinkResult = await client
-    .from("project_public_links")
-    .select("link_token")
-    .eq("id", publicLinkId)
-    .single<{ link_token: string }>()
-
-  return mapSession(
-    expectData(sessionResult, "Unable to update session quality override"),
-    expectData(publicLinkResult, "Unable to load public link token").link_token
-  )
-}
-
-export async function saveProjectSynthesisOverride(
-  projectId: string,
-  editedNarrative: string,
-  consultantNotes: string
-) {
-  const client = await createServerSupabaseClient()
-
-  if (!client) {
-    fail("Supabase publishable-key environment is not configured.")
-  }
-
-  const result = await client
-    .from("project_synthesis_overrides")
-    .upsert(
-      {
-        project_id: projectId,
-        edited_narrative: editedNarrative,
-        consultant_notes: consultantNotes,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "project_id" }
-    )
-    .select("*")
-    .single<ProjectSynthesisOverrideRow>()
-
-  return mapSynthesisOverride(
-    expectData(result, "Unable to save project synthesis override")
   )
 }
 

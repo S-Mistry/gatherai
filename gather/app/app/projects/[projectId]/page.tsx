@@ -3,7 +3,6 @@ import { headers } from "next/headers"
 import { notFound } from "next/navigation"
 
 import { ConsultantAppBar } from "@/components/dashboard/consultant-app-bar"
-import { ProjectSynthesisOverrideForm } from "@/components/dashboard/project-synthesis-override-form"
 import { ProjectEvidenceSurface } from "@/components/dashboard/project-evidence-surface"
 import { ProjectVersionForm } from "@/components/dashboard/project-version-form"
 import { RefreshSynthesisButton } from "@/components/dashboard/refresh-synthesis-button"
@@ -66,7 +65,13 @@ export default async function ProjectDetailPage({
             { label: detail.project.name },
           ]}
         />
-        <div style={{ padding: "36px 40px 120px", maxWidth: 1320, margin: "0 auto" }}>
+        <div
+          style={{
+            padding: "36px 40px 120px",
+            maxWidth: 1320,
+            margin: "0 auto",
+          }}
+        >
           <TestimonialProjectDetail
             project={detail.project}
             configVersion={detail.configVersion}
@@ -81,11 +86,10 @@ export default async function ProjectDetailPage({
   }
 
   const stats = computeSessionStats(detail.sessions)
-  const synthesisOverrideActive = Boolean(
-    detail.synthesisOverride?.editedNarrative.trim()
-  )
   const projectTypePreset = getProjectTypePreset(detail.project.projectType)
-  const synthesisWarning = formatProjectSynthesisWarning(detail.synthesis.warning)
+  const synthesisWarning = formatProjectSynthesisWarning(
+    detail.synthesis.warning
+  )
   const totalSessions = detail.sessions.length
   const includedSessions = stats.includedInSynthesis
   const themesCount = detail.synthesis.crossInterviewThemes.length
@@ -100,450 +104,424 @@ export default async function ProjectDetailPage({
           { label: detail.project.name },
         ]}
       />
-      <div style={{ padding: "36px 40px 120px", maxWidth: 1320, margin: "0 auto" }}>
+      <div
+        style={{ padding: "36px 40px 120px", maxWidth: 1320, margin: "0 auto" }}
+      >
         {/* ── Hero ─────────────────────────────────── */}
-      <section
-        className="project-detail-hero-grid"
-        style={{
-          gap: 36,
-          marginBottom: 56,
-        }}
-      >
-        <div className="card flat relative" style={{ padding: "38px 42px" }}>
-          <Tape
-            style={{
-              top: -11,
-              left: "50%",
-              transform: "translateX(-50%) rotate(2deg)",
-            }}
-          />
-          <div className="font-hand" style={{ fontSize: 26, color: "var(--clay)" }}>
-            what we heard —
-          </div>
-          <h1
-            className="font-serif"
-            style={{
-              fontSize: 60,
-              fontWeight: 400,
-              lineHeight: 1.05,
-              margin: "12px 0 26px",
-              letterSpacing: "-0.018em",
-            }}
-          >
-            <span style={{ color: "var(--ink-2)" }}>
-              {includedSessions || stats.completed || 0}{" "}
-              {includedSessions === 1 ? "voice" : "voices"}.
-            </span>
-            <br />
-            <span style={{ fontStyle: "italic", color: "var(--clay)" }}>
-              {detail.project.name}
-            </span>
-          </h1>
-          <p
-            className="font-sans"
-            style={{
-              fontSize: 16,
-              lineHeight: 1.6,
-              color: "var(--ink-2)",
-              maxWidth: 540,
-              margin: 0,
-            }}
-          >
-            {detail.synthesis.executiveSummary ||
-              "Synthesis will strengthen after the first completed sessions with usable evidence arrive."}
-          </p>
-          <div
-            style={{
-              marginTop: 26,
-              display: "flex",
-              gap: 14,
-              alignItems: "center",
-              flexWrap: "wrap",
-            }}
-          >
-            {synthesisOverrideActive ? (
-              <Stamp variant="ink">narrative override</Stamp>
-            ) : includedSessions >= 3 ? (
-              <Stamp>synthesis ready</Stamp>
-            ) : null}
-            <span
-              className="font-mono"
-              style={{ fontSize: 11, color: "var(--ink-3)" }}
+        <section
+          className="project-detail-hero-grid"
+          style={{
+            gap: 36,
+            marginBottom: 56,
+          }}
+        >
+          <div className="card flat relative" style={{ padding: "38px 42px" }}>
+            <Tape
+              style={{
+                top: -11,
+                left: "50%",
+                transform: "translateX(-50%) rotate(2deg)",
+              }}
+            />
+            <div
+              className="font-hand"
+              style={{ fontSize: 26, color: "var(--clay)" }}
             >
-              {includedSessions}/{totalSessions} interviews
-              {totalSessions - includedSessions > 0
-                ? ` · ${totalSessions - includedSessions} excluded for low coverage`
-                : ""}
-            </span>
-          </div>
-          <div
-            className="flex flex-wrap items-center gap-3"
-            style={{ marginTop: 22 }}
-          >
-            <CopyLink value={shareUrl} label="Copy share link" />
-            <Button asChild variant="ghost" size="sm">
-              <Link href={`/i/${detail.project.publicLinkToken}`}>
-                Preview as respondent
-              </Link>
-            </Button>
-            <RefreshSynthesisButton projectId={detail.project.id} />
-          </div>
-        </div>
-
-        {/* Stat tiles */}
-        <div
-          className="project-detail-stat-grid"
-          style={{
-            gap: 14,
-          }}
-        >
-          <BigStat
-            big={String(includedSessions)}
-            small={`/${totalSessions}`}
-            label="interviews"
-            note={
-              totalSessions - includedSessions === 0
-                ? "all included"
-                : `${totalSessions - includedSessions} excluded · low coverage`
-            }
-            tone="ink"
-          />
-          <BigStat
-            big={String(themesCount)}
-            small="themes"
-            label="cross-interview"
-            note={themesCount === 0 ? "none surfaced yet" : "frequency ≥ 3"}
-            tone="clay"
-          />
-          <BigStat
-            big={String(contradictionsCount)}
-            small="open"
-            label="contradictions"
-            note={contradictionsCount === 0 ? "no tensions" : "unresolved"}
-            tone="rose"
-          />
-          <BigStat
-            big={String(stats.flagged)}
-            small="flagged"
-            label="quality"
-            note={stats.flagged === 0 ? "clean" : "needs your eye"}
-            tone="sage"
-          />
-        </div>
-      </section>
-
-      {/* ── Who we talked to ───────────────────── */}
-      <section style={{ marginBottom: 56 }}>
-        <div className="section-head">
-          <h2 className="font-serif" style={{ fontSize: 32, fontWeight: 400 }}>
-            Who we talked to
-          </h2>
-          <span
-            className="font-hand"
-            style={{ fontSize: 20, color: "var(--ink-3)" }}
-          >
-            — click anyone for their transcript
-          </span>
-        </div>
-        <SessionsAtAGlance
-          projectId={projectId}
-          sessions={detail.sessions}
-          qualityScores={detail.qualityScores}
-        />
-      </section>
-
-      {/* ── Themes / Quotes / Contradictions ─────── */}
-      <ProjectEvidenceSurface
-        projectId={detail.project.id}
-        contradictions={detail.synthesis.contradictionMap}
-        notableQuotes={detail.synthesis.notableQuotesByTheme}
-        themes={detail.synthesis.crossInterviewThemes}
-        totalSessions={includedTotalForSpectro}
-      />
-
-      {/* ── Optional warning banner ───────────── */}
-      {synthesisWarning ? (
-        <p
-          className="font-sans"
-          style={{
-            background: "var(--gold-soft)",
-            border: "1px solid rgba(200,160,60,0.3)",
-            borderRadius: 8,
-            padding: "12px 16px",
-            fontSize: 13,
-            color: "var(--ink-2)",
-            margin: "0 0 56px",
-          }}
-        >
-          {synthesisWarning}
-        </p>
-      ) : null}
-
-      {/* ── Project setup (collapsed by default) ─── */}
-      <details
-        className="card flat"
-        style={{ padding: "22px 26px", marginBottom: 24 }}
-      >
-        <summary
-          className="cursor-pointer flex items-center justify-between gap-3"
-          style={{ listStyle: "none" }}
-        >
-          <span className="flex items-center gap-2.5">
-            <span className="eyebrow">Project setup</span>
-            <Badge variant="neutral">v{detail.configVersion.versionNumber}</Badge>
-          </span>
-          <span
-            className="font-mono"
-            style={{ fontSize: 10, color: "var(--ink-3)" }}
-          >
-            topics · questions · history
-          </span>
-        </summary>
-        <div className="project-detail-two-column-grid mt-6 gap-7">
-          <div>
-            <h3
+              what we heard —
+            </div>
+            <h1
               className="font-serif"
               style={{
-                fontSize: 22,
+                fontSize: 60,
                 fontWeight: 400,
-                margin: "0 0 12px",
+                lineHeight: 1.05,
+                margin: "12px 0 26px",
+                letterSpacing: "-0.018em",
               }}
             >
-              What you asked for
-            </h3>
-            {detail.configVersion.areasOfInterest.length > 0 ? (
-              <>
-                <div
-                  className="font-hand"
-                  style={{
-                    fontSize: 20,
-                    color: "var(--clay)",
-                    marginBottom: 6,
-                  }}
-                >
-                  topics —
-                </div>
-                <ul
-                  className="font-sans"
-                  style={{
-                    margin: "0 0 16px",
-                    paddingLeft: 18,
-                    fontSize: 14,
-                    lineHeight: 1.6,
-                    color: "var(--ink-2)",
-                  }}
-                >
-                  {detail.configVersion.areasOfInterest.map((topic) => (
-                    <li key={topic}>{topic}</li>
-                  ))}
-                </ul>
-              </>
-            ) : null}
-            {detail.configVersion.requiredQuestions.length > 0 ? (
-              <>
-                <div
-                  className="font-hand"
-                  style={{
-                    fontSize: 20,
-                    color: "var(--clay)",
-                    marginBottom: 6,
-                  }}
-                >
-                  must-ask questions —
-                </div>
-                <ol
-                  className="font-sans"
-                  style={{
-                    margin: 0,
-                    paddingLeft: 18,
-                    fontSize: 14,
-                    lineHeight: 1.6,
-                    color: "var(--ink-2)",
-                  }}
-                >
-                  {detail.configVersion.requiredQuestions.map((q) => (
-                    <li key={q.id ?? q.prompt}>{q.prompt}</li>
-                  ))}
-                </ol>
-              </>
-            ) : null}
-            {detail.configVersion.backgroundContext ? (
-              <>
-                <div
-                  className="font-hand mt-4"
-                  style={{
-                    fontSize: 20,
-                    color: "var(--clay)",
-                    marginBottom: 6,
-                  }}
-                >
-                  background —
-                </div>
-                <p
-                  className="font-sans"
-                  style={{
-                    fontSize: 13.5,
-                    lineHeight: 1.6,
-                    color: "var(--ink-2)",
-                    margin: 0,
-                  }}
-                >
-                  {detail.configVersion.backgroundContext}
-                </p>
-              </>
-            ) : null}
-          </div>
-
-          <div>
-            <div className="flex items-baseline justify-between mb-3">
-              <h3
-                className="font-serif"
-                style={{ fontSize: 22, fontWeight: 400, margin: 0 }}
-              >
-                How it has changed
-              </h3>
+              <span style={{ color: "var(--ink-2)" }}>
+                {includedSessions || stats.completed || 0}{" "}
+                {includedSessions === 1 ? "voice" : "voices"}.
+              </span>
+              <br />
+              <span style={{ fontStyle: "italic", color: "var(--clay)" }}>
+                {detail.project.name}
+              </span>
+            </h1>
+            <p
+              className="font-sans"
+              style={{
+                fontSize: 16,
+                lineHeight: 1.6,
+                color: "var(--ink-2)",
+                maxWidth: 540,
+                margin: 0,
+              }}
+            >
+              {detail.synthesis.executiveSummary ||
+                "Synthesis will strengthen after the first completed sessions with usable evidence arrive."}
+            </p>
+            <div
+              style={{
+                marginTop: 26,
+                display: "flex",
+                gap: 14,
+                alignItems: "center",
+                flexWrap: "wrap",
+              }}
+            >
+              {includedSessions >= 3 ? <Stamp>synthesis ready</Stamp> : null}
               <span
                 className="font-mono"
-                style={{ fontSize: 10, color: "var(--ink-3)" }}
+                style={{ fontSize: 11, color: "var(--ink-3)" }}
               >
-                future sessions only
+                {includedSessions}/{totalSessions} interviews
+                {totalSessions - includedSessions > 0
+                  ? ` · ${totalSessions - includedSessions} excluded for low coverage`
+                  : ""}
               </span>
             </div>
-            <div className="space-y-3">
-              {detail.configHistory.map((version, index) => (
-                <div
-                  key={version.id}
-                  style={{
-                    border: "1px dashed var(--line)",
-                    borderRadius: 6,
-                    padding: "14px 18px",
-                  }}
-                >
-                  <div className="flex flex-wrap items-baseline gap-2">
-                    <Badge variant={index === 0 ? "clay" : "neutral"}>
-                      v{version.versionNumber}
-                    </Badge>
-                    {index === 0 ? (
-                      <Badge variant="sage">active</Badge>
-                    ) : null}
-                    <span
-                      className="font-mono"
-                      style={{ fontSize: 11, color: "var(--ink-3)" }}
-                    >
-                      <RelativeTime date={version.createdAt} />
-                    </span>
-                  </div>
-                  <p
-                    className="font-sans mt-2 mb-0"
-                    style={{
-                      fontSize: 13.5,
-                      lineHeight: 1.55,
-                      color: "var(--ink-2)",
-                    }}
-                  >
-                    {version.objective}
-                  </p>
-                </div>
-              ))}
+            <div
+              className="flex flex-wrap items-center gap-3"
+              style={{ marginTop: 22 }}
+            >
+              <CopyLink value={shareUrl} label="Copy share link" />
+              <Button asChild variant="ghost" size="sm">
+                <Link href={`/i/${detail.project.publicLinkToken}`}>
+                  Preview as respondent
+                </Link>
+              </Button>
+              <RefreshSynthesisButton projectId={detail.project.id} />
             </div>
-
-            <details
-              className="mt-5"
-              style={{
-                border: "1px dashed var(--line)",
-                borderRadius: 6,
-                padding: "14px 18px",
-              }}
-            >
-              <summary
-                className="font-hand cursor-pointer"
-                style={{
-                  fontSize: 22,
-                  color: "var(--clay)",
-                  listStyle: "none",
-                }}
-              >
-                + create next version
-              </summary>
-              <div className="pt-4">
-                <ProjectVersionForm
-                  project={detail.project}
-                  configVersion={detail.configVersion}
-                />
-              </div>
-            </details>
           </div>
-        </div>
-      </details>
 
-      {/* ── Sessions table (full detail) ──────── */}
-      <details
-        className="card flat"
-        style={{ padding: "22px 26px", marginBottom: 24 }}
-      >
-        <summary
-          className="cursor-pointer flex items-center justify-between gap-3"
-          style={{ listStyle: "none" }}
-        >
-          <span className="flex items-center gap-2.5">
-            <span className="eyebrow">Sessions table</span>
-            <span
-              className="font-mono"
-              style={{ fontSize: 11, color: "var(--ink-3)" }}
-            >
-              {detail.sessions.length}{" "}
-              {detail.sessions.length === 1 ? "session" : "sessions"}
-            </span>
-          </span>
-          <span
-            className="font-mono"
-            style={{ fontSize: 10, color: "var(--ink-3)" }}
+          {/* Stat tiles */}
+          <div
+            className="project-detail-stat-grid"
+            style={{
+              gap: 14,
+            }}
           >
-            quality · transcripts · exclusion
-          </span>
-        </summary>
-        <div className="pt-6">
-          <SessionsTable
+            <BigStat
+              big={String(includedSessions)}
+              small={`/${totalSessions}`}
+              label="interviews"
+              note={
+                totalSessions - includedSessions === 0
+                  ? "all included"
+                  : `${totalSessions - includedSessions} excluded · low coverage`
+              }
+              tone="ink"
+            />
+            <BigStat
+              big={String(themesCount)}
+              small="themes"
+              label="cross-interview"
+              note={themesCount === 0 ? "none surfaced yet" : "frequency ≥ 3"}
+              tone="clay"
+            />
+            <BigStat
+              big={String(contradictionsCount)}
+              small="open"
+              label="contradictions"
+              note={contradictionsCount === 0 ? "no tensions" : "unresolved"}
+              tone="rose"
+            />
+            <BigStat
+              big={String(stats.flagged)}
+              small="flagged"
+              label="quality"
+              note={stats.flagged === 0 ? "clean" : "needs your eye"}
+              tone="sage"
+            />
+          </div>
+        </section>
+
+        {/* ── Who we talked to ───────────────────── */}
+        <section style={{ marginBottom: 56 }}>
+          <div className="section-head">
+            <h2
+              className="font-serif"
+              style={{ fontSize: 32, fontWeight: 400 }}
+            >
+              Who we talked to
+            </h2>
+            <span
+              className="font-hand"
+              style={{ fontSize: 20, color: "var(--ink-3)" }}
+            >
+              — click anyone for their transcript
+            </span>
+          </div>
+          <SessionsAtAGlance
             projectId={projectId}
             sessions={detail.sessions}
             qualityScores={detail.qualityScores}
           />
-        </div>
-      </details>
+        </section>
 
-      {/* ── Override drawer ─────────────────── */}
-      <details
-        className="card flat"
-        style={{ padding: "22px 26px" }}
-        open={synthesisOverrideActive}
-      >
-        <summary
-          className="cursor-pointer flex items-center justify-between gap-3"
-          style={{ listStyle: "none" }}
-        >
-          <span className="flex items-center gap-2.5">
-            <span className="eyebrow">Consultant narrative override</span>
-            {synthesisOverrideActive ? (
-              <Badge variant="clay">active</Badge>
-            ) : null}
-          </span>
-          <span
-            className="font-mono"
-            style={{ fontSize: 10, color: "var(--ink-3)" }}
+        {/* ── Themes / Quotes / Contradictions ─────── */}
+        <ProjectEvidenceSurface
+          projectId={detail.project.id}
+          contradictions={detail.synthesis.contradictionMap}
+          notableQuotes={detail.synthesis.notableQuotesByTheme}
+          themes={detail.synthesis.crossInterviewThemes}
+          totalSessions={includedTotalForSpectro}
+        />
+
+        {/* ── Optional warning banner ───────────── */}
+        {synthesisWarning ? (
+          <p
+            className="font-sans"
+            style={{
+              background: "var(--gold-soft)",
+              border: "1px solid rgba(200,160,60,0.3)",
+              borderRadius: 8,
+              padding: "12px 16px",
+              fontSize: 13,
+              color: "var(--ink-2)",
+              margin: "0 0 56px",
+            }}
           >
-            edit readout
-          </span>
-        </summary>
-        <div className="pt-4">
-          <ProjectSynthesisOverrideForm
-            projectId={detail.project.id}
-            generatedNarrative={detail.generatedSynthesis.executiveSummary}
-            override={detail.synthesisOverride}
-          />
-        </div>
-      </details>
+            {synthesisWarning}
+          </p>
+        ) : null}
 
-      <span className="sr-only">{projectTypePreset.label}</span>
+        {/* ── Project setup (collapsed by default) ─── */}
+        <details
+          className="card flat"
+          style={{ padding: "22px 26px", marginBottom: 24 }}
+        >
+          <summary
+            className="flex cursor-pointer items-center justify-between gap-3"
+            style={{ listStyle: "none" }}
+          >
+            <span className="flex items-center gap-2.5">
+              <span className="eyebrow">Project setup</span>
+              <Badge variant="neutral">
+                v{detail.configVersion.versionNumber}
+              </Badge>
+            </span>
+            <span
+              className="font-mono"
+              style={{ fontSize: 10, color: "var(--ink-3)" }}
+            >
+              topics · questions · history
+            </span>
+          </summary>
+          <div className="project-detail-two-column-grid mt-6 gap-7">
+            <div>
+              <h3
+                className="font-serif"
+                style={{
+                  fontSize: 22,
+                  fontWeight: 400,
+                  margin: "0 0 12px",
+                }}
+              >
+                What you asked for
+              </h3>
+              {detail.configVersion.areasOfInterest.length > 0 ? (
+                <>
+                  <div
+                    className="font-hand"
+                    style={{
+                      fontSize: 20,
+                      color: "var(--clay)",
+                      marginBottom: 6,
+                    }}
+                  >
+                    topics —
+                  </div>
+                  <ul
+                    className="font-sans"
+                    style={{
+                      margin: "0 0 16px",
+                      paddingLeft: 18,
+                      fontSize: 14,
+                      lineHeight: 1.6,
+                      color: "var(--ink-2)",
+                    }}
+                  >
+                    {detail.configVersion.areasOfInterest.map((topic) => (
+                      <li key={topic}>{topic}</li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
+              {detail.configVersion.requiredQuestions.length > 0 ? (
+                <>
+                  <div
+                    className="font-hand"
+                    style={{
+                      fontSize: 20,
+                      color: "var(--clay)",
+                      marginBottom: 6,
+                    }}
+                  >
+                    must-ask questions —
+                  </div>
+                  <ol
+                    className="font-sans"
+                    style={{
+                      margin: 0,
+                      paddingLeft: 18,
+                      fontSize: 14,
+                      lineHeight: 1.6,
+                      color: "var(--ink-2)",
+                    }}
+                  >
+                    {detail.configVersion.requiredQuestions.map((q) => (
+                      <li key={q.id ?? q.prompt}>{q.prompt}</li>
+                    ))}
+                  </ol>
+                </>
+              ) : null}
+              {detail.configVersion.backgroundContext ? (
+                <>
+                  <div
+                    className="mt-4 font-hand"
+                    style={{
+                      fontSize: 20,
+                      color: "var(--clay)",
+                      marginBottom: 6,
+                    }}
+                  >
+                    background —
+                  </div>
+                  <p
+                    className="font-sans"
+                    style={{
+                      fontSize: 13.5,
+                      lineHeight: 1.6,
+                      color: "var(--ink-2)",
+                      margin: 0,
+                    }}
+                  >
+                    {detail.configVersion.backgroundContext}
+                  </p>
+                </>
+              ) : null}
+            </div>
+
+            <div>
+              <div className="mb-3 flex items-baseline justify-between">
+                <h3
+                  className="font-serif"
+                  style={{ fontSize: 22, fontWeight: 400, margin: 0 }}
+                >
+                  How it has changed
+                </h3>
+                <span
+                  className="font-mono"
+                  style={{ fontSize: 10, color: "var(--ink-3)" }}
+                >
+                  future sessions only
+                </span>
+              </div>
+              <div className="space-y-3">
+                {detail.configHistory.map((version, index) => (
+                  <div
+                    key={version.id}
+                    style={{
+                      border: "1px dashed var(--line)",
+                      borderRadius: 6,
+                      padding: "14px 18px",
+                    }}
+                  >
+                    <div className="flex flex-wrap items-baseline gap-2">
+                      <Badge variant={index === 0 ? "clay" : "neutral"}>
+                        v{version.versionNumber}
+                      </Badge>
+                      {index === 0 ? (
+                        <Badge variant="sage">active</Badge>
+                      ) : null}
+                      <span
+                        className="font-mono"
+                        style={{ fontSize: 11, color: "var(--ink-3)" }}
+                      >
+                        <RelativeTime date={version.createdAt} />
+                      </span>
+                    </div>
+                    <p
+                      className="mt-2 mb-0 font-sans"
+                      style={{
+                        fontSize: 13.5,
+                        lineHeight: 1.55,
+                        color: "var(--ink-2)",
+                      }}
+                    >
+                      {version.objective}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <details
+                className="mt-5"
+                style={{
+                  border: "1px dashed var(--line)",
+                  borderRadius: 6,
+                  padding: "14px 18px",
+                }}
+              >
+                <summary
+                  className="cursor-pointer font-hand"
+                  style={{
+                    fontSize: 22,
+                    color: "var(--clay)",
+                    listStyle: "none",
+                  }}
+                >
+                  + create next version
+                </summary>
+                <div className="pt-4">
+                  <ProjectVersionForm
+                    project={detail.project}
+                    configVersion={detail.configVersion}
+                  />
+                </div>
+              </details>
+            </div>
+          </div>
+        </details>
+
+        {/* ── Sessions table (full detail) ──────── */}
+        <details
+          className="card flat"
+          style={{ padding: "22px 26px", marginBottom: 24 }}
+        >
+          <summary
+            className="flex cursor-pointer items-center justify-between gap-3"
+            style={{ listStyle: "none" }}
+          >
+            <span className="flex items-center gap-2.5">
+              <span className="eyebrow">Sessions table</span>
+              <span
+                className="font-mono"
+                style={{ fontSize: 11, color: "var(--ink-3)" }}
+              >
+                {detail.sessions.length}{" "}
+                {detail.sessions.length === 1 ? "session" : "sessions"}
+              </span>
+            </span>
+            <span
+              className="font-mono"
+              style={{ fontSize: 10, color: "var(--ink-3)" }}
+            >
+              quality · transcripts · exclusion
+            </span>
+          </summary>
+          <div className="pt-6">
+            <SessionsTable
+              projectId={projectId}
+              sessions={detail.sessions}
+              qualityScores={detail.qualityScores}
+            />
+          </div>
+        </details>
+
+        <span className="sr-only">{projectTypePreset.label}</span>
       </div>
     </>
   )
@@ -600,7 +578,14 @@ function BigStat({
   return (
     <div className="card flat" style={{ padding: "20px 22px" }}>
       <div className="eyebrow">{label}</div>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 6 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "baseline",
+          gap: 8,
+          marginTop: 6,
+        }}
+      >
         <span
           className="font-serif"
           style={{
@@ -608,8 +593,7 @@ function BigStat({
             fontWeight: 400,
             lineHeight: 1,
             color,
-            fontStyle:
-              tone === "clay" || tone === "rose" ? "italic" : "normal",
+            fontStyle: tone === "clay" || tone === "rose" ? "italic" : "normal",
           }}
         >
           {big}
@@ -647,7 +631,10 @@ function SessionsAtAGlance({
 }: {
   projectId: string
   sessions: SessionAtAGlance[]
-  qualityScores: Record<string, { overall: number; lowQuality: boolean } | undefined>
+  qualityScores: Record<
+    string,
+    { overall: number; lowQuality: boolean } | undefined
+  >
 }) {
   if (sessions.length === 0) {
     return (
@@ -757,8 +744,7 @@ function SessionsAtAGlance({
                 quality ·{" "}
                 <span
                   style={{
-                    color:
-                      overall < 0.6 ? "var(--rose)" : "var(--sage)",
+                    color: overall < 0.6 ? "var(--rose)" : "var(--sage)",
                   }}
                 >
                   {overall.toFixed(2)}

@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
+import { Button } from "@/components/ui/button"
 import { getPublicTestimonialEmbed } from "@/lib/data/repository"
 import { cn } from "@/lib/utils"
 
@@ -20,17 +21,13 @@ function firstParam(value: string | string[] | undefined) {
 }
 
 function parseColumns(value: string | string[] | undefined) {
-  const columns = Number.parseInt(firstParam(value) ?? "2", 10)
-  return columns === 1 || columns === 2 || columns === 3 ? columns : 2
+  const columns = Number.parseInt(firstParam(value) ?? "3", 10)
+  return columns === 1 || columns === 2 || columns === 3 ? columns : 3
 }
 
 function parseLimit(value: string | string[] | undefined) {
-  const limit = Number.parseInt(firstParam(value) ?? "20", 10)
-  return Number.isFinite(limit) ? Math.max(1, Math.min(20, limit)) : 20
-}
-
-function parseTheme(value: string | string[] | undefined) {
-  return firstParam(value) === "dark" ? "dark" : "light"
+  const limit = Number.parseInt(firstParam(value) ?? "3", 10)
+  return Number.isFinite(limit) ? Math.max(1, Math.min(20, limit)) : 3
 }
 
 const STICKY_TINTS = ["cream", "peach", "sage", "lilac"] as const
@@ -43,7 +40,6 @@ export default async function TestimonialEmbedPage({
   const resolvedSearchParams = (await searchParams) ?? {}
   const columns = parseColumns(resolvedSearchParams.columns)
   const limit = parseLimit(resolvedSearchParams.limit)
-  const theme = parseTheme(resolvedSearchParams.theme)
   const embed = await getPublicTestimonialEmbed(projectId, limit)
 
   if (!embed) {
@@ -52,14 +48,13 @@ export default async function TestimonialEmbedPage({
 
   const reviewUrl = `/t/${embed.link.linkToken}`
   const signUpUrl = "/sign-in?intent=testimonials"
-  const isDark = theme === "dark"
 
   return (
     <main
       className="min-h-screen p-6"
       style={{
-        background: isDark ? "#1f1a13" : "var(--cream)",
-        color: isDark ? "#f5ecd9" : "var(--ink)",
+        background: "var(--cream)",
+        color: "var(--ink)",
         fontFamily: "var(--font-serif), Georgia, serif",
       }}
     >
@@ -88,24 +83,19 @@ export default async function TestimonialEmbedPage({
               }}
             >
               What people say about{" "}
-              <span style={{ fontStyle: "italic", color: embed.link.brandColor }}>
+              <span
+                style={{ fontStyle: "italic", color: embed.link.brandColor }}
+              >
                 {embed.link.businessName}
               </span>
             </h1>
           </div>
           {embed.captureEnabled ? (
-            <Link
-              href={reviewUrl}
-              target="_blank"
-              className="inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-medium text-white"
-              style={{
-                backgroundColor: embed.link.brandColor,
-                fontFamily: "var(--font-sans), sans-serif",
-                boxShadow: "0 2px 0 rgba(0,0,0,0.15)",
-              }}
-            >
-              Leave a review →
-            </Link>
+            <Button asChild variant="clay">
+              <Link href={reviewUrl} target="_blank" rel="noreferrer">
+                Leave a review →
+              </Link>
+            </Button>
           ) : null}
         </div>
 
@@ -113,7 +103,7 @@ export default async function TestimonialEmbedPage({
           <div
             className="font-serif"
             style={{
-              border: `1.5px dashed ${isDark ? "#4a4032" : "var(--line)"}`,
+              border: "1.5px dashed var(--line)",
               borderRadius: 8,
               padding: "20px 24px",
               fontSize: 16,
