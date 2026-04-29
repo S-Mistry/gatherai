@@ -171,3 +171,10 @@ Use this file for confirmed repo-specific issues only. Keep entries short and pr
 - Cause: The workspace split used only `participant_sessions.in_progress` and project `synthesizing` status, but testimonial reviews do not create participant sessions or synthesis jobs.
 - Avoid: Compute workspace motion state by project type. Include pending testimonial review counts, testimonial activity timestamps, flagged completed feedback sessions, recent completed sessions, and recent project edits.
 - Fix/Check: Add derived motion-state tests for testimonial pending reviews and 7-day activity aging, then verify `/app` places pending testimonial projects in `In motion`.
+
+## I-025 Post-login dashboard crashed when archive migration was not applied
+
+- Problem: After Google OAuth completed, `/app` showed a production Next.js error digest instead of loading the workspace.
+- Cause: The deployed database was missing `projects.archived_at` and `projects.archived_by_user_id`, while the workspace dashboard immediately filtered projects by `archived_at`.
+- Avoid: Before diagnosing OAuth again, check schema drift when the callback succeeds but the signed-in app page crashes.
+- Fix/Check: Run `NEXT_PUBLIC_APP_URL=https://<production-domain> npm --prefix gather run supabase:bootstrap`, then verify `information_schema.columns` contains both archive columns and `/auth/login?provider=google&next=/app` redirects to the production `/auth/callback`.
