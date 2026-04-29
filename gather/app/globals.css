@@ -243,6 +243,37 @@
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
   }
 
+  .workspace-dashboard-grid {
+    --workspace-dashboard-tile-width: 274px;
+    --workspace-dashboard-tile-height: 208px;
+    --workspace-dashboard-gap: 18px;
+    display: grid;
+    grid-template-columns: repeat(4, var(--workspace-dashboard-tile-width));
+    grid-auto-rows: var(--workspace-dashboard-tile-height);
+    gap: var(--workspace-dashboard-gap);
+    align-items: stretch;
+    justify-content: center;
+  }
+  .workspace-dashboard-grid > * {
+    width: var(--workspace-dashboard-tile-width);
+    min-width: 0;
+    height: var(--workspace-dashboard-tile-height);
+  }
+  .workspace-dashboard-grid > .project-tile {
+    height: var(--workspace-dashboard-tile-height);
+    overflow: hidden;
+  }
+
+  .workspace-dashboard-start-tile {
+    width: var(--workspace-dashboard-tile-width);
+    height: var(--workspace-dashboard-tile-height);
+    border: 1.5px dashed var(--line);
+    border-radius: 8px;
+    padding: 24px 26px;
+    color: var(--ink-3);
+    overflow: hidden;
+  }
+
   .project-detail-hero-grid {
     display: grid;
     grid-template-columns: minmax(0, 1.25fr) minmax(320px, 1fr);
@@ -297,6 +328,12 @@
     }
   }
 
+  @media (max-width: 1220px) {
+    .workspace-dashboard-grid {
+      grid-template-columns: repeat(2, var(--workspace-dashboard-tile-width));
+    }
+  }
+
   @media (max-width: 1023px) {
     .app-bar {
       align-items: flex-start;
@@ -306,6 +343,20 @@
 
     .review-action-bar {
       top: 92px;
+    }
+  }
+
+  @media (max-width: 700px) {
+    .workspace-dashboard-grid {
+      grid-template-columns: minmax(
+        0,
+        min(100%, var(--workspace-dashboard-tile-width))
+      );
+    }
+
+    .workspace-dashboard-grid > *,
+    .workspace-dashboard-start-tile {
+      width: min(100%, var(--workspace-dashboard-tile-width));
     }
   }
 
@@ -611,9 +662,12 @@
     transition: transform 0.15s, box-shadow 0.15s;
     position: relative;
     display: block;
+    height: 100%;
   }
   .project-tile-link {
-    display: block;
+    display: flex;
+    height: 100%;
+    flex-direction: column;
     color: inherit;
     text-decoration: none;
     padding-right: 28px;

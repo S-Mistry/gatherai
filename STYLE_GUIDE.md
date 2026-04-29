@@ -309,7 +309,7 @@ Every page below is the canonical layout. Reproduce paddings, max-widths, and gr
       <h2 className="font-serif" style={{ fontSize: 26, fontWeight: 400 }}>In motion</h2>
       <span className="font-hand" style={{ fontSize: 18, color: 'var(--ink-3)' }}>— need a look</span>
     </div>
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 22 }}>
+    <div className="workspace-dashboard-grid">
       {/* <ProjectTile /> ×N */}
     </div>
   </section>
@@ -318,14 +318,16 @@ Every page below is the canonical layout. Reproduce paddings, max-widths, and gr
     <div className="section-head">
       <h2 className="font-serif" style={{ fontSize: 22, fontWeight: 400, color: 'var(--ink-2)' }}>Quiet for now</h2>
     </div>
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 18 }}>
+    <div className="workspace-dashboard-grid">
       {/* dashed empty tile first + <ProjectTile /> ×N */}
     </div>
   </section>
 </>
 ```
 
-Empty tile first cell: `border: 1.5px dashed var(--line); border-radius: 8; padding: 24px 26px; min-height: 180; display: grid; place-items: center; color: var(--ink-3)` with Caveat 32 clay `+ start a new one` and sans 12 ink-3 `stakeholder interviews · feedback pulse`.
+Dashboard grids use `.workspace-dashboard-grid`: `--workspace-dashboard-tile-width: 274px; --workspace-dashboard-tile-height: 208px; --workspace-dashboard-gap: 18px; display: grid; gridTemplateColumns: repeat(4, var(--workspace-dashboard-tile-width)); gridAutoRows: var(--workspace-dashboard-tile-height); gap: var(--workspace-dashboard-gap); alignItems: stretch; justifyContent: center`. Direct children get `width: var(--workspace-dashboard-tile-width); minWidth: 0; height: var(--workspace-dashboard-tile-height)`. At `max-width: 1220px`, use two fixed columns; at `max-width: 700px`, use one centered `min(100%, 274px)` column. Project tiles and the empty start tile fill the full grid row.
+
+Empty tile first cell: `width: var(--workspace-dashboard-tile-width); height: var(--workspace-dashboard-tile-height); border: 1.5px dashed var(--line); border-radius: 8; padding: 24px 26px; display: grid; place-items: center; color: var(--ink-3); overflow: hidden` with Caveat 32 clay `+ start a new one` and sans 12 ink-3 `stakeholder interviews · feedback pulse`.
 
 #### New project (`/app/projects/new`) — TypePicker
 

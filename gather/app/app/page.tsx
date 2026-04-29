@@ -215,13 +215,7 @@ export default async function ConsultantHomePage() {
               — fresh activity
             </span>
           </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(2, 1fr)",
-              gap: 22,
-            }}
-          >
+          <div className="workspace-dashboard-grid">
             {live.map((p) => (
               <ProjectTile key={p.id} project={p} />
             ))}
@@ -249,23 +243,10 @@ export default async function ConsultantHomePage() {
                 : "Quiet for now"}
           </h2>
         </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: 18,
-          }}
-        >
+        <div className="workspace-dashboard-grid">
           <Link
             href="/app/projects/new"
-            className="grid place-items-center text-center"
-            style={{
-              border: "1.5px dashed var(--line)",
-              borderRadius: 8,
-              padding: "24px 26px",
-              minHeight: 180,
-              color: "var(--ink-3)",
-            }}
+            className="workspace-dashboard-start-tile grid place-items-center text-center"
           >
             <div>
               <div

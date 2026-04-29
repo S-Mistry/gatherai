@@ -254,6 +254,7 @@ export function ProjectTile({ project }: { project: ProjectTileData }) {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            marginTop: "auto",
           }}
         >
           <Badge
