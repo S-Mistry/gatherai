@@ -1,6 +1,6 @@
 # Technical Spec v1
 
-Last updated: April 28, 2026
+Last updated: April 29, 2026
 
 ## 1. Scope
 
@@ -61,7 +61,7 @@ Last updated: April 28, 2026
   - the server transcribes the recording with OpenAI speech-to-text, then performs a best-effort 1-5 star suggestion through a small structured model call
   - reviewer edits the transcript, adjusts the star rating, optionally leaves a name, and submits a pending review
   - consultant approves or rejects pending reviews before they can appear in the public embed
-  - `/embed/testimonials/[projectId]` renders approved reviews only, plus a leave-review CTA and Gather attribution
+  - `/embed/testimonials/[projectId]` renders approved reviews only, plus a leave-review CTA and Gather attribution while capture is enabled; archived testimonial projects keep rendering approved reviews but suppress the leave-review CTA
 - Consultant path:
   - browser loads `/sign-in`
   - page starts Supabase Google OAuth; email-only consultant sessions are rejected even if legacy email auth users exist
@@ -69,6 +69,8 @@ Last updated: April 28, 2026
   - Supabase redirects back through `/auth/callback`, which exchanges the auth code, verifies the user has a Google provider, and provisions the consultant workspace idempotently
   - browser loads `/app/...`
   - server components and server actions fetch consultant-scoped data from Supabase through route-specific repository loaders rather than one broad workspace snapshot path
+  - active project lists exclude archived projects by default; `/app/projects?filter=archived` shows archived projects with restore and permanent-delete controls
+  - archiving a project is reversible and immediately stops public capture links; permanent deletion is only exposed for archived projects and relies on existing cascade deletes
   - the project synthesis surface lazily resolves transcript-backed evidence in a right-side drawer through an authenticated consultant read route
   - RLS restricts reads and writes to the consultant workspace
 - Analysis path:
@@ -109,9 +111,9 @@ Last updated: April 28, 2026
 ### 4.2 Consultant routes
 
 - `/app`
-  - workspace dashboard
+  - workspace dashboard with `In motion` projects derived from unresolved work or fresh activity
 - `/app/projects`
-  - project list, with optional `filter=live|completed|needs-review` dashboard drill-down
+  - project list, with optional `filter=live|completed|needs-review|archived` dashboard drill-down
 - `/app/projects/new`
   - project creation
 - `/app/projects/[projectId]`
@@ -152,6 +154,7 @@ Last updated: April 28, 2026
 
 - project create/update/version
 - project create bootstraps the project row, immutable `project_type`, initial config version, and initial public link atomically, applying mode-specific starter defaults when fields are omitted and rejecting discovery creation when `ENABLE_DISCOVERY_PROJECTS=false`
+- project archive/restore/permanent-delete; permanent delete is allowed only after archive, and delete-all archived is scoped to the authenticated consultant workspace
 - session include/exclude toggle
 - session claim suppress/restore
 - session quality override
@@ -166,7 +169,7 @@ Last updated: April 28, 2026
 - `ProjectType`
   - immutable project route selector: `discovery`, `feedback`, or `testimonial`, with discovery hidden by default from creation flows
 - `ProjectRecord`
-  - consultant-owned project shell including immutable `projectType`, project `name`, current config version, and active public link token
+  - consultant-owned project shell including immutable `projectType`, project `name`, current config version, active public link token, and optional archive metadata
 - `ProjectConfigVersion`
   - immutable configuration snapshot used by one or more sessions
 - `PublicInterviewConfig`
@@ -205,6 +208,8 @@ Last updated: April 28, 2026
   - public review-link settings including business name, website URL, brand color, headline, prompt, token, and revocation state
 - `TestimonialReview`
   - submitted text review with optional reviewer name, suggested rating, final rating, moderation status, and timestamps
+- `ProjectMotionState`
+  - derived workspace dashboard state; testimonials stay in motion while any review is `pending`, and feedback/discovery projects stay in motion for live/synthesizing work, unresolved flagged completed sessions, or activity within a rolling 7-day window
 
 ### 5.2 Data invariants
 
@@ -218,6 +223,10 @@ Last updated: April 28, 2026
 - Evidence references are required for major generated claims.
 - Testimonial reviews are transcript text only; audio is temporary request data and is not stored.
 - Only `approved` testimonial reviews render in embeds.
+- Archived projects remain consultant-readable and restorable, but are hidden from active workspace lists.
+- Archived participant and testimonial capture links cannot start, resume, write events, mint realtime client secrets, transcribe, or submit reviews.
+- Archived testimonial embeds keep serving approved reviews until permanent deletion, with capture CTA hidden.
+- Workspace `In motion` is computed from existing timestamps without extra schema. Pending testimonial reviews never age out; otherwise testimonial activity and feedback/discovery completed-session or project activity age out after 7 × 24 hours.
 
 ## 6. Interview runtime
 
@@ -351,7 +360,7 @@ Last updated: April 28, 2026
 - completion copy mirrors the selected project type so discovery closes as planning input and feedback closes as improvement input
 - testimonial public UX uses a simpler no-agent recorder, shows recording/stop states, lets reviewers edit the transcript and star rating, and ends with a submitted-review thank-you screen
 - visual system: Instrument Serif body and headings, Caveat for handwritten margin notes and form labels, Inter Tight for sans labels and button text, JetBrains Mono for micro-eyebrows and timers; warm cream + clay paper-notebook palette is light-only (no dark mode in v1); the synthesis evidence drawer is the canonical affordance for "open the evidence behind this claim" — it slides in from the right and is rendered by `<EvidenceDrawer>` over `ProjectEvidenceSurface`; visible wordmark is `gather.` while codebase identifiers stay `GatherAI`; full surface conventions live in `STYLE_GUIDE.md`
-- design fidelity bar: every UI surface is aligned to the Studio cream/clay design at `gather/project/final/` to within ±2px on type and exact-match on ornament positions, copy, and grid templates. Page paddings live in pages, not the app shell — `<AppShell>` only renders the sticky `<AppBar>`. New shared components: `<NotebookCard>` / `<SidebarRail>` / `<NotebookControls>` / `<PreStartCard>` for the deep interview; `<Completion>` for the post-submit screen; `<MarginNote>` ornament; `.section-head` utility
+- design fidelity bar: every UI surface is aligned to the Studio cream/clay design at `gather/project/final/` to within ±2px on type and exact-match on ornament positions, copy, and grid templates. Page paddings live in pages — the consultant layout only enforces the auth gate and supplies a `<ConsultantSessionProvider>`; each consultant page renders its own `<ConsultantAppBar>` at the top with a full breadcrumb that deepens with route depth and a `rightSlot` for page-level status/actions. New shared components: `<ConsultantAppBar>` for consultant chrome; `<ReviewStatusControls>` for the session review status pill + transcript toggle + overflow menu; `<NotebookCard>` / `<SidebarRail>` / `<NotebookControls>` / `<PreStartCard>` for the deep interview; `<Completion>` for the post-submit screen; `<MarginNote>` ornament; `.section-head` utility. The legacy `<AppShell>` and `<ReviewActionBar>` are removed; sticky asides on the session review page anchor to `calc(var(--app-bar-height) + 24px)`.
 
 ## 11. Environment variables
 

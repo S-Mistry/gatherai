@@ -1,6 +1,6 @@
 # Decision Log
 
-Last updated: April 28, 2026 (D-021 design fidelity bar)
+Last updated: April 29, 2026 (D-024 workspace in-motion semantics)
 
 ## Locked Decisions
 
@@ -129,6 +129,24 @@ Last updated: April 28, 2026 (D-021 design fidelity bar)
 - Status: accepted
 - Decision: every UI surface aligns to the Studio cream/clay design at `gather/project/final/` within ±2px on type and exact-match on ornament positions, copy, and grid templates. Page paddings live in pages, not the app shell — `<AppShell>` renders only the sticky `<AppBar>`; each page sets its own `<div style={{ padding, maxWidth, margin: '0 auto' }}>` outer container. New utilities and components: `.section-head`, `<MarginNote>`, the shared `<Completion>` screen, and `<NotebookCard>` / `<SidebarRail>` / `<NotebookControls>` / `<PreStartCard>` for the interview surface.
 - Consequence: deep interview becomes a notebook (two tapes, scribble Q heading, two-column transcript with rotated Caveat speaker tags, inline live wave row, MarginNote for highlights, right rail with project context + today's questions checklist + anonymity disclaimer). Synthesis adds a 7-col "Who we talked to" session grid above the themes/quotes/contradictions block. Feedback flow gains a footer skip link and routes its submitted state into `<Completion>` (sage stamp, 78px headline, Caveat "— really.", dot grid, sticky note). `STYLE_GUIDE.md` becomes the exhaustive 12-section spec — type scale, layout primitives, page recipes, ornament positions, copy library — such that any agent can rebuild the design from the doc alone. `ui-design.md` is amended with a drop-in `<style>` block reproducing all tokens and ornament classes verbatim.
+
+### D-022 Project archive lifecycle
+
+- Status: accepted
+- Decision: project deletion is a two-stage lifecycle. The project-card X archives active projects after confirmation; archived projects are available at `/app/projects?filter=archived`, can be restored, and can be permanently deleted from the archive after confirmation. Delete-all archived is scoped to the authenticated consultant workspace.
+- Consequence: active workspace lists exclude archived projects, archive is reversible, and permanent deletion relies on existing `on delete cascade` relationships. Archived participant and testimonial capture links stop working immediately, including active-session resume/event/client-secret paths. Testimonial embeds keep rendering approved reviews while archived but hide the leave-review CTA until the project is restored.
+
+### D-023 Per-page consultant chrome
+
+- Status: accepted
+- Decision: every consultant page renders its own `<ConsultantAppBar>` at the top, with a full breadcrumb reflecting actual navigation depth and a right slot for page-level status/actions. The `app/app/layout.tsx` no longer paints any chrome — it only enforces the auth gate and supplies a `ConsultantSessionProvider` so child pages can render the avatar and Sign-out form through `<ConsultantAppBar>`. The session review page no longer has a separate `<ReviewActionBar>`; its breadcrumb (Workspace / project / respondent) lives in the AppBar and its status pill + overflow menu live in the AppBar's right slot.
+- Consequence: `gather/components/dashboard/app-shell.tsx` and `gather/components/review/review-action-bar.tsx` are deleted. Status controls move to `gather/components/review/review-status-controls.tsx`. Sticky sibling rail and transcript aside on the session review page anchor to `calc(var(--app-bar-height) + 24px)`. There is exactly one chrome bar per consultant page; the breadcrumb deepens with route depth instead of forcing a second sticky row to repaint navigation.
+
+### D-024 Workspace in-motion semantics
+
+- Status: accepted
+- Decision: workspace `In motion` means unresolved work or fresh activity, not only live sessions. Testimonial projects stay in motion while any review is `pending`; otherwise testimonial activity, feedback/discovery completed-session activity, and project edits age out after a rolling 7 × 24 hour window.
+- Consequence: the workspace home screen derives motion state from existing project, session, testimonial review, and testimonial link timestamps. No new schema is required, and pending testimonial moderation cannot disappear into `Quiet for now` because of age alone.
 
 ## Reference Notes
 

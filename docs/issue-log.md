@@ -1,6 +1,6 @@
 # Issue Log
 
-Last updated: April 28, 2026
+Last updated: April 29, 2026
 
 Use this file for confirmed repo-specific issues only. Keep entries short and practical.
 
@@ -157,3 +157,24 @@ Use this file for confirmed repo-specific issues only. Keep entries short and pr
 - Cause: Supabase Email auth was enabled, `signInWithOtp` allowed implicit user creation, and the `handle_new_user` trigger created a workspace for every auth user.
 - Avoid: In OAuth mode, keep consultant access Google-only across app checks, RLS helpers, and Supabase bootstrap. Do not create workspaces from the generic auth-user trigger.
 - Fix/Check: Disable Supabase Email auth during bootstrap, set magic-link `shouldCreateUser: false`, require a Google provider claim before app/RLS access, and provision workspaces idempotently only after an accepted Google callback.
+
+## I-023 Production OAuth callback fell back to localhost
+
+- Problem: Signing in from the Vercel deployment could return to `http://localhost:3000` instead of the production app.
+- Cause: Supabase Auth `site_url` still pointed at local development even though the Vercel production app URL was configured and allow-listed.
+- Avoid: Whenever `NEXT_PUBLIC_APP_URL` changes for production, run Supabase bootstrap with the production app URL and verify both Supabase `site_url` and redirect allow-list entries.
+- Fix/Check: Run `NEXT_PUBLIC_APP_URL=https://<production-domain> npm --prefix gather run supabase:bootstrap`, then confirm `/auth/login?provider=google&next=/app` sends `redirect_to` to the production `/auth/callback`.
+
+## I-024 Pending testimonial reviews hid in Quiet for now
+
+- Problem: A testimonial project with unapproved pending reviews could remain in the workspace dashboard's `Quiet for now` section.
+- Cause: The workspace split used only `participant_sessions.in_progress` and project `synthesizing` status, but testimonial reviews do not create participant sessions or synthesis jobs.
+- Avoid: Compute workspace motion state by project type. Include pending testimonial review counts, testimonial activity timestamps, flagged completed feedback sessions, recent completed sessions, and recent project edits.
+- Fix/Check: Add derived motion-state tests for testimonial pending reviews and 7-day activity aging, then verify `/app` places pending testimonial projects in `In motion`.
+
+## I-025 Post-login dashboard crashed when archive migration was not applied
+
+- Problem: After Google OAuth completed, `/app` showed a production Next.js error digest instead of loading the workspace.
+- Cause: The deployed database was missing `projects.archived_at` and `projects.archived_by_user_id`, while the workspace dashboard immediately filtered projects by `archived_at`.
+- Avoid: Before diagnosing OAuth again, check schema drift when the callback succeeds but the signed-in app page crashes.
+- Fix/Check: Run `NEXT_PUBLIC_APP_URL=https://<production-domain> npm --prefix gather run supabase:bootstrap`, then verify `information_schema.columns` contains both archive columns and `/auth/login?provider=google&next=/app` redirects to the production `/auth/callback`.

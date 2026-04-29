@@ -268,11 +268,13 @@ Synthesis updates as completed interviews accumulate and can also be manually re
 
 ### Live monitoring
 The dashboard displays:
+- in-motion projects with unresolved work or fresh activity
 - in-progress sessions
 - completed sessions
 - abandoned sessions
 - recent activity
 - flagged low-quality interviews
+- pending testimonial reviews
 - top emerging themes
 
 ### Quality scoring

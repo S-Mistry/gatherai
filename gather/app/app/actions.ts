@@ -5,10 +5,14 @@ import { redirect } from "next/navigation"
 
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 import {
+  archiveProject,
   createProjectConfigVersion,
   createProjectFromForm,
   createTestimonialLink,
   enqueueSynthesisRefresh,
+  permanentlyDeleteArchivedProject,
+  permanentlyDeleteArchivedProjects,
+  restoreArchivedProject,
   saveProjectSynthesisOverride,
   saveSessionClaimSuppression,
   saveSessionOverride,
@@ -39,6 +43,40 @@ export async function createProjectAction(formData: FormData) {
   revalidatePath("/app")
   revalidatePath("/app/projects")
   redirect(`/app/projects/${record.project.id}`)
+}
+
+export async function archiveProjectAction(formData: FormData) {
+  const projectId = String(formData.get("projectId") ?? "")
+
+  await archiveProject(projectId)
+  revalidatePath("/app")
+  revalidatePath("/app/projects")
+  revalidatePath(`/app/projects/${projectId}`)
+}
+
+export async function restoreArchivedProjectAction(formData: FormData) {
+  const projectId = String(formData.get("projectId") ?? "")
+
+  await restoreArchivedProject(projectId)
+  revalidatePath("/app")
+  revalidatePath("/app/projects")
+  revalidatePath(`/app/projects/${projectId}`)
+}
+
+export async function permanentlyDeleteArchivedProjectAction(
+  formData: FormData
+) {
+  const projectId = String(formData.get("projectId") ?? "")
+
+  await permanentlyDeleteArchivedProject(projectId)
+  revalidatePath("/app")
+  revalidatePath("/app/projects")
+}
+
+export async function permanentlyDeleteArchivedProjectsAction() {
+  await permanentlyDeleteArchivedProjects()
+  revalidatePath("/app")
+  revalidatePath("/app/projects")
 }
 
 export async function updateTestimonialReviewStatusAction(formData: FormData) {

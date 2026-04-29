@@ -13,8 +13,10 @@ import {
   buildGeneratedOutputPlaceholder,
 } from "@/lib/data/placeholders"
 import {
+  buildProjectMotionState,
   buildRecentNeedsReviewSessions,
   buildSessionMetrics,
+  buildTestimonialProjectMetrics,
   groupByProjectId,
 } from "@/lib/data/derived"
 import {
@@ -121,6 +123,8 @@ interface ProjectRow {
   status: string
   created_at: string
   updated_at: string
+  archived_at: string | null
+  archived_by_user_id: string | null
 }
 
 interface ProjectConfigVersionRow {
@@ -268,6 +272,18 @@ interface TestimonialReviewRow {
   reviewer_name: string | null
   suggested_rating: number | null
   rating: number
+  status: TestimonialReviewStatus
+  created_at: string
+  updated_at: string
+}
+
+interface TestimonialLinkActivityRow {
+  project_id: string
+  updated_at: string
+}
+
+interface TestimonialReviewActivityRow {
+  project_id: string
   status: TestimonialReviewStatus
   created_at: string
   updated_at: string
@@ -663,7 +679,13 @@ function mapProject(
     status: (row.status || "draft") as ProjectRecord["status"],
     currentConfigVersionId: configVersionId,
     publicLinkToken,
+    archivedAt: row.archived_at ?? undefined,
+    archivedByUserId: row.archived_by_user_id ?? undefined,
   }
+}
+
+function isProjectArchived(row: Pick<ProjectRow, "archived_at">) {
+  return Boolean(row.archived_at)
 }
 
 function mapSession(
@@ -1013,6 +1035,25 @@ function keyByProjectId<T extends { project_id: string }>(rows: T[]) {
       map.set(row.project_id, row)
     }
   })
+  return map
+}
+
+function groupRowsBySnakeProjectId<T extends { project_id: string }>(
+  rows: T[]
+) {
+  const map = new Map<string, T[]>()
+
+  rows.forEach((row) => {
+    const existing = map.get(row.project_id)
+
+    if (existing) {
+      existing.push(row)
+      return
+    }
+
+    map.set(row.project_id, [row])
+  })
+
   return map
 }
 
@@ -1566,6 +1607,12 @@ async function getProjectBundleByLinkToken(
       .single<ProjectConfigVersionRow>(),
   ])
 
+  const projectRow = expectData(projectResult, "Unable to load linked project")
+
+  if (isProjectArchived(projectRow)) {
+    return null
+  }
+
   const configRow = expectData(
     configResult,
     "Unable to load linked project configuration"
@@ -1574,7 +1621,7 @@ async function getProjectBundleByLinkToken(
   return {
     client,
     link: expectData(linkResult, "Unable to load project link"),
-    project: expectData(projectResult, "Unable to load linked project"),
+    project: projectRow,
     configRow,
     config: mapConfigVersion(configRow),
   }
@@ -2434,13 +2481,21 @@ export async function getWorkspaceSnapshot() {
     .from("projects")
     .select("*")
     .eq("workspace_id", context.workspace.id)
+    .is("archived_at", null)
     .order("updated_at", { ascending: false })
   const projectRows = expectRows(
     projectsResult,
     "Unable to load projects"
   ) as ProjectRow[]
   const projectIds = projectRows.map((row) => row.id)
-  const [configMap, linkMap, synthesisMap, sessionsResult] = await Promise.all([
+  const [
+    configMap,
+    linkMap,
+    synthesisMap,
+    sessionsResult,
+    testimonialLinksResult,
+    testimonialReviewsResult,
+  ] = await Promise.all([
     getLatestConfigVersions(client, projectIds),
     getLatestPublicLinks(client, projectIds),
     getLatestSyntheses(client, projectIds),
@@ -2455,11 +2510,41 @@ export async function getWorkspaceSnapshot() {
             "id, project_id, respondent_label, status, quality_flag, excluded_from_synthesis, last_activity_at"
           )
           .in("project_id", projectIds),
+    projectIds.length === 0
+      ? Promise.resolve({
+          data: [] as TestimonialLinkActivityRow[],
+          error: null,
+        })
+      : client
+          .from("testimonial_links")
+          .select("project_id, updated_at")
+          .in("project_id", projectIds),
+    projectIds.length === 0
+      ? Promise.resolve({
+          data: [] as TestimonialReviewActivityRow[],
+          error: null,
+        })
+      : client
+          .from("testimonial_reviews")
+          .select("project_id, status, created_at, updated_at")
+          .in("project_id", projectIds),
   ])
   const sessionRows = expectRows(
     sessionsResult,
     "Unable to load participant sessions"
   ) as ParticipantSessionListRow[]
+  const testimonialLinksByProjectId = groupRowsBySnakeProjectId(
+    expectRows(
+      testimonialLinksResult,
+      "Unable to load testimonial link activity"
+    ) as TestimonialLinkActivityRow[]
+  )
+  const testimonialReviewsByProjectId = groupRowsBySnakeProjectId(
+    expectRows(
+      testimonialReviewsResult,
+      "Unable to load testimonial review activity"
+    ) as TestimonialReviewActivityRow[]
+  )
   const incompleteProjectIds = projectRows
     .filter((row) => !configMap.has(row.id) || !linkMap.has(row.id))
     .map((row) => row.id)
@@ -2488,8 +2573,25 @@ export async function getWorkspaceSnapshot() {
     const synthesis = synthesisMap.get(row.id)
     const metrics = buildSessionMetrics(projectSessions)
 
+    const project = mapProject(row, config.id, link.link_token)
+    const testimonialMetrics = buildTestimonialProjectMetrics({
+      projectUpdatedAt: project.updatedAt,
+      links: (testimonialLinksByProjectId.get(row.id) ?? []).map(
+        (testimonialLink) => ({
+          updatedAt: testimonialLink.updated_at,
+        })
+      ),
+      reviews: (testimonialReviewsByProjectId.get(row.id) ?? []).map(
+        (review) => ({
+          status: normalizeTestimonialReviewStatus(review.status),
+          createdAt: review.created_at,
+          updatedAt: review.updated_at,
+        })
+      ),
+    })
+
     return {
-      ...mapProject(row, config.id, link.link_token),
+      ...project,
       sessionCounts: {
         inProgress: metrics.inProgress,
         completed: metrics.completed,
@@ -2500,6 +2602,14 @@ export async function getWorkspaceSnapshot() {
         ? mapSynthesis(synthesis).crossInterviewThemes
         : [],
       includedSessions: metrics.includedInSynthesis,
+      testimonialCounts: testimonialMetrics,
+      motionState: buildProjectMotionState({
+        projectType: project.projectType,
+        status: project.status,
+        updatedAt: project.updatedAt,
+        sessions: projectSessions,
+        testimonialMetrics,
+      }),
     }
   })
 
@@ -2520,7 +2630,9 @@ export async function getWorkspaceSnapshot() {
   }
 }
 
-export async function listProjects() {
+export type ProjectListView = "active" | "archived"
+
+export async function listProjects(options?: { view?: ProjectListView }) {
   const context = await getRequiredConsultantContext()
   const client = await createServerSupabaseClient()
 
@@ -2528,18 +2640,33 @@ export async function listProjects() {
     fail("Supabase publishable-key environment is not configured.")
   }
 
-  const projectsResult = await client
+  let projectsQuery = client
     .from("projects")
     .select("*")
     .eq("workspace_id", context.workspace.id)
-    .order("updated_at", { ascending: false })
+
+  if (options?.view === "archived") {
+    projectsQuery = projectsQuery.not("archived_at", "is", null)
+  } else {
+    projectsQuery = projectsQuery.is("archived_at", null)
+  }
+
+  const projectsResult = await projectsQuery.order("updated_at", {
+    ascending: false,
+  })
 
   const projectRows = expectRows(
     projectsResult,
     "Unable to load projects"
   ) as ProjectRow[]
   const projectIds = projectRows.map((row) => row.id)
-  const [configMap, linkMap, sessionsResult] = await Promise.all([
+  const [
+    configMap,
+    linkMap,
+    sessionsResult,
+    testimonialLinksResult,
+    testimonialReviewsResult,
+  ] = await Promise.all([
     getLatestConfigVersions(client, projectIds),
     getLatestPublicLinks(client, projectIds),
     projectIds.length === 0
@@ -2552,6 +2679,24 @@ export async function listProjects() {
           .select(
             "id, project_id, respondent_label, status, quality_flag, excluded_from_synthesis, last_activity_at"
           )
+          .in("project_id", projectIds),
+    projectIds.length === 0
+      ? Promise.resolve({
+          data: [] as TestimonialLinkActivityRow[],
+          error: null,
+        })
+      : client
+          .from("testimonial_links")
+          .select("project_id, updated_at")
+          .in("project_id", projectIds),
+    projectIds.length === 0
+      ? Promise.resolve({
+          data: [] as TestimonialReviewActivityRow[],
+          error: null,
+        })
+      : client
+          .from("testimonial_reviews")
+          .select("project_id, status, created_at, updated_at")
           .in("project_id", projectIds),
   ])
   const sessionSummaries = (
@@ -2569,6 +2714,18 @@ export async function listProjects() {
     lastActivityAt: row.last_activity_at,
   }))
   const sessionsByProjectId = groupByProjectId(sessionSummaries)
+  const testimonialLinksByProjectId = groupRowsBySnakeProjectId(
+    expectRows(
+      testimonialLinksResult,
+      "Unable to load testimonial link activity"
+    ) as TestimonialLinkActivityRow[]
+  )
+  const testimonialReviewsByProjectId = groupRowsBySnakeProjectId(
+    expectRows(
+      testimonialReviewsResult,
+      "Unable to load testimonial review activity"
+    ) as TestimonialReviewActivityRow[]
+  )
 
   return projectRows.map((row) => {
     const config = configMap.get(row.id)
@@ -2580,10 +2737,27 @@ export async function listProjects() {
       )
     }
 
-    const metrics = buildSessionMetrics(sessionsByProjectId.get(row.id) ?? [])
+    const projectSessions = sessionsByProjectId.get(row.id) ?? []
+    const metrics = buildSessionMetrics(projectSessions)
+    const project = mapProject(row, config.id, link.link_token)
+    const testimonialMetrics = buildTestimonialProjectMetrics({
+      projectUpdatedAt: project.updatedAt,
+      links: (testimonialLinksByProjectId.get(row.id) ?? []).map(
+        (testimonialLink) => ({
+          updatedAt: testimonialLink.updated_at,
+        })
+      ),
+      reviews: (testimonialReviewsByProjectId.get(row.id) ?? []).map(
+        (review) => ({
+          status: normalizeTestimonialReviewStatus(review.status),
+          createdAt: review.created_at,
+          updatedAt: review.updated_at,
+        })
+      ),
+    })
 
     return {
-      ...mapProject(row, config.id, link.link_token),
+      ...project,
       sessionCounts: {
         inProgress: metrics.inProgress,
         completed: metrics.completed,
@@ -2591,6 +2765,14 @@ export async function listProjects() {
         flagged: metrics.flagged,
       },
       includedSessions: metrics.includedInSynthesis,
+      testimonialCounts: testimonialMetrics,
+      motionState: buildProjectMotionState({
+        projectType: project.projectType,
+        status: project.status,
+        updatedAt: project.updatedAt,
+        sessions: projectSessions,
+        testimonialMetrics,
+      }),
     }
   })
 }
@@ -3094,6 +3276,21 @@ export async function getPublicTestimonialConfig(
     return null
   }
 
+  const projectResult = await client
+    .from("projects")
+    .select("*")
+    .eq("id", linkResult.data.project_id)
+    .eq("project_type", "testimonial")
+    .maybeSingle<ProjectRow>()
+
+  if (projectResult.error) {
+    fail(`Unable to load testimonial project: ${projectResult.error.message}`)
+  }
+
+  if (!projectResult.data || isProjectArchived(projectResult.data)) {
+    return null
+  }
+
   return {
     projectId: linkResult.data.project_id,
     linkId: linkResult.data.id,
@@ -3196,6 +3393,7 @@ export async function getPublicTestimonialEmbed(projectId: string, limit = 20) {
   return {
     project: projectResult.data,
     link: activeLink,
+    captureEnabled: !isProjectArchived(projectResult.data),
     reviews: expectRows(
       reviewsResult,
       "Unable to load approved testimonial reviews"
@@ -3360,9 +3558,9 @@ export async function resumeParticipantSession(
   sessionId: string,
   token: string
 ) {
-  const lookup = await getParticipantSessionLookup(sessionId)
+  const bundle = await getParticipantSessionRuntimeBundle(sessionId)
 
-  if (!lookup) {
+  if (!bundle) {
     return null
   }
 
@@ -3370,11 +3568,15 @@ export async function resumeParticipantSession(
     return null
   }
 
-  if (new Date(lookup.session.resumeExpiresAt).getTime() < Date.now()) {
+  if (bundle.project.archivedAt) {
     return null
   }
 
-  return lookup.session
+  if (new Date(bundle.session.resumeExpiresAt).getTime() < Date.now()) {
+    return null
+  }
+
+  return bundle.session
 }
 
 export async function appendSessionEvents(
@@ -3389,7 +3591,7 @@ export async function appendSessionEvents(
 ) {
   const bundle = await getParticipantSessionRuntimeBundle(sessionId)
 
-  if (!bundle) {
+  if (!bundle || bundle.project.archivedAt) {
     return null
   }
 
@@ -3423,7 +3625,7 @@ export async function completeParticipantSession(
 ) {
   const bundle = await getParticipantSessionRuntimeBundle(sessionId)
 
-  if (!bundle) {
+  if (!bundle || bundle.project.archivedAt) {
     return null
   }
 
@@ -3505,7 +3707,7 @@ export async function getParticipantRealtimeConfig(sessionId: string) {
     return { status: "missing_session" as const }
   }
 
-  if (!bundle.link || bundle.link.revoked_at) {
+  if (!bundle.link || bundle.link.revoked_at || bundle.project.archivedAt) {
     return { status: "missing_link" as const }
   }
 
@@ -3627,6 +3829,123 @@ export async function createProjectFromForm(input: {
     ),
     configVersion: mapConfigVersion(createdProject.configRow),
   }
+}
+
+export async function archiveProject(projectId: string) {
+  const context = await getRequiredConsultantContext()
+  const client = await createServerSupabaseClient()
+
+  if (!client) {
+    fail("Supabase publishable-key environment is not configured.")
+  }
+
+  const archivedAt = new Date().toISOString()
+  const result = await client
+    .from("projects")
+    .update({
+      archived_at: archivedAt,
+      archived_by_user_id: context.user.id,
+      updated_at: archivedAt,
+    })
+    .eq("id", projectId)
+    .eq("workspace_id", context.workspace.id)
+    .is("archived_at", null)
+    .select("id")
+    .maybeSingle<{ id: string }>()
+
+  if (result.error) {
+    fail(`Unable to archive project: ${result.error.message}`)
+  }
+
+  if (!result.data) {
+    fail("Project is already archived or unavailable.")
+  }
+
+  return result.data
+}
+
+export async function restoreArchivedProject(projectId: string) {
+  const context = await getRequiredConsultantContext()
+  const client = await createServerSupabaseClient()
+
+  if (!client) {
+    fail("Supabase publishable-key environment is not configured.")
+  }
+
+  const restoredAt = new Date().toISOString()
+  const result = await client
+    .from("projects")
+    .update({
+      archived_at: null,
+      archived_by_user_id: null,
+      updated_at: restoredAt,
+    })
+    .eq("id", projectId)
+    .eq("workspace_id", context.workspace.id)
+    .not("archived_at", "is", null)
+    .select("id")
+    .maybeSingle<{ id: string }>()
+
+  if (result.error) {
+    fail(`Unable to restore project: ${result.error.message}`)
+  }
+
+  if (!result.data) {
+    fail("Project is not archived or unavailable.")
+  }
+
+  return result.data
+}
+
+export async function permanentlyDeleteArchivedProject(projectId: string) {
+  const context = await getRequiredConsultantContext()
+  const client = await createServerSupabaseClient()
+
+  if (!client) {
+    fail("Supabase publishable-key environment is not configured.")
+  }
+
+  const result = await client
+    .from("projects")
+    .delete()
+    .eq("id", projectId)
+    .eq("workspace_id", context.workspace.id)
+    .not("archived_at", "is", null)
+    .select("id")
+    .maybeSingle<{ id: string }>()
+
+  if (result.error) {
+    fail(`Unable to permanently delete project: ${result.error.message}`)
+  }
+
+  if (!result.data) {
+    fail("Only archived projects can be permanently deleted.")
+  }
+
+  return result.data
+}
+
+export async function permanentlyDeleteArchivedProjects() {
+  const context = await getRequiredConsultantContext()
+  const client = await createServerSupabaseClient()
+
+  if (!client) {
+    fail("Supabase publishable-key environment is not configured.")
+  }
+
+  const result = await client
+    .from("projects")
+    .delete()
+    .eq("workspace_id", context.workspace.id)
+    .not("archived_at", "is", null)
+    .select("id")
+
+  const deletedRows = expectRows(
+    result,
+    "Unable to permanently delete archived projects"
+  ) as Array<{ id: string }>
+
+  return { count: deletedRows.length }
 }
 
 export async function enqueueSynthesisRefresh(projectId: string) {

@@ -79,6 +79,8 @@ export interface ProjectRecord {
   status: "draft" | "collecting" | "synthesizing" | "ready"
   currentConfigVersionId: string
   publicLinkToken: string
+  archivedAt?: string
+  archivedByUserId?: string
 }
 
 export interface PublicInterviewConfig {

@@ -2,11 +2,17 @@ import assert from "node:assert/strict"
 import test from "node:test"
 
 import {
+  buildProjectMotionState,
   buildRecentNeedsReviewSessions,
   buildSessionMetrics,
+  buildTestimonialProjectMetrics,
   groupByProjectId,
   selectLatestRowsBySessionId,
 } from "../lib/data/derived"
+
+const motionNow = new Date("2026-04-29T12:00:00.000Z")
+const oldActivityAt = "2026-04-18T12:00:00.000Z"
+const recentActivityAt = "2026-04-27T12:00:00.000Z"
 
 test("data-derived groups sessions and computes project metrics in one pass", () => {
   const sessions = [
@@ -144,4 +150,166 @@ test("data-derived selects only the latest generated row per session", () => {
       value: "only-b",
     },
   ])
+})
+
+test("data-derived keeps old pending testimonial reviews in motion", () => {
+  const testimonialMetrics = buildTestimonialProjectMetrics({
+    projectUpdatedAt: oldActivityAt,
+    reviews: [
+      {
+        status: "pending",
+        createdAt: oldActivityAt,
+        updatedAt: oldActivityAt,
+      },
+    ],
+  })
+
+  const state = buildProjectMotionState({
+    projectType: "testimonial",
+    status: "draft",
+    updatedAt: oldActivityAt,
+    sessions: [],
+    testimonialMetrics,
+    now: motionNow,
+  })
+
+  assert.equal(state.isInMotion, true)
+  assert.equal(state.reason, "testimonial_pending")
+})
+
+test("data-derived returns approved or rejected testimonials to quiet after one week", () => {
+  const approved = buildProjectMotionState({
+    projectType: "testimonial",
+    status: "draft",
+    updatedAt: oldActivityAt,
+    sessions: [],
+    testimonialMetrics: buildTestimonialProjectMetrics({
+      projectUpdatedAt: oldActivityAt,
+      reviews: [
+        {
+          status: "approved",
+          createdAt: oldActivityAt,
+          updatedAt: oldActivityAt,
+        },
+      ],
+    }),
+    now: motionNow,
+  })
+  const rejected = buildProjectMotionState({
+    projectType: "testimonial",
+    status: "draft",
+    updatedAt: oldActivityAt,
+    sessions: [],
+    testimonialMetrics: buildTestimonialProjectMetrics({
+      projectUpdatedAt: oldActivityAt,
+      reviews: [
+        {
+          status: "rejected",
+          createdAt: oldActivityAt,
+          updatedAt: oldActivityAt,
+        },
+      ],
+    }),
+    now: motionNow,
+  })
+
+  assert.equal(approved.isInMotion, false)
+  assert.equal(rejected.isInMotion, false)
+})
+
+test("data-derived treats new testimonial review activity as in motion", () => {
+  const testimonialMetrics = buildTestimonialProjectMetrics({
+    projectUpdatedAt: oldActivityAt,
+    reviews: [
+      {
+        status: "approved",
+        createdAt: recentActivityAt,
+        updatedAt: recentActivityAt,
+      },
+    ],
+  })
+
+  const state = buildProjectMotionState({
+    projectType: "testimonial",
+    status: "draft",
+    updatedAt: oldActivityAt,
+    sessions: [],
+    testimonialMetrics,
+    now: motionNow,
+  })
+
+  assert.equal(state.isInMotion, true)
+  assert.equal(state.reason, "testimonial_recent_activity")
+})
+
+test("data-derived keeps feedback projects in motion while live or synthesizing", () => {
+  const live = buildProjectMotionState({
+    projectType: "feedback",
+    status: "draft",
+    updatedAt: oldActivityAt,
+    sessions: [
+      {
+        projectId: "proj-a",
+        status: "in_progress",
+        qualityFlag: false,
+        excludedFromSynthesis: false,
+        lastActivityAt: oldActivityAt,
+      },
+    ],
+    now: motionNow,
+  })
+  const synthesizing = buildProjectMotionState({
+    projectType: "feedback",
+    status: "synthesizing",
+    updatedAt: oldActivityAt,
+    sessions: [],
+    now: motionNow,
+  })
+
+  assert.equal(live.isInMotion, true)
+  assert.equal(live.reason, "session_in_progress")
+  assert.equal(synthesizing.isInMotion, true)
+  assert.equal(synthesizing.reason, "synthesizing")
+})
+
+test("data-derived keeps flagged completed feedback sessions in motion", () => {
+  const state = buildProjectMotionState({
+    projectType: "feedback",
+    status: "draft",
+    updatedAt: oldActivityAt,
+    sessions: [
+      {
+        projectId: "proj-a",
+        status: "complete",
+        qualityFlag: true,
+        excludedFromSynthesis: false,
+        lastActivityAt: oldActivityAt,
+      },
+    ],
+    now: motionNow,
+  })
+
+  assert.equal(state.isInMotion, true)
+  assert.equal(state.reason, "flagged_completed_session")
+})
+
+test("data-derived returns unflagged old completed feedback sessions to quiet", () => {
+  const state = buildProjectMotionState({
+    projectType: "feedback",
+    status: "draft",
+    updatedAt: oldActivityAt,
+    sessions: [
+      {
+        projectId: "proj-a",
+        status: "complete",
+        qualityFlag: false,
+        excludedFromSynthesis: false,
+        lastActivityAt: oldActivityAt,
+      },
+    ],
+    now: motionNow,
+  })
+
+  assert.equal(state.isInMotion, false)
+  assert.equal(state.reason, "quiet")
 })

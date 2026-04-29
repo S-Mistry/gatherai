@@ -39,11 +39,50 @@ function ordinal(n: number): string {
   }
 }
 
-function describeFreshness(snapshot: Awaited<ReturnType<typeof getWorkspaceSnapshot>>) {
+function describeFreshness(
+  snapshot: Awaited<ReturnType<typeof getWorkspaceSnapshot>>
+) {
+  const pendingTestimonials = snapshot.projects
+    .filter(
+      (p) => p.projectType === "testimonial" && p.testimonialCounts.pending > 0
+    )
+    .sort((a, b) =>
+      (a.motionState.latestActivityAt ?? a.updatedAt) >
+      (b.motionState.latestActivityAt ?? b.updatedAt)
+        ? -1
+        : 1
+    )[0]
+
+  if (pendingTestimonials) {
+    const pending = pendingTestimonials.testimonialCounts.pending
+    return (
+      <>
+        <strong style={{ color: "var(--ink)" }}>{pendingTestimonials.name}</strong>{" "}
+        has {pending} pending {pending === 1 ? "review" : "reviews"} to moderate.
+      </>
+    )
+  }
+
+  const needsReview = snapshot.recentNeedsReviewSessions[0]
+
+  if (needsReview) {
+    return (
+      <>
+        <strong style={{ color: "var(--ink)" }}>{needsReview.projectName}</strong>{" "}
+        has a flagged interview that needs a look.
+      </>
+    )
+  }
+
   const fresh = snapshot.projects
     .filter((p) => p.status === "synthesizing" || p.sessionCounts.completed > 0)
-    .sort((a, b) => (a.updatedAt > b.updatedAt ? -1 : 1))[0]
-  if (!fresh) return "No flagged sessions — synthesis is fresh."
+    .sort((a, b) =>
+      (a.motionState.latestActivityAt ?? a.updatedAt) >
+      (b.motionState.latestActivityAt ?? b.updatedAt)
+        ? -1
+        : 1
+    )[0]
+  if (!fresh) return "No pending reviews or live sessions right now."
   const completed = fresh.sessionCounts.completed
   if (completed === 0) {
     return "Synthesis is waiting on its first completed session."
@@ -51,7 +90,7 @@ function describeFreshness(snapshot: Awaited<ReturnType<typeof getWorkspaceSnaps
   return (
     <>
       <strong style={{ color: "var(--ink)" }}>{fresh.name}</strong> finished its{" "}
-      {ordinal(completed)} interview overnight — synthesis is fresh.
+      {ordinal(completed)} interview recently — synthesis is fresh.
     </>
   )
 }
@@ -71,16 +110,26 @@ export default async function ConsultantHomePage() {
     sessionCounts: project.sessionCounts,
     includedSessions: project.includedSessions,
     updatedAt: project.updatedAt,
+    testimonialCounts: project.testimonialCounts,
+    motionState: project.motionState,
     tagline: getProjectTypePreset(project.projectType).audiencePlural,
   }))
 
-  const live = tiles.filter(
-    (p) => p.sessionCounts.inProgress > 0 || p.status === "synthesizing"
-  )
-  const quiet = tiles.filter(
-    (p) => !(p.sessionCounts.inProgress > 0 || p.status === "synthesizing")
-  )
-  const waitingCount = live.length + snapshot.recentNeedsReviewSessions.length
+  const sortByActivity = (
+    left: (typeof tiles)[number],
+    right: (typeof tiles)[number]
+  ) =>
+    (left.motionState.latestActivityAt ?? left.updatedAt) >
+    (right.motionState.latestActivityAt ?? right.updatedAt)
+      ? -1
+      : 1
+  const live = tiles
+    .filter((p) => p.motionState.isInMotion)
+    .sort(sortByActivity)
+  const quiet = tiles
+    .filter((p) => !p.motionState.isInMotion)
+    .sort(sortByActivity)
+  const waitingCount = live.length
 
   return (
     <>
@@ -93,7 +142,10 @@ export default async function ConsultantHomePage() {
           margin: "0 auto",
         }}
       >
-        <div className="font-hand" style={{ fontSize: 28, color: "var(--clay)", marginBottom: 4 }}>
+        <div
+          className="font-hand"
+          style={{ fontSize: 28, color: "var(--clay)", marginBottom: 4 }}
+        >
           good morning, {firstName} —
         </div>
         <h1
@@ -114,17 +166,30 @@ export default async function ConsultantHomePage() {
               <span style={{ fontStyle: "italic", color: "var(--clay)" }}>
                 {waitingCount}
               </span>{" "}
-              waiting on you.
+              in motion.
             </>
           ) : (
             <>{tiles.length} projects, all quiet.</>
           )}
         </h1>
-        <div style={{ display: "flex", gap: 28, alignItems: "baseline", flexWrap: "wrap" }}>
-          <span className="font-sans" style={{ fontSize: 14, color: "var(--ink-2)" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 28,
+            alignItems: "baseline",
+            flexWrap: "wrap",
+          }}
+        >
+          <span
+            className="font-sans"
+            style={{ fontSize: 14, color: "var(--ink-2)" }}
+          >
             {describeFreshness(snapshot)}
           </span>
-          <span className="font-mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
+          <span
+            className="font-mono"
+            style={{ fontSize: 11, color: "var(--ink-3)" }}
+          >
             {dayLabel()}
           </span>
         </div>
@@ -143,11 +208,20 @@ export default async function ConsultantHomePage() {
             <h2 className="font-serif" style={{ fontSize: 26, fontWeight: 400 }}>
               In motion
             </h2>
-            <span className="font-hand" style={{ fontSize: 18, color: "var(--ink-3)" }}>
-              — need a look
+            <span
+              className="font-hand"
+              style={{ fontSize: 18, color: "var(--ink-3)" }}
+            >
+              — fresh activity
             </span>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 22 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(2, 1fr)",
+              gap: 22,
+            }}
+          >
             {live.map((p) => (
               <ProjectTile key={p.id} project={p} />
             ))}
@@ -175,7 +249,13 @@ export default async function ConsultantHomePage() {
                 : "Quiet for now"}
           </h2>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 18 }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, 1fr)",
+            gap: 18,
+          }}
+        >
           <Link
             href="/app/projects/new"
             className="grid place-items-center text-center"
@@ -198,7 +278,7 @@ export default async function ConsultantHomePage() {
                 className="font-sans"
                 style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 8 }}
               >
-                stakeholder interviews · feedback pulse
+                stakeholder interviews · feedback pulse · testimonials
               </div>
             </div>
           </Link>
